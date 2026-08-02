@@ -54,11 +54,12 @@ project-scoped agent authorization          PASS
 project JSON export                         PASS
 ```
 
-The shared shuv2code preview successfully navigated to the service and reported `ClankSpace`, but snapshot, evaluation, and typing calls timed out on two tabs. The installed in-app-browser fallback found no compatible backend. This is documented as a verification handoff rather than hidden or treated as an application success.
+The initial preview commands were incorrectly treated as unavailable while an earlier action queue was still resolving. A clean follow-up pass used the shuv2code in-app browser successfully and found three real frontend defects: empty projects encoded as `null`, an invalid HTML slug pattern under modern regex rules, and superseded notes remaining actionable. All three were fixed before final handoff.
+
+Controlled-browser coverage now includes login, the empty workspace, project creation, note capture, active trajectory rendering, the original coordination warning, one-time project-agent key issuance, supersession, dark/light appearance, and an iPhone-sized viewport. The clean post-fix tab reported no console errors and no horizontal overflow.
 
 ## Handoff
 
 - Private repository published at `ShamanicArts/clankspace` on `main`.
-- With an automation-capable browser, log in, inspect desktop and mobile layouts, run the coordination check, supersede a disposable note, and issue a disposable project agent key.
 - Connect Railway Hobby, mount `/data`, set secrets, add `clank.shamanicarts.dev`, and enable volume backups.
 - Pilot-only gaps are contest/redact controls, full-instance portable online backup, private GitHub, granular human membership, and hardened browser sessions.

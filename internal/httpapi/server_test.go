@@ -48,6 +48,15 @@ func TestHealthStaticAndAuthentication(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("wanted 200, got %d: %s", w.Code, w.Body.String())
 	}
+	var projects struct {
+		Projects []domain.Project `json:"projects"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&projects); err != nil {
+		t.Fatal(err)
+	}
+	if projects.Projects == nil {
+		t.Fatal("empty projects must encode as [] rather than null")
+	}
 }
 
 func TestProjectExportIsNotDashboardCapped(t *testing.T) {

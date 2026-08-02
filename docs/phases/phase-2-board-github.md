@@ -34,7 +34,7 @@ Make accrued intent, runtime provenance, trajectories, warnings, repositories, a
 
 ## Success criteria
 
-- [ ] Dashboard interaction verified in controlled desktop and mobile browser (automation unavailable during bootstrap; see handoff).
+- [x] Dashboard interaction verified in controlled desktop and mobile browser.
 - [x] Public PRs appear without a GitHub credential.
 - [x] Imported prose never acquires intent/decision status automatically.
-- [ ] Browser has no console errors or horizontal overflow (static syntax and responsive CSS verified; interactive browser check pending).
+- [x] Browser has no console errors or horizontal overflow.

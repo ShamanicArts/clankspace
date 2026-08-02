@@ -136,7 +136,7 @@ func (s *Store) ListProjects(ctx context.Context, workspaceID string) ([]domain.
 		return nil, err
 	}
 	defer rows.Close()
-	var out []domain.Project
+	out := make([]domain.Project, 0)
 	for rows.Next() {
 		var p domain.Project
 		var created string
@@ -158,7 +158,7 @@ func (s *Store) ListProjectsForPrincipal(ctx context.Context, p domain.Principal
 		return nil, err
 	}
 	defer rows.Close()
-	var out []domain.Project
+	out := make([]domain.Project, 0)
 	for rows.Next() {
 		var p domain.Project
 		var created string
