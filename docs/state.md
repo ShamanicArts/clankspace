@@ -10,7 +10,7 @@ updated: 2026-08-02
 
 ## Current focus
 
-Publish the verified repository, complete one controlled-browser interaction pass, and connect the deploy-ready vertical slice to Railway.
+Complete one controlled-browser interaction pass and connect the published, deploy-ready vertical slice to Railway.
 
 ## Active phase
 

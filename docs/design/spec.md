@@ -258,5 +258,5 @@ Railway mounts `/data`; database lives at `/data/clankspace.db`. Railway volume 
 - [x] Implement CLI and MCP.
 - [x] Implement dashboard and GitHub evidence.
 - [x] Verify local API, CLI, MCP, GitHub, export, and scoped-identity flow.
-- [ ] Publish private repository.
+- [x] Publish private repository.
 - [ ] Connect Railway and DNS when credentials are available.

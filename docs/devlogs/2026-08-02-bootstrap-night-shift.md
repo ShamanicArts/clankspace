@@ -58,7 +58,7 @@ The shared shuv2code preview successfully navigated to the service and reported 
 
 ## Handoff
 
-- Publish the private GitHub repository.
+- Private repository published at `ShamanicArts/clankspace` on `main`.
 - With an automation-capable browser, log in, inspect desktop and mobile layouts, run the coordination check, supersede a disposable note, and issue a disposable project agent key.
 - Connect Railway Hobby, mount `/data`, set secrets, add `clank.shamanicarts.dev`, and enable volume backups.
 - Pilot-only gaps are contest/redact controls, full-instance portable online backup, private GitHub, granular human membership, and hardened browser sessions.
