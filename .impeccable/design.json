@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-02T14:45:00+01:00",
+  "title": "Design System: ClankSpace",
+  "extensions": {
+    "colorMeta": {
+      "coordination-green": { "role": "primary", "displayName": "Coordination Green", "canonical": "oklch(48% 0.11 155)", "tonalRamp": ["oklch(18% 0.04 155)", "oklch(28% 0.07 155)", "oklch(38% 0.10 155)", "oklch(48% 0.11 155)", "oklch(60% 0.10 155)", "oklch(72% 0.08 155)", "oklch(84% 0.05 155)", "oklch(94% 0.025 155)"] },
+      "warm-field": { "role": "neutral", "displayName": "Warm Field", "canonical": "oklch(96.5% 0.012 95)", "tonalRamp": ["oklch(17% 0.012 95)", "oklch(28% 0.012 95)", "oklch(40% 0.012 95)", "oklch(54% 0.012 95)", "oklch(68% 0.012 95)", "oklch(80% 0.012 95)", "oklch(90% 0.012 95)", "oklch(96.5% 0.012 95)"] },
+      "divergence-amber": { "role": "secondary", "displayName": "Divergence Amber", "canonical": "oklch(50% 0.115 65)", "tonalRamp": ["oklch(18% 0.04 65)", "oklch(28% 0.07 65)", "oklch(39% 0.10 65)", "oklch(50% 0.115 65)", "oklch(62% 0.10 65)", "oklch(74% 0.075 65)", "oklch(86% 0.05 65)", "oklch(95% 0.025 65)"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Project Display", "purpose": "Project identity only." },
+      "body": { "displayName": "Operational Body", "purpose": "Actions, rationale, provenance, and evidence." }
+    },
+    "shadows": [
+      { "name": "ambient-stage", "value": "0 8px 30px oklch(24% 0.015 120 / 0.045)", "purpose": "The proposed-work stage." },
+      { "name": "modal-lift", "value": "0 18px 50px oklch(24% 0.015 120 / 0.08)", "purpose": "Dialogs and login only." }
+    ],
+    "motion": [
+      { "name": "state-ease", "value": "180ms cubic-bezier(.16,1,.3,1)", "purpose": "Hover, focus, toast, and state feedback." }
+    ],
+    "breakpoints": [
+      { "name": "compact-layout", "value": "1050px" },
+      { "name": "mobile-nav", "value": "800px" },
+      { "name": "phone", "value": "520px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The current consequential action.",
+      "html": "<button class=\"ds-btn-primary\">Check current intent</button>",
+      "css": ".ds-btn-primary{background:oklch(48% .11 155);color:oklch(99% .006 95);border:1px solid transparent;border-radius:8px;padding:.72rem 1rem;font:700 .88rem/1.2 system-ui;transition:background 180ms cubic-bezier(.16,1,.3,1)}.ds-btn-primary:hover{background:oklch(40% .105 155)}.ds-btn-primary:focus-visible{outline:3px solid oklch(48% .11 155 / .32);outline-offset:2px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A supporting action that does not compete with the current choice.",
+      "html": "<button class=\"ds-btn-secondary\">Inspect rationale</button>",
+      "css": ".ds-btn-secondary{background:transparent;color:oklch(24% .015 120);border:1px solid oklch(86% .014 95);border-radius:8px;padding:.72rem 1rem;font:700 .88rem/1.2 system-ui}.ds-btn-secondary:hover{background:oklch(99% .006 95)}.ds-btn-secondary:focus-visible{outline:3px solid oklch(48% .11 155 / .32);outline-offset:2px}"
+    },
+    {
+      "name": "Proposed Move Field",
+      "kind": "input",
+      "description": "The move an agent is about to make.",
+      "html": "<label class=\"ds-field\">Proposed move<input placeholder=\"Remove the new permission layer\"></label>",
+      "css": ".ds-field{display:grid;gap:7px;color:oklch(49% .016 110);font:750 .76rem/1.2 system-ui}.ds-field input{background:oklch(99% .006 95);color:oklch(24% .015 120);border:1px solid oklch(86% .014 95);border-radius:8px;padding:.76rem .82rem}.ds-field input:focus{outline:3px solid oklch(48% .11 155 / .32);outline-offset:2px}"
+    },
+    {
+      "name": "Runtime Chip",
+      "kind": "chip",
+      "description": "Compact, non-interactive run provenance.",
+      "html": "<span class=\"ds-chip\">gpt-5.6 · primary</span>",
+      "css": ".ds-chip{display:inline-block;background:oklch(96.5% .012 95);color:oklch(49% .016 110);border-radius:999px;padding:3px 6px;font:600 .62rem/1.2 system-ui}"
+    },
+    {
+      "name": "Direction Comparison",
+      "kind": "custom",
+      "refersTo": "divergence-panel",
+      "description": "The signature possible-divergence comparison.",
+      "html": "<section class=\"ds-collision\"><small>POSSIBLE DIVERGENCE</small><strong>Two directions touch the same work.</strong><div><span>Your proposed move</span><b>↔</b><span>Active trajectory</span></div></section>",
+      "css": ".ds-collision{display:grid;gap:12px;background:oklch(94% .04 75);color:oklch(24% .015 120);border:1px solid oklch(50% .115 65 / .45);border-radius:13px;padding:18px;font-family:system-ui}.ds-collision small{color:oklch(50% .115 65);font-weight:850;letter-spacing:.1em}.ds-collision>div{display:grid;grid-template-columns:1fr auto 1fr;gap:14px}.ds-collision b{color:oklch(50% .115 65)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Shared Field Notebook",
+    "overview": "Warm enough for human judgment, structured enough for precise agent provenance, and quiet until two directions intersect.",
+    "keyCharacteristics": ["Restrained warm field", "Consequential coordination color", "Attributed rationale", "Flat-by-default structure", "Responsive and keyboard-visible"],
+    "rules": [
+      { "name": "The Consequence Rule", "body": "Green means current coordination. Amber means a human choice is needed. Neither color is decorative.", "section": "colors" },
+      { "name": "The Two Voices Rule", "body": "Serif identifies the project and consequential reasoning. Sans-serif carries every action, state, and piece of evidence.", "section": "typography" },
+      { "name": "The Flat-by-Default Rule", "body": "If a surface is not asking for a decision or temporarily interrupting the workflow, it does not receive a shadow.", "section": "elevation" }
+    ],
+    "dos": ["Do lead every project with the proposed-work check and active direction.", "Do keep rationale, actor, runtime, and path scope adjacent to material intent.", "Do keep empty states instructional: declare work, accrue intent, catch divergence."],
+    "donts": ["Don't build a generic admin dashboard organized around object types, counts, and CRUD controls.", "Don't make a decision wiki that presents historical notes as settled organizational law.", "Don't use neon agent-control interfaces, anthropomorphic bot theatres, or decorative AI imagery."]
+  }
+}

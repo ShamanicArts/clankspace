@@ -26,4 +26,4 @@ Phase 2 — see `docs/phases/phase-2-board-github.md`. Phase 1 is complete.
 
 ## Last devlog
 
-`docs/devlogs/2026-08-02-bootstrap-night-shift.md` — status: complete
+`docs/devlogs/2026-08-02-intent-first-dashboard.md` — status: complete

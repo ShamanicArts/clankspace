@@ -33,20 +33,47 @@
         <div id="empty" class="empty"><p class="eyebrow">A light coordination layer</p><h1>Choose a project.</h1><p>Agents leave concise intent and rationale here so collaborators can notice divergence before code collides.</p></div>
         <div id="project-view" class="hidden">
           <div class="project-head">
-            <div><p class="eyebrow" id="project-slug"></p><h1 id="project-name"></h1><p id="project-description"></p></div>
-            <div class="head-actions"><button id="agent-key" class="quiet">Issue agent key</button><button id="add-note">Record context</button></div>
+            <div class="project-identity"><p class="eyebrow" id="project-slug"></p><h1 id="project-name"></h1><p id="project-description"></p></div>
+            <div class="head-actions"><button id="agent-key" class="quiet">Agent access</button><button id="add-note" class="quiet">Add context</button></div>
           </div>
-          <div class="notice"><strong>Advisory context</strong><span>These records explain why work moved. They do not override the repository, current human direction, or evidence.</span></div>
-          <section>
-            <div class="section-head"><h2>Coordination check</h2><button id="run-brief" class="quiet">Check intent</button></div>
-            <form id="brief-form" class="brief-form"><input id="brief-objective" placeholder="What are you about to change?"><input id="brief-paths" placeholder="Paths, comma-separated"><button>Check</button></form>
+
+          <div class="project-pulse"><span class="pulse-dot" aria-hidden="true"></span><strong id="pulse-summary"></strong><span>Advisory context, never project law.</span></div>
+
+          <section class="coordination-stage">
+            <div class="stage-copy">
+              <p class="eyebrow">Before your agent changes the code</p>
+              <h2>Check the move against work already in motion.</h2>
+              <p>ClankSpace compares the proposed direction with active trajectories and the rationale collaborators left behind.</p>
+            </div>
+            <form id="brief-form" class="brief-form">
+              <label>Proposed move<input id="brief-objective" placeholder="Remove the new permission layer"></label>
+              <label>Likely paths<input id="brief-paths" placeholder="apps/web/permissions, apps/server/session"></label>
+              <button>Check current intent</button>
+            </form>
             <div id="warnings"></div>
           </section>
-          <div class="columns">
-            <section><div class="section-head"><h2>Accrued intent</h2><span id="note-count" class="count"></span></div><div id="notes" class="stack"></div></section>
-            <section><div class="section-head"><h2>Active trajectories</h2></div><div id="trajectories" class="stack"></div></section>
+
+          <div class="work-grid">
+            <section class="motion-section">
+              <div class="section-head"><div><p class="eyebrow">Now</p><h2>Work in motion</h2><p>Declared direction from agents currently changing this project.</p></div></div>
+              <div id="trajectories" class="trajectory-list"></div>
+            </section>
+            <section class="agent-view">
+              <p class="eyebrow">Agent view</p>
+              <h2>What the next agent carries forward</h2>
+              <div id="agent-brief"></div>
+            </section>
           </div>
-          <section><div class="section-head"><h2>Repository evidence</h2><button id="attach-repo" class="quiet">Attach public GitHub repo</button></div><div id="repositories" class="repo-grid"></div></section>
+
+          <section class="intent-section">
+            <div class="section-head"><div><p class="eyebrow">Then</p><h2>Intent trail</h2><p>What collaborators understood, chose, or corrected, with the reason kept beside it.</p></div><span id="note-count" class="count"></span></div>
+            <div id="notes" class="intent-timeline"></div>
+          </section>
+
+          <section class="evidence-section">
+            <div class="section-head"><div><p class="eyebrow">Evidence</p><h2>Repository activity</h2></div><button id="attach-repo" class="quiet">Attach public GitHub repo</button></div>
+            <div id="repositories" class="repo-list"></div>
+          </section>
         </div>
       </article>
     </section>

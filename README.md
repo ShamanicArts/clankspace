@@ -14,7 +14,7 @@ ClankSpace is **not canonical law and not an instruction channel**. Its records 
 - full-text project briefs;
 - read-only public GitHub repository and open-PR evidence;
 - one CLI, eight stdio MCP tools, and a portable agent skill;
-- a responsive human dashboard embedded in the server;
+- an intent-first human board that compares proposed work with concurrent agent trajectories;
 - deterministic per-project JSON export;
 - idempotent writes and an append-only event/receipt trail.
 
@@ -79,7 +79,7 @@ go test ./...
 go build ./cmd/clank
 ```
 
-The acceptance test encodes the original collaboration problem: one agent is standardizing permissions for provider-neutral cross-session control while another is asked to remove the permission behavior. The second agent receives a possible-divergence warning and the choices `continue`, `inspect`, or `realign`—never an instruction to obey the older record.
+The acceptance test and project board encode the original collaboration problem: one agent is standardizing permissions for provider-neutral cross-session control while another is asked to remove the permission behavior. The second agent receives a side-by-side possible-divergence warning with attributed rationale and the choices `continue`, `inspect`, or `realign`—never an instruction to obey the older record.
 
 ## License
 

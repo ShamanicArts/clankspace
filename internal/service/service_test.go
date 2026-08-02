@@ -73,6 +73,9 @@ func TestOriginalCoordinationScenario(t *testing.T) {
 	if warning.RelatedNotes[0].Run.Harness != "Codex" || warning.RelatedNotes[0].Run.Role != "primary" {
 		t.Fatalf("wrong provenance: %#v", warning.RelatedNotes[0].Run)
 	}
+	if warning.RelatedNotes[0].Run.AgentName != "Shuv's agent" || warning.RelatedNotes[0].Run.PrincipalName != "Maintainers" {
+		t.Fatalf("human-readable attribution was lost: %#v", warning.RelatedNotes[0].Run)
+	}
 	_ = db
 }
 
@@ -138,5 +141,8 @@ func TestProjectAgentIdentityIsScoped(t *testing.T) {
 	}
 	if run.PrincipalID != agentPrincipal.ID {
 		t.Fatal("run was not attributed to project agent identity")
+	}
+	if run.AgentName != "codex" || run.PrincipalName != "shuv2code agents" {
+		t.Fatalf("run is not legible to collaborators: %#v", run)
 	}
 }

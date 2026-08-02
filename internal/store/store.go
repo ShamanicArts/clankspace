@@ -355,7 +355,7 @@ func (s *Store) StartRun(ctx context.Context, principal domain.Principal, key st
 			runType = "interactive"
 		}
 		profile, _ := json.Marshal(in.InstructionProfile)
-		r := domain.Run{ID: newID("run"), ProjectID: in.ProjectID, AgentID: agentID, PrincipalID: principal.ID, Harness: in.Harness, HarnessVersion: in.HarnessVersion, Provider: in.Provider, Model: in.Model, Reasoning: in.Reasoning, Role: role, ParentRunID: in.ParentRunID, RootRunID: in.RootRunID, RunType: runType, PermissionMode: in.PermissionMode, InteractionMode: in.InteractionMode, RepositoryID: in.RepositoryID, Branch: in.Branch, Worktree: in.Worktree, BaseSHA: in.BaseSHA, HeadSHA: in.HeadSHA, Objective: in.Objective, InstructionProfile: in.InstructionProfile, StartedAt: t}
+		r := domain.Run{ID: newID("run"), ProjectID: in.ProjectID, AgentID: agentID, AgentName: agentName, PrincipalID: principal.ID, PrincipalName: principal.DisplayName, Harness: in.Harness, HarnessVersion: in.HarnessVersion, Provider: in.Provider, Model: in.Model, Reasoning: in.Reasoning, Role: role, ParentRunID: in.ParentRunID, RootRunID: in.RootRunID, RunType: runType, PermissionMode: in.PermissionMode, InteractionMode: in.InteractionMode, RepositoryID: in.RepositoryID, Branch: in.Branch, Worktree: in.Worktree, BaseSHA: in.BaseSHA, HeadSHA: in.HeadSHA, Objective: in.Objective, InstructionProfile: in.InstructionProfile, StartedAt: t}
 		_, err = tx.ExecContext(ctx, `INSERT INTO runs(id,project_id,agent_id,principal_id,harness,harness_version,provider,model,reasoning,role,parent_run_id,root_run_id,run_type,permission_mode,interaction_mode,repository_id,branch,worktree,base_sha,head_sha,objective,instruction_profile_json,started_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, r.ID, r.ProjectID, r.AgentID, r.PrincipalID, r.Harness, r.HarnessVersion, r.Provider, r.Model, r.Reasoning, r.Role, nullable(r.ParentRunID), nullable(r.RootRunID), r.RunType, r.PermissionMode, r.InteractionMode, nullable(r.RepositoryID), r.Branch, r.Worktree, r.BaseSHA, r.HeadSHA, r.Objective, string(profile), ts(t))
 		return r.ID, "run.started", r, err
 	})
@@ -392,12 +392,12 @@ func (s *Store) EndRun(ctx context.Context, principal domain.Principal, key, run
 	return r, receipt, err
 }
 
-const runSelect = `SELECT r.id,r.project_id,r.agent_id,r.principal_id,r.harness,r.harness_version,r.provider,r.model,r.reasoning,r.role,COALESCE(r.parent_run_id,''),COALESCE(r.root_run_id,''),r.run_type,r.permission_mode,r.interaction_mode,COALESCE(r.repository_id,''),r.branch,r.worktree,r.base_sha,r.head_sha,r.objective,r.instruction_profile_json,r.started_at,COALESCE(r.ended_at,''),r.outcome,r.verification FROM runs r`
+const runSelect = `SELECT r.id,r.project_id,r.agent_id,a.name,r.principal_id,p.display_name,r.harness,r.harness_version,r.provider,r.model,r.reasoning,r.role,COALESCE(r.parent_run_id,''),COALESCE(r.root_run_id,''),r.run_type,r.permission_mode,r.interaction_mode,COALESCE(r.repository_id,''),r.branch,r.worktree,r.base_sha,r.head_sha,r.objective,r.instruction_profile_json,r.started_at,COALESCE(r.ended_at,''),r.outcome,r.verification FROM runs r JOIN agents a ON a.id=r.agent_id JOIN principals p ON p.id=r.principal_id`
 
 func scanRun(row *sql.Row) (domain.Run, error) {
 	var r domain.Run
 	var profile, started, ended string
-	err := row.Scan(&r.ID, &r.ProjectID, &r.AgentID, &r.PrincipalID, &r.Harness, &r.HarnessVersion, &r.Provider, &r.Model, &r.Reasoning, &r.Role, &r.ParentRunID, &r.RootRunID, &r.RunType, &r.PermissionMode, &r.InteractionMode, &r.RepositoryID, &r.Branch, &r.Worktree, &r.BaseSHA, &r.HeadSHA, &r.Objective, &profile, &started, &ended, &r.Outcome, &r.Verification)
+	err := row.Scan(&r.ID, &r.ProjectID, &r.AgentID, &r.AgentName, &r.PrincipalID, &r.PrincipalName, &r.Harness, &r.HarnessVersion, &r.Provider, &r.Model, &r.Reasoning, &r.Role, &r.ParentRunID, &r.RootRunID, &r.RunType, &r.PermissionMode, &r.InteractionMode, &r.RepositoryID, &r.Branch, &r.Worktree, &r.BaseSHA, &r.HeadSHA, &r.Objective, &profile, &started, &ended, &r.Outcome, &r.Verification)
 	if err != nil {
 		return r, err
 	}

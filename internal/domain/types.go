@@ -38,7 +38,9 @@ type Run struct {
 	ID                 string     `json:"id"`
 	ProjectID          string     `json:"projectId"`
 	AgentID            string     `json:"agentId"`
+	AgentName          string     `json:"agentName"`
 	PrincipalID        string     `json:"principalId"`
+	PrincipalName      string     `json:"principalName"`
 	Harness            string     `json:"harness,omitempty"`
 	HarnessVersion     string     `json:"harnessVersion,omitempty"`
 	Provider           string     `json:"provider,omitempty"`
