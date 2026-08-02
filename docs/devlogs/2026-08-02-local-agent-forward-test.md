@@ -44,6 +44,8 @@ The agent:
 
 The RelayDesk worktree remained clean at `978e43d`. A separate reviewer run appended the material verification checkpoint without storing the fake conversation.
 
+The actual child session was recovered and preserved after the initial verification summary proved insufficient. The unmodified local rollout, instruction/context inventory, observable reasoning summaries, and committed tool trace retain the real runtime context, run-registration correction, ClankSpace responses, actions, and final answer. See [`evidence/forward-tests/relaydesk-conflict/README.md`](../../evidence/forward-tests/relaydesk-conflict/README.md).
+
 ## Result
 
 Pass. The useful coordination pause occurred inside the coding-agent conversation. The dashboard remained a read-only inspection of the resulting ten-entry project log.
