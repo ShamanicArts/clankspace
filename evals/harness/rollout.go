@@ -195,13 +195,7 @@ func RunRollout(ctx context.Context, options RolloutOptions) (RolloutResult, err
 }
 
 func runCodexTurn(ctx context.Context, options RolloutOptions, prepared PreparedWorld, threadID, prompt, tracePath, stderrPath, responsePath string) (string, error) {
-	effort := fmt.Sprintf("model_reasoning_effort=%q", options.Reasoning)
-	args := []string{"exec"}
-	if threadID == "" {
-		args = append(args, "--ignore-user-config", "--model", options.Model, "--config", effort, "--sandbox", "workspace-write", "--cd", prepared.RepositoryPath, "--json", "--color", "never", "--output-last-message", responsePath, prompt)
-	} else {
-		args = append(args, "resume", "--ignore-user-config", "--model", options.Model, "--config", effort, "--json", "--output-last-message", responsePath, threadID, prompt)
-	}
+	args := codexTurnArgs(options, prepared, threadID, prompt, responsePath)
 	cmd := exec.CommandContext(ctx, options.CodexBin, args...)
 	cmd.Dir = prepared.RepositoryPath
 	cmd.Env = rolloutEnvironment(prepared.CredentialFile)
@@ -218,6 +212,18 @@ func runCodexTurn(ctx context.Context, options RolloutOptions, prepared Prepared
 		return "", fmt.Errorf("codex exited: %w: %s", err, strings.TrimSpace(stderr.String()))
 	}
 	return threadIDFromTrace(stdout.Bytes()), nil
+}
+
+func codexTurnArgs(options RolloutOptions, prepared PreparedWorld, threadID, prompt, responsePath string) []string {
+	effort := fmt.Sprintf("model_reasoning_effort=%q", options.Reasoning)
+	sandbox := `sandbox_mode="workspace-write"`
+	args := []string{"exec"}
+	if threadID == "" {
+		args = append(args, "--ignore-user-config", "--model", options.Model, "--config", effort, "--config", sandbox, "--sandbox", "workspace-write", "--cd", prepared.RepositoryPath, "--json", "--color", "never", "--output-last-message", responsePath, prompt)
+	} else {
+		args = append(args, "resume", "--ignore-user-config", "--model", options.Model, "--config", effort, "--config", sandbox, "--json", "--output-last-message", responsePath, threadID, prompt)
+	}
+	return args
 }
 
 func rolloutEnvironment(credentialsFile string) []string {

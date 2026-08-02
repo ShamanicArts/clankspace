@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/ShamanicArts/clankspace/internal/domain"
@@ -13,6 +14,20 @@ func TestThreadIDFromTrace(t *testing.T) {
 	trace := []byte("{\"type\":\"thread.started\",\"thread_id\":\"thread-123\"}\n{\"type\":\"turn.started\"}\n")
 	if got := threadIDFromTrace(trace); got != "thread-123" {
 		t.Fatalf("thread id = %q", got)
+	}
+}
+
+func TestCodexResumePreservesWorkspaceWriteSandbox(t *testing.T) {
+	args := codexTurnArgs(
+		RolloutOptions{Model: "gpt-5.6-luna", Reasoning: "high"},
+		PreparedWorld{RepositoryPath: "/tmp/world"},
+		"thread-123", "finish the task", "/tmp/response.txt",
+	)
+	if !slices.Contains(args, `sandbox_mode="workspace-write"`) {
+		t.Fatalf("resume args lost workspace-write sandbox: %#v", args)
+	}
+	if args[0] != "exec" || args[1] != "resume" {
+		t.Fatalf("unexpected resume command: %#v", args)
 	}
 }
 
