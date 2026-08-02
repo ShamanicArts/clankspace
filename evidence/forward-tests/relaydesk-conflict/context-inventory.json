@@ -1,50 +1,56 @@
 {
-  "sessionId": "019fc2e8-787d-75c0-847a-22c98cc0a458",
-  "startedAt": "2026-08-02T14:37:23.114Z",
-  "completedAt": "2026-08-02T14:39:15.398Z",
-  "originator": "shuv2code_desktop",
-  "runtime": {
+  "session": {
+    "id": "019fc2fe-9e1c-7041-bb8d-5fb8a30f71ad",
+    "originator": "codex_exec",
+    "source": "exec",
+    "cwd": "/home/shamanic/dev/relaydesk",
+    "cliVersion": "0.146.0",
+    "provider": "openai",
     "model": "gpt-5.6-sol",
     "reasoningEffort": "high",
-    "personality": "pragmatic",
-    "multiAgentVersion": "v2",
-    "contextCompositionHash": "3000",
-    "approvalPolicy": "never"
+    "turnCount": 3
   },
-  "initialEnvironment": {
-    "cwd": "/home/shamanic/Projects/shuv2code",
-    "workspaceRoots": [
-      "/home/shamanic/Projects/shuv2code"
-    ],
-    "date": "2026-08-02",
-    "timezone": "Europe/London"
+  "messageCounts": {
+    "developer": 3,
+    "userInstructionEnvelope": 1,
+    "actualUserTurns": 3,
+    "observableAssistantMessages": 13,
+    "observableReasoningSummaries": 95,
+    "responseReasoningRecords": 64,
+    "toolCalls": 50,
+    "toolOutputs": 50
   },
   "instructionContext": {
-    "developerMessageCount": 3,
-    "developerTextSha256": "2e4a0a3a5dc4e9f2a4612ee822368b939f68d6e50e5a3bfec29bdca4937da9ae",
-    "userEnvelopeMessageCount": 1,
-    "taskTransport": "encrypted inter-agent payload",
-    "relayDeskAgentsMdSha256AtBaseline": "78d3156afa4af894939fbb72fbe2de0ca2142c0908b248f756782e39d518f52d",
-    "clankSpaceSkillSha256AtBaseline": "2912f5b0f8e8fb52be96ad418220ecebfa997c21ee0dc7380589e5d6009b37d6"
-  },
-  "reasoningContext": {
-    "encryptedReasoningRecordCount": 17,
-    "observableReasoningSummaryCount": 16,
-    "encryptedRecordsPreservedInRawRollout": true,
-    "observableSummaries": "reasoning-summaries.jsonl"
+    "developerMessagesSha256": "3727c7b76327f9903c8378f7ea40ab5db3af64a8a4474731b6bbf21f847c4717",
+    "allRoleUserMessagesSha256": "8aad97659015eecc65055aa697ebfc4bab63e964cef330b2e88798152c47b9bc",
+    "relayDeskAgentsMdSha256": "78d3156afa4af894939fbb72fbe2de0ca2142c0908b248f756782e39d518f52d",
+    "clankSpaceSkillSha256": "8209200efbb3a05fbb9134fb0e446b54de57a4447eb3fb00d5d19c4d0c23b7ea"
   },
   "artifacts": {
+    "conversation": {
+      "path": "conversation.md",
+      "sha256": "78af1edb25dc09a44b25a5bca274a96f7548cd812408a2b652ca911c5901030d"
+    },
     "observableTrace": {
       "path": "observable-trace.jsonl",
-      "sha256": "58390a3f6e1a8b37f550335f74e1782014b034f384480858a73824353de710a2"
+      "sha256": "2ccde21474c2198c5004f1bbdc635a436d38cbd0f1e7047f5683a808237365cb"
     },
     "reasoningSummaries": {
       "path": "reasoning-summaries.jsonl",
-      "sha256": "ae310c14d21677715cb8825cc3b0fde47c4628efac4aad799af57b29a254c900"
+      "sha256": "181d6c3b7413507f1d295c284b7b904873c2145f9fb3b8cbfc77f96687ba55ef"
     },
-    "rawRollout": {
-      "localPath": "/home/shamanic/.local/share/clankspace-local/evidence/relaydesk-conflict/rollout.raw.jsonl",
-      "sha256": "e3690e2cba679d9d891ff7273d0543af18e7fa88dcd00cc427fea0852ddd2293"
+    "nativeRollout": {
+      "sha256": "c5edc85088b26435a5e266d2f8bb8c0b8419f9eea0812af41b99cac61ac20151",
+      "projectLocalPath": "/home/shamanic/dev/relaydesk/.clankspace/evidence/relaydesk-multiturn.raw.jsonl",
+      "durableLocalPath": "/home/shamanic/.local/share/clankspace-local/evidence/relaydesk-multiturn/rollout.raw.jsonl",
+      "committed": false
     }
+  },
+  "validity": {
+    "multiTurn": true,
+    "actualRoleTaggedUserTurns": true,
+    "nativeProjectRoot": true,
+    "priorDesignConversationInherited": false,
+    "conversationReconstructed": false
   }
 }

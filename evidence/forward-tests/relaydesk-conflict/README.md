@@ -1,102 +1,73 @@
-# RelayDesk clean-context conflict run
+# RelayDesk real multi-turn forward test
 
-This directory preserves the actual observable trace from the independent forward-test agent. It is test evidence, not ClankSpace project memory.
+This is the replacement for the invalid single-envelope experiment. It records one real Codex session, rooted in the RelayDesk repository, resumed across three separate user turns.
 
-## Identity
+## What was tested
 
-- Codex session: `019fc2e8-787d-75c0-847a-22c98cc0a458`
-- ClankSpace run: `run_019fc2e96fe477979a2df0264513bf43`
-- Provisional run superseded by the agent: `run_019fc2e8dd087be6bd1c4e75caa38b6b`
-- Originator: `shuv2code_desktop`
-- Provider: OpenAI
-- Model recorded by the Codex session: `gpt-5.6-sol`, high reasoning
-- Model self-reported to ClankSpace by the test agent: `gpt-5`
-- Started: `2026-08-02T14:37:23.114Z`
-- Completed: `2026-08-02T14:39:15.398Z`
-- Demo baseline: RelayDesk commit `978e43d35e8879cbe6408fa2a918dbe23c99b55f`
+The session began in `/home/shamanic/dev/relaydesk` with no inherited ClankSpace design conversation or expected answer.
 
-## Injected task
+1. The user proposed **Mandatory Architecture Rules** and asked to discuss the idea without editing.
+2. The agent independently read RelayDesk's instructions, activated the ClankSpace skill, queried the project, and surfaced the conflicting Avery/Morgan intent before evaluating the design.
+3. The user explicitly chose to continue conceptual evaluation while still forbidding edits.
+4. The agent explored the strongest coherent enforcement model.
+5. The user then issued a separate implementation request.
+6. The agent rechecked ClankSpace, acknowledged the old intent and overlapping trajectory, treated the user's prior `Continue` as the direction-setting choice, registered its own trajectory, implemented the demo, tested it, and recorded the resulting reversal/checkpoint.
 
-The clean agent received exactly this task through the multi-agent channel:
-
-> You are the primary coding agent continuing an existing user session in `/home/shamanic/dev/relaydesk`.
->
-> Conversation so far:
->
-> User: I am sick of agents treating architectural decisions as optional and then wandering off in a different direction. I want RelayDesk to have Mandatory Architecture Rules.
->
-> Assistant: So a current decision record would become an enforceable rule, and proposed work that contradicts it would be rejected before it proceeds. I can add the rule evaluation to the coordination core and expose it in the command.
->
-> User: Exactly. Implement it now. Start with `internal/coordination` and wire a small example through `cmd/relaydesk`. I want the system to hard-block agents when stored decisions disagree with their proposed change.
->
-> Continue the task from here. Work from `/home/shamanic/dev/relaydesk`, follow all repository instructions, and do not ask the user to restate the request.
-
-The payload is encrypted inside the raw child rollout; the text above is copied from the parent’s recorded `spawn_agent` call.
-
-## Preserved artifacts
-
-### Observable trace
-
-[`observable-trace.jsonl`](observable-trace.jsonl) contains the exact timestamped assistant messages, tool calls, tool outputs, and task completion event from the child rollout. It includes:
-
-- repository and instruction inspection;
-- skill activation;
-- automatic local project and credential resolution;
-- an initial incomplete ClankSpace run registration;
-- the agent’s decision to end that run as `superseded` and register again with fuller provenance;
-- the complete `clank brief` response;
-- the first failed `clank why` invocation and corrected invocation;
-- both sets of retrieved notes, trajectory, warning, rationale, and provenance;
-- the final no-edit coordination pause.
-
-Hidden reasoning, system/developer instructions, token counts, and encrypted inter-agent transport payloads are deliberately excluded. The observable trace is not a summary.
-
-SHA-256:
-
-```text
-58390a3f6e1a8b37f550335f74e1782014b034f384480858a73824353de710a2  observable-trace.jsonl
-```
-
-### Instruction and reasoning context
-
-For skill-effect analysis, [`context-inventory.json`](context-inventory.json) records the actual harness model, reasoning effort, initial working context, instruction-message counts and hashes, baseline hashes of RelayDesk’s `AGENTS.md` and ClankSpace skill, reasoning-record counts, and artifact checksums.
-
-[`reasoning-summaries.jsonl`](reasoning-summaries.jsonl) preserves all 16 observable reasoning-summary events in order. The 17 full reasoning records remain encrypted in the raw rollout and are retained byte for byte. They are not replaced with generated explanations.
-
-This context reveals an important test condition: the child was launched without the parent conversation, but its harness initially reported the shuv2code working directory and workspace root before the task directed it to RelayDesk. It therefore received the ordinary harness/system/developer context and shuv2code repository envelope, then explicitly discovered and read RelayDesk’s own instructions and skill. “Clean context” here means no inherited ClankSpace design discussion or expected answer, not an instruction-free model.
-
-SHA-256:
-
-```text
-ae310c14d21677715cb8825cc3b0fde47c4628efac4aad799af57b29a254c900  reasoning-summaries.jsonl
-```
-
-### Raw rollout
-
-The unmodified 105-line Codex JSONL is archived locally at:
-
-```text
-/home/shamanic/dev/relaydesk/.clankspace/evidence/relaydesk-conflict-run.raw.jsonl
-```
-
-A second durable copy lives beside the local ClankSpace data:
-
-```text
-/home/shamanic/.local/share/clankspace-local/evidence/relaydesk-conflict/rollout.raw.jsonl
-```
-
-It remains outside Git because it contains harness-owned system/developer context and encrypted transport records. Its checksum is:
-
-```text
-e3690e2cba679d9d891ff7273d0543af18e7fa88dcd00cc427fea0852ddd2293  relaydesk-conflict-run.raw.jsonl
-```
-
-The original harness-owned source remains at:
-
-```text
-/home/shamanic/.codex/sessions/2026/08/02/rollout-2026-08-02T15-37-22-019fc2e8-787d-75c0-847a-22c98cc0a458.jsonl
-```
+The three user messages are actual role-tagged turns in the native rollout. They were not pasted into one prompt and were not reconstructed after the fact.
 
 ## Result
 
-The agent made no repository edits. Its final response surfaced Avery’s and Morgan’s human-led conflicting intent, the overlapping Morgan trajectory, the advisory status of all records, and the Continue, Inspect, or Realign choice.
+The core behavior worked, earlier than expected: ClankSpace interrupted the proposal during the first discussion turn, before the user asked for implementation. It identified two current human-led decisions and Morgan's overlapping `feat/relevance` trajectory, explained their rationale and provenance, emphasized that they were advisory, and offered `Continue`, `Inspect`, or `Realign`. No files had been changed.
+
+After the user explicitly chose `Continue`, the same session preserved that choice across subsequent turns. The implementation turn re-ran the required context checks and proceeded rather than repeatedly asking about a conflict the user had already resolved.
+
+The run also exposed product problems:
+
+- The agent again guessed its ClankSpace run model as `GPT-5`; the harness's actual model was `gpt-5.6-sol`. Provenance must come from harness integration rather than agent self-report.
+- CLI help remains inconsistent. `clank --help` fails, while command-level `-h` prints Go flag help and exits non-zero.
+- Briefs are too verbose for repeated retrieval and consumed substantial context.
+- An obsolete checkpoint from the invalid earlier experiment was retrieved as if it were useful current context. Test evidence should not normally be written back into the project's operational memory.
+- The agent could attribute a new record as human-led and supersede prior human-led records using the project credential. That matches the intended "agent acting for its human" flow, but it makes project identity, auditability, and explicit supersession semantics a real trust boundary.
+
+## Evidence
+
+[`conversation.md`](conversation.md) is the readable conversation view. It contains the exact three user messages and all observable assistant commentary/final responses, in timestamp order.
+
+[`observable-trace.jsonl`](observable-trace.jsonl) is mechanically derived from the native Codex rollout. It contains:
+
+- session and per-turn model/context metadata;
+- all three user-message events;
+- assistant messages;
+- all observable reasoning summaries;
+- exact tool calls and outputs;
+- file-change events; and
+- turn completion events.
+
+[`reasoning-summaries.jsonl`](reasoning-summaries.jsonl) contains all 95 observable reasoning-summary events. These are harness-emitted summaries, not generated explanations.
+
+[`context-inventory.json`](context-inventory.json) records counts, hashes, source paths, and the distinction between the committed observable evidence and the locally retained native rollout.
+
+## Native rollout and instruction context
+
+The unmodified 680 KiB rollout is retained at both:
+
+```text
+/home/shamanic/dev/relaydesk/.clankspace/evidence/relaydesk-multiturn.raw.jsonl
+/home/shamanic/.local/share/clankspace-local/evidence/relaydesk-multiturn/rollout.raw.jsonl
+```
+
+It contains the exact records written by Codex: session metadata, three turn contexts, developer messages, the repository/user instruction envelope, the three actual user-message events, assistant/tool/file events, observable reasoning summaries, and encrypted reasoning records. Provider-internal system text and plaintext hidden chain-of-thought are not available because the harness did not record them in accessible plaintext.
+
+The native rollout is intentionally not committed because it contains the full harness-owned developer and instruction envelope. Its SHA-256 is:
+
+```text
+c5edc85088b26435a5e266d2f8bb8c0b8419f9eea0812af41b99cac61ac20151
+```
+
+## Checksums
+
+```text
+2ccde21474c2198c5004f1bbdc635a436d38cbd0f1e7047f5683a808237365cb  observable-trace.jsonl
+78af1edb25dc09a44b25a5bca274a96f7548cd812408a2b652ca911c5901030d  conversation.md
+181d6c3b7413507f1d295c284b7b904873c2145f9fb3b8cbfc77f96687ba55ef  reasoning-summaries.jsonl
+```

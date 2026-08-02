@@ -1,0 +1,50 @@
+{
+  "sessionId": "019fc2e8-787d-75c0-847a-22c98cc0a458",
+  "startedAt": "2026-08-02T14:37:23.114Z",
+  "completedAt": "2026-08-02T14:39:15.398Z",
+  "originator": "shuv2code_desktop",
+  "runtime": {
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "high",
+    "personality": "pragmatic",
+    "multiAgentVersion": "v2",
+    "contextCompositionHash": "3000",
+    "approvalPolicy": "never"
+  },
+  "initialEnvironment": {
+    "cwd": "/home/shamanic/Projects/shuv2code",
+    "workspaceRoots": [
+      "/home/shamanic/Projects/shuv2code"
+    ],
+    "date": "2026-08-02",
+    "timezone": "Europe/London"
+  },
+  "instructionContext": {
+    "developerMessageCount": 3,
+    "developerTextSha256": "2e4a0a3a5dc4e9f2a4612ee822368b939f68d6e50e5a3bfec29bdca4937da9ae",
+    "userEnvelopeMessageCount": 1,
+    "taskTransport": "encrypted inter-agent payload",
+    "relayDeskAgentsMdSha256AtBaseline": "78d3156afa4af894939fbb72fbe2de0ca2142c0908b248f756782e39d518f52d",
+    "clankSpaceSkillSha256AtBaseline": "2912f5b0f8e8fb52be96ad418220ecebfa997c21ee0dc7380589e5d6009b37d6"
+  },
+  "reasoningContext": {
+    "encryptedReasoningRecordCount": 17,
+    "observableReasoningSummaryCount": 16,
+    "encryptedRecordsPreservedInRawRollout": true,
+    "observableSummaries": "reasoning-summaries.jsonl"
+  },
+  "artifacts": {
+    "observableTrace": {
+      "path": "observable-trace.jsonl",
+      "sha256": "58390a3f6e1a8b37f550335f74e1782014b034f384480858a73824353de710a2"
+    },
+    "reasoningSummaries": {
+      "path": "reasoning-summaries.jsonl",
+      "sha256": "ae310c14d21677715cb8825cc3b0fde47c4628efac4aad799af57b29a254c900"
+    },
+    "rawRollout": {
+      "localPath": "/home/shamanic/.local/share/clankspace-local/evidence/relaydesk-conflict/rollout.raw.jsonl",
+      "sha256": "e3690e2cba679d9d891ff7273d0543af18e7fa88dcd00cc427fea0852ddd2293"
+    }
+  }
+}

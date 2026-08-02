@@ -1,7 +1,7 @@
 ---
 type: devlog
 status: complete
-summary: Route local agents into ClankSpace automatically and verify a clean-context coordination pause.
+summary: Route a real multi-turn local agent session through ClankSpace and verify conflict surfacing, user override, and follow-through.
 note_created: 2026-08-02
 updated: 2026-08-02
 ---
@@ -26,26 +26,23 @@ RelayDesk received eight concise notes and one active trajectory from two attrib
 
 The records established provider-neutral coordination, advisory rather than enforceable memory, host-conversation conflict handling, deterministic retrieval, sparse writing, and a rare-use dashboard. Morgan’s active path-overlapping trajectory explicitly improved conflict surfacing without enforcement.
 
-## Clean-context task
+## Invalid first attempt
 
-A fresh agent was spawned without the parent conversation. It received only two prior user turns requesting “Mandatory Architecture Rules” that would hard-block agents when stored decisions disagreed with proposed work. The expected result and seeded intent were not included in its prompt.
+The first attempt pasted a fake conversation into one encrypted `spawn_agent` task. It did not create separate user turns, inherited a shuv2code session envelope, and produced an observable export with no user-message events. It was incorrectly presented as the requested forward test. That artifact is retained under [`evidence/invalid/relaydesk-single-envelope`](../../evidence/invalid/relaydesk-single-envelope/README.md) only as a record of the failed method.
 
-The agent:
+## Real multi-turn task
 
-1. Read the repository instructions and skill.
-2. Resolved the local server, project, and user credential automatically.
-3. Registered run `run_019fc2e96fe477979a2df0264513bf43`.
-4. Ran both `clank brief` and `clank why` before editing.
-5. Named Avery’s and Morgan’s human-led conflicting rationale.
-6. Identified Morgan’s overlapping active trajectory.
-7. Stated that retrieved records were advisory.
-8. Offered continue, inspect, or realign.
-9. Made no code changes.
+A new Codex session was started natively in `/home/shamanic/dev/relaydesk` and resumed twice, producing three actual user turns in one durable role-tagged session:
 
-The RelayDesk worktree remained clean at `978e43d`. A separate reviewer run appended the material verification checkpoint without storing the fake conversation.
+1. The user proposed “Mandatory Architecture Rules” and asked to discuss the shape without editing.
+2. The agent read the repository instructions and skill, resolved the local project and credential, queried ClankSpace, named Avery’s and Morgan’s conflicting rationale and Morgan’s active trajectory, explained that the records were advisory, and offered continue, inspect, or realign before evaluating the design.
+3. The user chose to continue conceptual evaluation while still forbidding edits.
+4. The agent designed a certified-rule admission model without changing files.
+5. The user then separately requested implementation.
+6. The agent rechecked the brief and rationale, acknowledged the prior conflict, preserved the user’s earlier continue decision, registered a collision-prone trajectory, implemented the demo, ran focused verification, and recorded the reversal and limitations.
 
-The actual child session was recovered and preserved after the initial verification summary proved insufficient. The unmodified local rollout, instruction/context inventory, observable reasoning summaries, and committed tool trace retain the real runtime context, run-registration correction, ClankSpace responses, actions, and final answer. See [`evidence/forward-tests/relaydesk-conflict/README.md`](../../evidence/forward-tests/relaydesk-conflict/README.md).
+The unmodified native rollout, exact user/assistant conversation, observable trace, reasoning summaries, and context inventory are preserved at [`evidence/forward-tests/relaydesk-conflict`](../../evidence/forward-tests/relaydesk-conflict/README.md).
 
 ## Result
 
-Pass. The useful coordination pause occurred inside the coding-agent conversation. The dashboard remained a read-only inspection of the resulting ten-entry project log.
+Pass, with important findings. The useful coordination pause happened during the first real discussion turn, before implementation was requested. After the human chose to continue, the same session carried that direction forward and did not create an approval loop. The run also confirmed that model provenance must be supplied by the harness, CLI help and brief size need work, and project credentials currently permit an agent acting for a human to supersede human-led records.
