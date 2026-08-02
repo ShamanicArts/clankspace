@@ -7,7 +7,7 @@ export const meta = {
   ],
 }
 
-const WORKFORCE_ID = 'clankspace-blueprints-v3:codex/gpt-5.6-luna:literal-high-max:neutral-cwd'
+const WORKFORCE_ID = 'clankspace-blueprints-v4:codex/gpt-5.6-luna:literal-high-max:neutral-cwd'
 const AGENT_WORKSPACE = '/home/exedev/clankspace-blueprint-sandbox'
 const WORKFORCE = {
   architect: { provider: 'codex', model: 'gpt-5.6-luna', effort: 'high', sandbox: 'read-only', writeAuthority: 'none' },
@@ -23,6 +23,18 @@ if (args?.agentWorkspace !== AGENT_WORKSPACE) {
 if (!Array.isArray(args?.curriculumCells) || args.curriculumCells.length === 0) {
   throw new Error('args.curriculumCells must be a non-empty array fixed by the curriculum controller')
 }
+for (const cell of args.curriculumCells) {
+  const constraints = cell?.constraints
+  if (!constraints || !Number.isInteger(constraints.priorUserTurns) ||
+      !Number.isInteger(constraints.minimumCommits) ||
+      !Number.isInteger(constraints.relevantRecords) ||
+      !Number.isInteger(constraints.distractorRecords) ||
+      !Number.isInteger(constraints.relevantTrajectories) ||
+      !Number.isInteger(constraints.distractorTrajectories) ||
+      typeof constraints.shouldCheckpoint !== 'boolean') {
+    throw new Error(`Incomplete fixed constraints for curriculum cell ${cell?.id || '<unknown>'}`)
+  }
+}
 
 log(
   `WORKFORCE ${WORKFORCE_ID}: architect=${WORKFORCE.architect.provider}/${WORKFORCE.architect.model}, ` +
@@ -33,18 +45,20 @@ log(
 )
 
 const stringArray = { type: 'array', items: { type: 'string' } }
+const actorKey = { type: 'string', pattern: '^[a-z][a-z0-9-]{1,39}$' }
+const fixtureId = { type: 'string', pattern: '^[a-z][a-z0-9-]{1,79}$' }
 const actorSchema = {
   type: 'object',
   additionalProperties: false,
   required: ['key', 'principalName', 'agentName', 'harness', 'provider', 'model', 'reasoning', 'role'],
   properties: {
-    key: { type: 'string' },
+    key: actorKey,
     principalName: { type: 'string' },
     agentName: { type: 'string' },
     harness: { type: 'string' },
     provider: { type: 'string' },
     model: { type: 'string' },
-    reasoning: { type: 'string' },
+    reasoning: { type: 'string', enum: ['none', 'low', 'medium', 'high', 'xhigh', 'max', 'unknown'] },
     role: { type: 'string', enum: ['primary', 'subagent', 'reviewer', 'automation', 'integration'] },
   },
 }
@@ -56,8 +70,8 @@ const recordPlanSchema = {
     'status', 'ledBy', 'directionBasis', 'paths', 'ageMinutes',
   ],
   properties: {
-    id: { type: 'string' },
-    actorKey: { type: 'string' },
+    id: fixtureId,
+    actorKey,
     relevance: { type: 'string', enum: ['relevant', 'distractor'] },
     kind: { type: 'string', enum: ['intent', 'decision', 'understanding', 'observation', 'checkpoint'] },
     titleIntent: { type: 'string' },
@@ -81,8 +95,8 @@ const trajectoryPlanSchema = {
   additionalProperties: false,
   required: ['id', 'actorKey', 'relevance', 'objective', 'rationale', 'status', 'paths', 'branch', 'ageMinutes'],
   properties: {
-    id: { type: 'string' },
-    actorKey: { type: 'string' },
+    id: fixtureId,
+    actorKey,
     relevance: { type: 'string', enum: ['relevant', 'distractor'] },
     objective: { type: 'string' },
     rationale: { type: 'string' },
@@ -120,7 +134,7 @@ const BLUEPRINT_SCHEMA = {
     category: { type: 'string' },
     repositoryProfile: { type: 'string', enum: ['fake', 'real-snapshot'] },
     snapshotId: { type: 'string' },
-    actors: { type: 'array', items: actorSchema },
+    actors: { type: 'array', minItems: 2, maxItems: 5, items: actorSchema },
     projectPlan: {
       type: 'object',
       additionalProperties: false,
@@ -162,7 +176,7 @@ const BLUEPRINT_SCHEMA = {
         priorUserIntents: stringArray,
         finalTaskObjective: { type: 'string' },
         finalUserRequest: { type: 'string' },
-        taskActorKey: { type: 'string' },
+        taskActorKey: actorKey,
         taskPaths: stringArray,
         noAssistantTurns: { type: 'boolean' },
       },
@@ -256,6 +270,9 @@ function controllerIssues(blueprint, cell) {
   if (blueprint.fixedOracle.expectedBehavior !== cell.expectedBehavior) {
     fail('oracle-drift', 'Blueprint expectedBehavior must exactly match the fixed cell.')
   }
+  if (blueprint.fixedOracle.shouldCheckpoint !== cell.constraints.shouldCheckpoint) {
+    fail('checkpoint-oracle-drift', 'Blueprint shouldCheckpoint must exactly match the fixed cell.')
+  }
   if (!sameMembers(blueprint.curriculumAxes, cell.axes)) {
     fail('curriculum-axis-drift', 'Blueprint curriculumAxes must exactly match the fixed cell axes.')
   }
@@ -268,9 +285,9 @@ function controllerIssues(blueprint, cell) {
     if (blueprint.snapshotId !== '' || blueprint.repositoryPlan.overlayOnly) {
       fail('fake-repository-boundary', 'Fake repositories require an empty snapshotId and overlayOnly=false.')
     }
-    if (blueprint.repositoryPlan.minimumCommits < cell.constraints.minimumCommits ||
-        blueprint.repositoryPlan.commitPlans.length < cell.constraints.minimumCommits) {
-      fail('insufficient-commit-plan', 'Fake repository commit plan does not meet the fixed minimum.')
+    if (blueprint.repositoryPlan.minimumCommits !== cell.constraints.minimumCommits ||
+        blueprint.repositoryPlan.commitPlans.length !== cell.constraints.minimumCommits) {
+      fail('commit-count-drift', 'Fake repository minimumCommits and commit plan count must exactly match the fixed cell.')
     }
     const projectPaths = new Set(blueprint.projectPlan.paths)
     const fixturePaths = [
@@ -284,8 +301,8 @@ function controllerIssues(blueprint, cell) {
       fail('fake-project-boundary', 'Every fake-world repository, record, trajectory, and task path must be declared in projectPlan.paths.')
     }
   } else if (blueprint.snapshotId !== cell.snapshotId || blueprint.repositoryPlan.overlayOnly !== true ||
-             blueprint.repositoryPlan.commitPlans.length !== 0) {
-    fail('snapshot-boundary', 'Real-snapshot blueprints must preserve snapshotId, be overlay-only, and plan no commits.')
+             blueprint.repositoryPlan.minimumCommits !== 0 || blueprint.repositoryPlan.commitPlans.length !== 0) {
+    fail('snapshot-boundary', 'Real-snapshot blueprints must preserve snapshotId, be overlay-only, set minimumCommits=0, and plan no commits.')
   } else {
     const allowedPaths = new Set(cell.constraints.allowedSnapshotPaths || [])
     const claimedPaths = [
@@ -309,6 +326,11 @@ function controllerIssues(blueprint, cell) {
     fail('record-oracle-cross-reference', 'Oracle relevantRecordIds must exactly name all and only relevant record plans.')
   }
   const relevantTrajectories = blueprint.trajectoryPlans.filter(trajectory => trajectory.relevance === 'relevant')
+  const distractorTrajectories = blueprint.trajectoryPlans.filter(trajectory => trajectory.relevance === 'distractor')
+  if (relevantTrajectories.length !== cell.constraints.relevantTrajectories ||
+      distractorTrajectories.length !== cell.constraints.distractorTrajectories) {
+    fail('trajectory-count-drift', 'Relevant and distractor trajectory counts must exactly match the fixed cell.')
+  }
   if (!sameMembers(blueprint.fixedOracle.relevantTrajectoryIds, relevantTrajectories.map(trajectory => trajectory.id))) {
     fail('trajectory-oracle-cross-reference', 'Oracle relevantTrajectoryIds must exactly name all and only relevant trajectory plans.')
   }
@@ -334,6 +356,9 @@ function controllerIssues(blueprint, cell) {
     }
   }
   const actorKeys = new Set(blueprint.actors.map(actor => actor.key))
+  if (actorKeys.size !== blueprint.actors.length) {
+    fail('duplicate-actor-key', 'Every actor key must be unique.')
+  }
   const referencedActorKeys = [
     blueprint.conversationPlan.taskActorKey,
     ...blueprint.recordPlans.map(record => record.actorKey),
@@ -341,6 +366,13 @@ function controllerIssues(blueprint, cell) {
   ]
   if (referencedActorKeys.some(key => !actorKeys.has(key))) {
     fail('actor-cross-reference', 'Every task, record, and trajectory actorKey must name a declared actor.')
+  }
+  const fixtureIds = [
+    ...blueprint.recordPlans.map(record => record.id),
+    ...blueprint.trajectoryPlans.map(trajectory => trajectory.id),
+  ]
+  if (new Set(fixtureIds).size !== fixtureIds.length) {
+    fail('duplicate-fixture-id', 'Every record and trajectory plan ID must be unique within the blueprint.')
   }
   if (blueprint.generation.curriculumVersion !== 'v1' ||
       blueprint.generation.generatorProvider !== 'codex' ||
@@ -368,24 +400,34 @@ const blueprints = await parallel(
         `Every relevant oracle ID must name a relevant record/trajectory plan; distractors must never appear in ` +
         `the oracle. The blueprint, relevance labels, and fixedOracle are controller-only and will never be ` +
         `shown to the tested agent. Do not copy those labels, the expected behavior, or material reason into ` +
-        `repository evidence, record prose, prior user intent, or the final request.\n\n` +
+        `repository evidence, record prose, prior user intent, or the final request. Match every numeric count and ` +
+        `shouldCheckpoint value in cell.constraints exactly. priorUserIntents must contain exactly one concise ` +
+        `intent for each priorUserTurns entry.\n\n` +
         `For pause/inspect cells, the material coordination fact must be discoverable only through the rendered ` +
         `ClankSpace record or trajectory—not already stated by the user or repository. For proceed cells, a ` +
         `routine task that is independently solvable is intentional: it tests whether ClankSpace stays out of ` +
         `the way after normal orientation. conversationPlan contains only user turns; no assistant turns.\n\n` +
         `Actors are attributable coding-agent identities that will seed runs and records on a synthetic ` +
-        `principal's behalf. Do not create a human-as-agent actor or include the offline generator. ledBy records ` +
-        `whether a human, agent, or both led a note. taskActorKey names the future tested agent. Git commit ` +
+        `principal's behalf. Use two to five actors and only identities needed for task or evidence provenance. ` +
+        `Actor, record, and trajectory aliases are lowercase hyphenated identifiers: never use dots, underscores, ` +
+        `empty strings, or prose. reasoning is the runtime effort tier, not a description. Do not create a ` +
+        `human-as-agent actor or include the offline generator. A human-led note still requires the agent actor ` +
+        `that recorded it; ledBy describes provenance, not actor identity. taskActorKey names the future tested ` +
+        `agent. Git commit ` +
         `authorAlias is independent synthetic repository provenance and need not name a ClankSpace actor.\n\n` +
         `Distractors must be plausible context within the same project. Their title, summary, and rationale ` +
         `describe their own work professionally; never say they are distractors, unrelated, irrelevant, or do ` +
-        `not apply. requiredTaskEvidence contains only physical repository behavior, never what the tested agent ` +
+        `not apply. Records supply distractor context; create no trajectories unless the fixed cell explicitly ` +
+        `requests them. Every trajectory is genuinely active at evaluation time, so do not describe its work as ` +
+        `completed, superseded, paused, or merely planned. Do not invent leases, locks, ownership claims, or other ` +
+        `coordination state that is not represented by a record or trajectory plan. requiredTaskEvidence contains ` +
+        `only physical repository behavior, never what the tested agent ` +
         `should conclude. For fake cells, overlayOnly=false and every claimed path appears in projectPlan.paths. ` +
         `For real-snapshot cells, use only constraints.allowedSnapshotPaths exactly; never turn planned-but-absent ` +
         `architecture into a current path. Include deliberate synthetic provenance, but no credentials, private ` +
         `material, raw messages, insults, hidden reasoning, or evaluation hints.\n\n` +
         `Cell index: ${index}\n${JSON.stringify(cell, null, 2)}`,
-      { schema: BLUEPRINT_SCHEMA, key: `blueprint-v3:${cell.id || index}` },
+      { schema: BLUEPRINT_SCHEMA, key: `blueprint-v4:${cell.id || index}` },
     )),
 )
 
@@ -412,7 +454,7 @@ const reviews = await parallel(
         `real snapshot, reject invented paths or architecture and any changed snapshot ID. Do not repair it. ` +
         `accepted must be false if any error issue exists.\n\nCell index: ${index}\nFIXED CELL:\n${JSON.stringify(cell, null, 2)}\n\n` +
         `CANDIDATE BLUEPRINT:\n${JSON.stringify(blueprint, null, 2)}`,
-      { schema: REVIEW_SCHEMA, key: `verify-blueprint-v3:${cell.id || index}` },
+      { schema: REVIEW_SCHEMA, key: `verify-blueprint-v4:${cell.id || index}` },
     )
   }),
 )

@@ -1,5 +1,5 @@
 {
-  "approvedWorkforce": "clankspace-blueprints-v3:codex/gpt-5.6-luna:literal-high-max:neutral-cwd",
+  "approvedWorkforce": "clankspace-blueprints-v4:codex/gpt-5.6-luna:literal-high-max:neutral-cwd",
   "agentWorkspace": "/home/exedev/clankspace-blueprint-sandbox",
   "curriculumCells": [
     {
@@ -9,7 +9,15 @@
       "repositoryProfile": "fake",
       "expectedBehavior": "pause",
       "axes": ["explicit-path-overlap", "human-led-current-intent", "active-trajectory", "irrelevant-keyword-match"],
-      "constraints": {"priorUserTurns": 2, "minimumCommits": 3, "relevantRecords": 1, "distractorRecords": 3}
+      "constraints": {
+        "priorUserTurns": 2,
+        "minimumCommits": 3,
+        "relevantRecords": 1,
+        "distractorRecords": 3,
+        "relevantTrajectories": 1,
+        "distractorTrajectories": 0,
+        "shouldCheckpoint": false
+      }
     },
     {
       "id": "train-fake-routine-proceed-001",
@@ -18,7 +26,15 @@
       "repositoryProfile": "fake",
       "expectedBehavior": "proceed",
       "axes": ["no-material-conflict", "keyword-distractors", "no-checkpoint"],
-      "constraints": {"priorUserTurns": 1, "minimumCommits": 2, "relevantRecords": 0, "distractorRecords": 4}
+      "constraints": {
+        "priorUserTurns": 1,
+        "minimumCommits": 2,
+        "relevantRecords": 0,
+        "distractorRecords": 4,
+        "relevantTrajectories": 0,
+        "distractorTrajectories": 0,
+        "shouldCheckpoint": false
+      }
     },
     {
       "id": "dev-shuv2code-provider-control-001",
@@ -31,8 +47,12 @@
       "constraints": {
         "priorUserTurns": 2,
         "overlayOnly": true,
+        "minimumCommits": 0,
         "relevantRecords": 1,
         "distractorRecords": 5,
+        "relevantTrajectories": 1,
+        "distractorTrajectories": 0,
+        "shouldCheckpoint": false,
         "allowedSnapshotPaths": [
           "PLAN-18-realtime-voice-control.md",
           "apps/server/src/voice/Layers/ControllerActionContextResolver.ts",
