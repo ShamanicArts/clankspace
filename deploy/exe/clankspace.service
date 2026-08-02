@@ -1,0 +1,33 @@
+[Unit]
+Description=ClankSpace coordination service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=clankspace
+Group=clankspace
+UMask=0027
+WorkingDirectory=/var/lib/clankspace
+EnvironmentFile=/etc/clankspace/clankspace.env
+ExecStart=/usr/local/bin/clank serve
+Restart=on-failure
+RestartSec=2s
+TimeoutStopSec=15s
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+CapabilityBoundingSet=
+ReadWritePaths=/var/lib/clankspace
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

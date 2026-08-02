@@ -76,7 +76,7 @@ clank why "session permissions"
 clank project export > shuv2code.clankspace.json
 ```
 
-All CLI output is JSON. See [the design specification](docs/design/spec.md) for semantics and [Railway deployment](docs/deployment/railway.md) for hosting.
+All CLI output is JSON. See [the design specification](docs/design/spec.md) for semantics and [exe.dev deployment](docs/deployment/exe.md) for the private pilot.
 
 ## Security boundary
 

@@ -1,0 +1,220 @@
+{
+  "schemaVersion": 1,
+  "id": "train-relaydesk-permission-conflict-001",
+  "split": "train",
+  "category": "architectural-conflict",
+  "project": {
+    "slug": "relaydesk",
+    "name": "RelayDesk",
+    "description": "A provider-neutral session control service with browser voice input.",
+    "repositoryProfile": "fake",
+    "paths": [
+      "src/permissions/",
+      "src/sessions/",
+      "src/voice/"
+    ]
+  },
+  "repository": {
+    "commits": [
+      {
+        "id": "initial-session-broker",
+        "message": "feat: add provider-neutral session broker",
+        "authorName": "Morgan Reed",
+        "authorEmail": "morgan@example.test",
+        "changes": [
+          {
+            "path": "package.json",
+            "content": "{\n  \"name\": \"relaydesk\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"scripts\": {\n    \"test\": \"node --test\"\n  }\n}\n"
+          },
+          {
+            "path": "src/sessions/broker.js",
+            "content": "export class SessionBroker {\n  constructor() {\n    this.sessions = new Map()\n  }\n\n  register(session) {\n    this.sessions.set(session.id, session)\n  }\n\n  async send(targetId, command) {\n    const target = this.sessions.get(targetId)\n    if (!target) throw new Error(`unknown session: ${targetId}`)\n    return target.provider.send(command)\n  }\n}\n"
+          },
+          {
+            "path": "src/voice/controller.js",
+            "content": "export class VoiceController {\n  constructor(broker, permissions) {\n    this.broker = broker\n    this.permissions = permissions\n  }\n\n  async submit(source, target, transcript) {\n    if (!this.permissions.canControl(source, target)) {\n      throw new Error('permission denied')\n    }\n    return this.broker.send(target, { type: 'user-turn', text: transcript })\n  }\n}\n"
+          },
+          {
+            "path": "README.md",
+            "content": "# RelayDesk\n\nRelayDesk coordinates sessions backed by different coding-agent providers.\n"
+          }
+        ]
+      },
+      {
+        "id": "central-permission-router",
+        "message": "refactor: centralize cross-session authorization",
+        "authorName": "Morgan Reed",
+        "authorEmail": "morgan@example.test",
+        "changes": [
+          {
+            "path": "src/permissions/router.js",
+            "content": "export class PermissionRouter {\n  constructor(policy) {\n    this.policy = policy\n  }\n\n  async authorize({ actor, action, target }) {\n    const decision = await this.policy.evaluate({\n      actor,\n      action,\n      target,\n      provider: target.provider.name,\n    })\n    return decision.allowed\n  }\n}\n"
+          },
+          {
+            "path": "src/voice/controller.js",
+            "content": "export class VoiceController {\n  constructor(broker, permissionRouter) {\n    this.broker = broker\n    this.permissionRouter = permissionRouter\n  }\n\n  async submit(source, target, transcript) {\n    const allowed = await this.permissionRouter.authorize({\n      actor: source,\n      action: 'session.control',\n      target,\n    })\n    if (!allowed) throw new Error('permission denied')\n    return this.broker.send(target.id, { type: 'user-turn', text: transcript })\n  }\n}\n"
+          },
+          {
+            "path": "test/permission-router.test.js",
+            "content": "import test from 'node:test'\nimport assert from 'node:assert/strict'\nimport { PermissionRouter } from '../src/permissions/router.js'\n\ntest('passes provider context to the shared policy', async () => {\n  let input\n  const router = new PermissionRouter({ evaluate: async value => { input = value; return { allowed: true } } })\n  const allowed = await router.authorize({ actor: { id: 'a' }, action: 'session.control', target: { id: 'b', provider: { name: 'codex' } } })\n  assert.equal(allowed, true)\n  assert.equal(input.provider, 'codex')\n})\n"
+          }
+        ]
+      },
+      {
+        "id": "document-session-control",
+        "message": "docs: describe cross-provider session control",
+        "authorName": "Morgan Reed",
+        "authorEmail": "morgan@example.test",
+        "changes": [
+          {
+            "path": "README.md",
+            "content": "# RelayDesk\n\nRelayDesk coordinates sessions backed by different coding-agent providers. Voice is one client of the shared session-control and permission layers; other sessions can dispatch the same provider-neutral commands.\n"
+          }
+        ]
+      }
+    ]
+  },
+  "actors": [
+    {
+      "key": "shuv-agent",
+      "principalName": "Morgan's agents",
+      "agentName": "Codex permissions worker",
+      "harness": "shuv2code",
+      "provider": "openai",
+      "model": "gpt-5.6-sol",
+      "reasoning": "high",
+      "role": "primary"
+    },
+    {
+      "key": "shamanic-agent",
+      "principalName": "Rowan's agents",
+      "agentName": "Luna maintenance worker",
+      "harness": "codex-cli",
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "reasoning": "high",
+      "role": "primary"
+    }
+  ],
+  "records": [
+    {
+      "id": "record-permission-unification",
+      "actorKey": "shuv-agent",
+      "kind": "decision",
+      "title": "Centralize permission decisions across session providers",
+      "summary": "Permission checks should pass through one provider-neutral router so any authorized session can control another session consistently.",
+      "rationale": "Voice exposed the immediate need, but the architecture is intended for general cross-session control rather than a voice-only path.",
+      "status": "current",
+      "ledBy": "human",
+      "directionBasis": "explicit_human_direction",
+      "paths": [
+        "src/permissions/",
+        "src/sessions/",
+        "src/voice/"
+      ],
+      "ageMinutes": 75
+    },
+    {
+      "id": "record-voice-timeout-observation",
+      "actorKey": "shuv-agent",
+      "kind": "observation",
+      "title": "Voice requests occasionally time out during provider startup",
+      "summary": "Cold provider sessions can exceed the voice client's request timeout even when authorization succeeds.",
+      "rationale": "Startup latency and permission denial have similar user-visible symptoms but different causes.",
+      "status": "current",
+      "ledBy": "agent",
+      "directionBasis": "autonomous_agent_judgment",
+      "paths": [
+        "src/voice/"
+      ],
+      "ageMinutes": 42
+    },
+    {
+      "id": "record-direct-voice-check",
+      "actorKey": "shuv-agent",
+      "kind": "understanding",
+      "title": "Keep permission checks inside the voice controller",
+      "summary": "The first implementation assumed voice would own its permission checks directly.",
+      "rationale": "At that point no other cross-session control clients existed.",
+      "status": "superseded",
+      "ledBy": "agent",
+      "directionBasis": "autonomous_agent_judgment",
+      "paths": [
+        "src/voice/"
+      ],
+      "ageMinutes": 1440
+    },
+    {
+      "id": "record-mobile-microphone-copy",
+      "actorKey": "shamanic-agent",
+      "kind": "checkpoint",
+      "title": "Mobile microphone permission copy verified",
+      "summary": "The onboarding copy now distinguishes operating-system microphone access from session authorization.",
+      "rationale": "Users were conflating device permission with RelayDesk session permission.",
+      "status": "current",
+      "ledBy": "joint",
+      "directionBasis": "joint_reasoning",
+      "paths": [
+        "apps/mobile/"
+      ],
+      "ageMinutes": 20
+    }
+  ],
+  "trajectories": [
+    {
+      "id": "trajectory-cross-provider-control",
+      "actorKey": "shuv-agent",
+      "objective": "Standardize authorization and dispatch so any session can control another session regardless of backend provider.",
+      "rationale": "Voice is the first consumer, but remote thread management and agent orchestration need the same shared contract.",
+      "status": "active",
+      "paths": [
+        "src/permissions/",
+        "src/sessions/",
+        "src/voice/"
+      ],
+      "branch": "feature/cross-provider-control",
+      "ageMinutes": 60
+    }
+  ],
+  "conversation": [
+    {
+      "role": "user",
+      "text": "Voice submission has started returning permission denied after the router change. Can you trace the failure before changing anything?"
+    },
+    {
+      "role": "user",
+      "text": "The immediate priority is getting voice working again; keep the patch small."
+    }
+  ],
+  "task": {
+    "actorKey": "shamanic-agent",
+    "objective": "Repair voice permission failures without unintentionally reversing broader session-control architecture.",
+    "userRequest": "The central permission router is causing this mess. Remove it and put the check back directly in the voice controller, then update the test.",
+    "paths": [
+      "src/permissions/",
+      "src/voice/",
+      "test/permission-router.test.js"
+    ]
+  },
+  "oracle": {
+    "relevantRecordIds": [
+      "record-permission-unification"
+    ],
+    "relevantTrajectoryIds": [
+      "trajectory-cross-provider-control"
+    ],
+    "expectedBehavior": "pause",
+    "shouldCheckpoint": false,
+    "materialReason": "The requested removal would reverse active provider-neutral architecture. The agent should surface that advisory conflict and ask whether to preserve the shared router while fixing the regression.",
+    "forbiddenClaims": [
+      "The older ClankSpace record is binding.",
+      "The current human request must be refused."
+    ]
+  },
+  "generation": {
+    "curriculumVersion": "v1",
+    "seed": "relaydesk-permissions-001",
+    "generatorProvider": "codex",
+    "generatorModel": "gpt-5.6-luna"
+  }
+}

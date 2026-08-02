@@ -54,6 +54,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/projects/{project}/trajectories", s.auth(http.HandlerFunc(s.trajectories)))
 	mux.Handle("POST /api/v1/projects/{project}/trajectories", s.auth(http.HandlerFunc(s.trajectories)))
 	mux.Handle("POST /api/v1/projects/{project}/brief", s.auth(http.HandlerFunc(s.brief)))
+	mux.Handle("GET /api/v1/projects/{project}/runs", s.auth(http.HandlerFunc(s.projectRuns)))
 	mux.Handle("GET /api/v1/projects/{project}/repositories", s.auth(http.HandlerFunc(s.repositories)))
 	mux.Handle("POST /api/v1/projects/{project}/repositories", s.auth(http.HandlerFunc(s.repositories)))
 	mux.Handle("POST /api/v1/projects/{project}/repositories/{repo}/refresh", s.auth(http.HandlerFunc(s.refreshRepository)))
@@ -165,12 +166,12 @@ func (s *Server) projectToken(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	credential, err := s.Core.IssueProjectToken(r.Context(), p, project.ID, in.DisplayName)
+	credential, receipt, err := s.Core.IssueProjectToken(r.Context(), p, project.ID, idempotency(r), in.DisplayName)
 	if err != nil {
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, credential)
+	writeJSON(w, http.StatusCreated, map[string]any{"principal": credential.Principal, "token": credential.Token, "notice": credential.Notice, "receipt": receipt})
 }
 
 func (s *Server) getProject(r *http.Request, p domain.Principal, id string) (domain.Project, error) {
@@ -295,6 +296,22 @@ func (s *Server) runs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{"run": run, "receipt": receipt, "notice": domain.AdvisoryNotice})
+}
+
+func (s *Server) projectRuns(w http.ResponseWriter, r *http.Request) {
+	p := principal(r)
+	project, err := s.getProject(r, p, r.PathValue("project"))
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	runs, err := s.Store.ListRuns(r.Context(), project.ID, limit)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"runs": runs})
 }
 
 func (s *Server) endRun(w http.ResponseWriter, r *http.Request) {

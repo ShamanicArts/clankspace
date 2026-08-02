@@ -107,3 +107,48 @@ func TestProjectExportIsNotDashboardCapped(t *testing.T) {
 		t.Fatalf("export truncated notes: got %d", len(out.Notes))
 	}
 }
+
+func TestProjectRunsAreVisibleToScopedClients(t *testing.T) {
+	db, err := store.Open(filepath.Join(t.TempDir(), "db.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	owner, err := db.EnsureBootstrap(t.Context(), "token", "Workspace", "Owner")
+	if err != nil {
+		t.Fatal(err)
+	}
+	core := service.New(db)
+	project, _, err := core.CreateProject(t.Context(), owner, "project", "runs", "Runs", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	credential, _, err := core.IssueProjectToken(t.Context(), owner, project.ID, "credential", "Test agents")
+	if err != nil {
+		t.Fatal(err)
+	}
+	principal, err := db.Authenticate(t.Context(), credential.Token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = core.StartRun(t.Context(), principal, "run", domain.StartRunInput{ProjectID: project.ID, AgentName: "Luna", Model: "gpt-5.6-luna"}); err != nil {
+		t.Fatal(err)
+	}
+	h := (&httpapi.Server{Store: db, Core: core, GitHub: githubsync.New(""), Log: slog.New(slog.NewTextHandler(&strings.Builder{}, nil))}).Handler()
+	r := httptest.NewRequest("GET", "/api/v1/projects/runs/runs?limit=10", nil)
+	r.Header.Set("Authorization", "Bearer "+credential.Token)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("wanted 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var out struct {
+		Runs []domain.Run `json:"runs"`
+	}
+	if err = json.NewDecoder(w.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Runs) != 1 || out.Runs[0].AgentName != "Luna" {
+		t.Fatalf("unexpected runs: %#v", out.Runs)
+	}
+}

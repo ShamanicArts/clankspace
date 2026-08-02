@@ -24,6 +24,14 @@ func New(baseURL, token string) *Client {
 }
 
 func (c *Client) Do(ctx context.Context, method, path string, in, out any) error {
+	key := ""
+	if method != http.MethodGet {
+		key = uuid.NewString()
+	}
+	return c.DoWithKey(ctx, method, path, key, in, out)
+}
+
+func (c *Client) DoWithKey(ctx context.Context, method, path, idempotencyKey string, in, out any) error {
 	var body io.Reader
 	if in != nil {
 		b, err := json.Marshal(in)
@@ -39,7 +47,10 @@ func (c *Client) Do(ctx context.Context, method, path string, in, out any) error
 	req.Header.Set("Authorization", "Bearer "+c.Token)
 	req.Header.Set("Content-Type", "application/json")
 	if method != http.MethodGet {
-		req.Header.Set("Idempotency-Key", uuid.NewString())
+		if strings.TrimSpace(idempotencyKey) == "" {
+			return fmt.Errorf("idempotency key is required for %s %s", method, path)
+		}
+		req.Header.Set("Idempotency-Key", idempotencyKey)
 	}
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
@@ -101,6 +112,13 @@ func (c *Client) EndRun(ctx context.Context, id string, in domain.EndRunInput) (
 	}
 	err := c.Do(ctx, "POST", "/runs/"+id+"/end", in, &o)
 	return o.Run, err
+}
+func (c *Client) ListRuns(ctx context.Context, project string, limit int) ([]domain.Run, error) {
+	var out struct {
+		Runs []domain.Run `json:"runs"`
+	}
+	err := c.Do(ctx, http.MethodGet, fmt.Sprintf("/projects/%s/runs?limit=%d", project, limit), nil, &out)
+	return out.Runs, err
 }
 func (c *Client) CreateNote(ctx context.Context, project string, in domain.CreateNoteInput) (domain.Note, error) {
 	var o struct {

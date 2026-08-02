@@ -111,9 +111,16 @@ func TestProjectAgentIdentityIsScoped(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	credential, err := svc.IssueProjectToken(ctx, owner, project.ID, "shuv2code agents")
+	credential, receipt, err := svc.IssueProjectToken(ctx, owner, project.ID, "agent-token", "shuv2code agents")
 	if err != nil {
 		t.Fatal(err)
+	}
+	replayed, replayReceipt, err := svc.IssueProjectToken(ctx, owner, project.ID, "agent-token", "shuv2code agents")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if credential.Principal.ID != replayed.Principal.ID || credential.Token != replayed.Token || receipt.EventID != replayReceipt.EventID {
+		t.Fatal("project credential retry created a duplicate identity")
 	}
 	agentPrincipal, err := db.Authenticate(ctx, credential.Token)
 	if err != nil {

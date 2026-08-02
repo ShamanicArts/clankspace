@@ -1,7 +1,7 @@
 ---
 type: state
 status: active
-summary: The agent-native loop, local credential routing, clean-context forward test, and append-log dashboard are working end to end.
+summary: Production/evaluation services and the deterministic synthetic-world evaluation substrate are running on exe.dev.
 note_created: 2026-08-02
 updated: 2026-08-02
 ---
@@ -10,20 +10,22 @@ updated: 2026-08-02
 
 ## Current focus
 
-Use the durable local pilot for iteration, then connect the published service to Railway.
+Run the first approved Luna train/dev batch through the isolated evaluation service, classify failures, and iterate on retrieval, skill, and tool contracts.
 
 ## Active phase
 
-Phase 3, Railway production pilot. The agent loop and human append-log viewer are complete locally.
+The private production and evaluation services are deployed on separate exe.dev VMs. The runner has sanitized real-repository snapshots, immutable corpus storage, isolated project seeding, genuine resumed-turn rollout capture, and deterministic scoring. Luna workflows are drafted and fake-validated but have not run live.
 
 ## Blockers
 
-- Railway account/project credentials are not available in this environment. Deployment configuration will be prepared and the exact remaining steps documented.
+- The first live Luna workforce and bounded command require explicit approval after the final manifest is shown.
+- Semantic retrieval is not yet implemented; the first cohorts intentionally establish the FTS/path baseline.
 
 ## Decisions pending
 
-- Whether signed human-turn receipts are worth adding after the initial pilot.
+- Whether failed evaluation projects should remain visible indefinitely or be archived after their immutable ledger evidence is synced.
+- Which embedding implementation to test after baseline retrieval metrics are frozen.
 
 ## Last devlog
 
-`docs/devlogs/2026-08-02-local-agent-forward-test.md` — status: complete
+`docs/evals/training-loop.md` — active evaluation strategy and evidence boundary.

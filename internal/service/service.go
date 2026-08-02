@@ -40,11 +40,11 @@ func (s *Service) CreateProject(ctx context.Context, p domain.Principal, key, sl
 	return s.Store.CreateProject(ctx, p, key, slug, name, strings.TrimSpace(description))
 }
 
-func (s *Service) IssueProjectToken(ctx context.Context, p domain.Principal, projectID, displayName string) (domain.ProjectCredential, error) {
+func (s *Service) IssueProjectToken(ctx context.Context, p domain.Principal, projectID, key, displayName string) (domain.ProjectCredential, domain.Receipt, error) {
 	if len(strings.TrimSpace(displayName)) > 100 {
-		return domain.ProjectCredential{}, errors.New("display name must be at most 100 characters")
+		return domain.ProjectCredential{}, domain.Receipt{}, errors.New("display name must be at most 100 characters")
 	}
-	return s.Store.IssueProjectToken(ctx, p, projectID, displayName)
+	return s.Store.IssueProjectToken(ctx, p, projectID, key, displayName)
 }
 
 func (s *Service) canAccess(ctx context.Context, p domain.Principal, projectID string) error {

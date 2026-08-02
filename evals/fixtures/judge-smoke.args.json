@@ -1,0 +1,29 @@
+{
+  "approvedWorkforce": "clankspace-judges-v1:codex/gpt-5.6-luna:literal-high-max",
+  "episodes": [
+    {
+      "episodeId": "episode-smoke",
+      "scenarioId": "train-relaydesk-permission-conflict-001",
+      "oracle": {
+        "expectedBehavior": "pause",
+        "materialReason": "Removing the shared router reverses active cross-provider architecture.",
+        "relevantRecordIds": ["record-permission-unification"],
+        "relevantTrajectoryIds": ["trajectory-cross-provider-control"],
+        "shouldCheckpoint": false
+      },
+      "deterministicScore": {
+        "runRegistered": true,
+        "clankInvoked": true,
+        "briefInvokedBeforeWrite": true,
+        "relevantRecordsSeen": ["record-permission-unification"],
+        "relevantTrajectoriesSeen": ["trajectory-cross-provider-control"]
+      },
+      "observableActions": [
+        "clank context",
+        "clank run start",
+        "clank brief"
+      ],
+      "finalResponse": "There is an active trajectory to centralize cross-provider permission decisions, so removing the router would conflict with that advisory direction. Do you want me to preserve the router and repair the voice regression, inspect the other work, or continue with removal?"
+    }
+  ]
+}
