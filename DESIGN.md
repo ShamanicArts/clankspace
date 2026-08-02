@@ -1,202 +1,110 @@
 ---
 name: ClankSpace
-description: A shared field notebook for concurrent human and agent intent.
+description: A quiet human window into an agent-maintained project context log.
 colors:
-  coordination-green: "oklch(48% 0.11 155)"
-  coordination-green-strong: "oklch(40% 0.105 155)"
-  coordination-green-soft: "oklch(93% 0.035 150)"
-  warm-field: "oklch(96.5% 0.012 95)"
-  paper: "oklch(99% 0.006 95)"
-  graphite: "oklch(24% 0.015 120)"
-  field-muted: "oklch(49% 0.016 110)"
-  field-line: "oklch(86% 0.014 95)"
-  divergence-amber: "oklch(50% 0.115 65)"
-  divergence-soft: "oklch(94% 0.04 75)"
+  accent: "oklch(47% 0.09 155)"
+  accent-soft: "oklch(95% 0.025 150)"
+  canvas: "oklch(97.5% 0.006 95)"
+  surface: "oklch(99.2% 0.003 95)"
+  ink: "oklch(24% 0.012 120)"
+  muted: "oklch(52% 0.012 110)"
+  faint: "oklch(72% 0.009 105)"
+  line: "oklch(88% 0.009 95)"
+  warning: "oklch(54% 0.105 65)"
 typography:
-  display:
-    fontFamily: "Georgia, serif"
-    fontSize: "3.2rem"
-    fontWeight: 500
-    lineHeight: 1
-    letterSpacing: "-0.035em"
-  headline:
-    fontFamily: "Georgia, serif"
-    fontSize: "1.75rem"
-    fontWeight: 500
-    lineHeight: 1.15
-    letterSpacing: "-0.02em"
-  body:
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "0.88rem"
-    fontWeight: 400
-    lineHeight: 1.5
-  label:
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "0.68rem"
-    fontWeight: 850
-    lineHeight: 1.2
-    letterSpacing: "0.13em"
+  family: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+  pageTitle: "600 1.7rem/1.2"
+  entryTitle: "620 0.98rem/1.4"
+  body: "400 0.875rem/1.55"
+  metadata: "500 0.72rem/1.4"
 rounded:
-  control: "8px"
-  surface: "13px"
-  stage: "15px"
+  control: "7px"
+  menu: "9px"
 spacing:
-  xs: "5px"
-  sm: "9px"
-  md: "18px"
-  lg: "28px"
-  xl: "42px"
-components:
-  button-primary:
-    backgroundColor: "{colors.coordination-green}"
-    textColor: "{colors.paper}"
-    rounded: "{rounded.control}"
-    padding: "0.72rem 1rem"
-    typography: "{typography.body}"
-  button-secondary:
-    backgroundColor: "transparent"
-    textColor: "{colors.graphite}"
-    rounded: "{rounded.control}"
-    padding: "0.72rem 1rem"
-    typography: "{typography.body}"
-  coordination-stage:
-    backgroundColor: "{colors.paper}"
-    textColor: "{colors.graphite}"
-    rounded: "{rounded.stage}"
-    padding: "42px"
-  divergence-panel:
-    backgroundColor: "{colors.divergence-soft}"
-    textColor: "{colors.graphite}"
-    rounded: "{rounded.surface}"
-    padding: "18px"
+  xs: "4px"
+  sm: "8px"
+  md: "16px"
+  lg: "24px"
+  xl: "40px"
 ---
 
 # Design System: ClankSpace
 
 ## Overview
 
-**Creative North Star: "The Shared Field Notebook"**
+**Creative north star: the quiet project ledger.**
 
-ClankSpace feels like a durable notebook left open between trusted technical collaborators: warm enough for human judgment, structured enough for precise agent provenance, and quiet until two directions intersect. The interface preserves the existing editorial warmth while using familiar product controls and predictable task flow.
+Scene: a maintainer opens ClankSpace for thirty seconds between coding sessions, in ordinary daytime light, to understand what several agents have carried forward. The interface should disappear behind a dense but readable log.
 
-The primary screen is not an admin inventory. It stages the coordination moment, then reveals work in motion, the bounded agent brief, and the intent trail. Density is earned by attribution and rationale rather than decoration.
+The default project screen is one reverse-chronological stream. There is no proposed-work form, coordination stage, kanban surface, agent brief panel, or dashboard metric layer. The intelligence lives in agent integrations. The web surface provides inspection and light governance.
 
-**Key Characteristics:**
+## Information hierarchy
 
-- Warm, restrained, and technical without looking terminal-native.
-- Editorial project titles paired with practical system UI text.
-- One green coordination accent; amber appears only for genuine possible divergence.
-- Borders and tonal layers carry structure; cards are reserved for consequential interactions.
-- Responsive structure, visible focus, and motion limited to state feedback.
+1. Project identity and attached repository context.
+2. Search and small filters.
+3. The append log, newest first.
+4. Progressive entry details: rationale, provenance, paths, PRs, and lifecycle.
+5. Secondary project actions: append manually, issue agent access, attach a repository, and export.
 
-## Colors
+## Layout
 
-The palette is a warm field of tinted neutrals with green reserved for coordination and amber reserved for intersecting direction.
-
-### Primary
-
-- **Coordination Green:** Primary actions, current direction, selected state, and agent-context emphasis.
-- **Coordination Green Soft:** The bounded agent brief and calm positive state.
-
-### Secondary
-
-- **Divergence Amber:** Possible collision language and the path intersection, never routine decoration.
-- **Divergence Soft:** The complete comparison surface behind a coordination warning.
-
-### Neutral
-
-- **Warm Field:** Application background and quiet spatial separation.
-- **Paper:** Forms and the primary coordination stage.
-- **Graphite:** Primary text and high-trust identity marks.
-- **Field Muted:** Supporting rationale, timestamps, and secondary provenance.
-- **Field Line:** Structural boundaries and timelines.
-
-**The Consequence Rule.** Green means current coordination. Amber means a human choice is needed. Neither color is decorative.
+- A narrow project rail remains visible on desktop and becomes a horizontal project strip on small screens.
+- The main reading column is approximately 820px wide and left aligned. It is not centred like a marketing page.
+- Log entries share one continuous ruled surface. They are rows, not cards.
+- Each row uses a compact time column and a flexible content column.
+- Long rationale is capped near 72 characters per line.
+- Repository evidence appears as inline links on relevant records or a quiet project context line, not a competing section.
 
 ## Typography
 
-**Display Font:** Georgia with the platform serif fallback.
+Use one system sans family. Project names are clear but not heroic. Titles, summaries, rationale, and provenance rely on weight and spacing rather than a display typeface. Paths, SHAs, branches, and run identifiers use the platform monospace stack.
 
-**Body Font:** Inter with the platform system sans stack.
+## Color
 
-**Label/Mono Font:** System sans for labels; platform monospace for paths, branches, and PR numbers.
-
-**Character:** Project names and consequential prompts receive a measured editorial voice. Controls, provenance, paths, and runtime details remain compact and operational.
-
-### Hierarchy
-
-- **Display** (500, 3.2rem, 1): project identity only; 2.2rem on compact screens.
-- **Headline** (500, 1.75rem, 1.15): the proposed-work coordination prompt.
-- **Title** (500, 1.45rem, 1.2): work, brief, intent, and evidence section titles.
-- **Body** (400, 0.88rem, 1.5): rationale and project implications, capped near 72 characters where prose runs long.
-- **Label** (850, 0.68rem, 0.13em, uppercase): short state and sequence cues only.
-
-**The Two Voices Rule.** Serif identifies the project and consequential reasoning. Sans-serif carries every action, state, and piece of evidence.
-
-## Elevation
-
-The system is flat by default. One diffuse ambient shadow lifts the login surface and primary coordination stage; timelines, trajectories, evidence, and navigation use tonal layering and one-pixel boundaries instead of stacked cards.
-
-### Shadow Vocabulary
-
-- **Ambient Stage** (`0 8px 30px oklch(24% 0.015 120 / 0.045)`): the proposed-work stage only.
-- **Modal Lift** (`0 18px 50px oklch(24% 0.015 120 / 0.08)`): temporary dialogs and login.
-
-**The Flat-by-Default Rule.** If a surface is not asking for a decision or temporarily interrupting the workflow, it does not receive a shadow.
+Use restrained tinted neutrals. Green marks the active project, current lifecycle, links, and primary focus. Amber is reserved for stale or contested context. Superseded and withdrawn records become quieter but remain legible. Color never substitutes for a written state.
 
 ## Components
 
-### Buttons
+### Log entry
 
-- **Shape:** Compact and gently curved (8px).
-- **Primary:** Coordination Green with Paper text and 0.72rem by 1rem padding.
-- **Hover / Focus:** Darker coordination green on hover; a visible translucent green outline on keyboard focus; one-pixel active movement.
-- **Secondary:** Transparent with a Field Line border. It never competes with the current decision.
+- Small kind and lifecycle text above the title.
+- Title and concise project implication remain visible.
+- Rationale follows as a plainly labelled sentence when present.
+- Actor, human principal, harness, model, role, branch, paths, and evidence form one subdued provenance block.
+- Supersede is a secondary text action shown only for current notes.
 
-### Chips
+### Search and filters
 
-- **Style:** Tiny neutral pills for runtime provenance. Path chips use monospace and a soft field background.
-- **State:** Chips are descriptive, never interactive filters.
+Search is the widest control. Kind and lifecycle filters sit beside it. Filtering is immediate and preserves a clear result count. Empty results explain which filters are active and offer a reset.
 
-### Cards / Containers
+### Project actions
 
-- **Corner Style:** 13px for consequential comparisons and the agent brief; 15px for the primary stage.
-- **Background:** Paper for the proposed-work stage, Coordination Green Soft for the agent brief, Divergence Soft for collision comparison.
-- **Shadow Strategy:** Only the proposed-work stage receives ambient lift.
-- **Border:** One-pixel Field Line or a restrained amber mix.
-- **Internal Padding:** 18px to 42px according to consequence and viewport.
+Manual append is visible but secondary. Infrequent actions live in a familiar overflow menu. Dialogs are acceptable for these short, bounded administrative actions because they are not the primary workflow.
 
-### Inputs / Fields
+### Empty state
 
-- **Style:** Paper background, one-pixel Field Line stroke, 8px corners.
-- **Focus:** A three-pixel translucent coordination-green outline outside the control.
-- **Error / Disabled:** Errors use explicit text plus red; disabled controls remain legible at reduced opacity.
+State that no material context has been recorded. Point agents toward the CLI/MCP workflow. Do not imply that the human needs to populate a project board.
 
-### Navigation
+## Interaction
 
-The top bar holds identity and lock state. The project rail stays quiet, with Paper and a one-pixel border indicating the active project. On mobile it becomes a horizontal strip above the board.
+- No decorative animation.
+- Hover and focus only clarify interactivity.
+- Native details disclosure is suitable for long provenance or project settings.
+- Refreshing, filtering, and opening entry details must not move the user unexpectedly.
 
-### Direction Comparison
+## Do
 
-The signature component places the proposed move and active collaborator trajectory on equal sides of an explicit intersection. Actor, objective, rationale, and overlapping path remain visible together. The footer always states that context does not decide for the human and offers Continue, Inspect, or Realign.
+- Make the latest material understanding scannable in seconds.
+- Merge intent, decisions, understandings, checkpoints, and trajectories into one chronological stream.
+- Keep rationale and attribution near every entry.
+- Make superseded context visibly historical without hiding it.
+- Let a quiet, lightly ruled page feel intentionally boring.
 
-## Do's and Don'ts
+## Do not
 
-### Do:
-
-- **Do** lead every project with the proposed-work check and active direction.
-- **Do** keep rationale, actor, runtime, and path scope adjacent to material intent.
-- **Do** reserve Coordination Green and Divergence Amber for state with consequence.
-- **Do** render project agent and run names, not opaque identifiers.
-- **Do** keep empty states instructional: declare work, accrue intent, catch divergence.
-- **Do** preserve keyboard focus, reduced-motion behavior, and contrast in both appearances.
-
-### Don't:
-
-- **Don't** build a generic admin dashboard organized around object types, counts, and CRUD controls.
-- **Don't** make a decision wiki that presents historical notes as settled organizational law.
-- **Don't** resemble surveillance or audit products that foreground monitoring people rather than understanding work.
-- **Don't** ingest chat transcripts, activity exhaust, or social feeds that reward volume over materiality.
-- **Don't** use neon agent-control interfaces, anthropomorphic bot theatres, or decorative AI imagery.
-- **Don't** turn the product into a project-management board that requires humans to maintain tickets before agents can coordinate.
-- **Don't** use colored side stripes, gradient text, decorative glass, nested cards, or hero-metric layouts.
+- Ask a human to describe proposed work to the dashboard.
+- Present conflict detection as a web workflow.
+- Split the default screen into Now, Agent View, Intent, and Evidence panels.
+- Use hero statements, activity metrics, coloured panels, timeline theatre, or nested cards.
+- Present records as instructions or canonical decisions.
+- Use colored side stripes, gradient text, glass effects, or display fonts.

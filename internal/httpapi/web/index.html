@@ -8,78 +8,77 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header>
-    <a class="brand" href="/"><span class="mark">C</span><span>ClankSpace</span></a>
-    <span class="advisory">Accrued intent, never instructions.</span>
-    <button id="logout" class="quiet hidden">Lock</button>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="mark" aria-hidden="true">C</span><span>ClankSpace</span></a>
+    <span class="product-note">Project context for agents</span>
+    <button id="logout" class="text-button hidden">Lock</button>
   </header>
+
   <main>
-    <section id="login" class="login card">
-      <p class="eyebrow">Shared context for fast-moving agents</p>
-      <h1>Enter your space.</h1>
-      <p>Use the project token supplied by the workspace owner. It stays in this browser tab.</p>
+    <section id="login" class="login">
+      <span class="mark login-mark" aria-hidden="true">C</span>
+      <h1>Open ClankSpace</h1>
+      <p>Use a workspace or project token. It stays in this browser tab.</p>
       <form id="login-form">
-        <label>Access token<input id="token" type="password" autocomplete="off" required></label>
-        <button>Open ClankSpace</button>
+        <label for="token">Access token</label>
+        <div class="login-row"><input id="token" type="password" autocomplete="off" required><button>Continue</button></div>
       </form>
     </section>
 
     <section id="app" class="hidden">
-      <aside>
-        <div class="side-heading"><span>Projects</span><button id="new-project" class="icon" title="New project">+</button></div>
-        <nav id="projects"></nav>
+      <aside class="project-rail">
+        <div class="rail-heading"><span>Projects</span><button id="new-project" class="icon-button" title="New project" aria-label="New project">+</button></div>
+        <nav id="projects" aria-label="Projects"></nav>
       </aside>
-      <article id="board">
-        <div id="empty" class="empty"><p class="eyebrow">A light coordination layer</p><h1>Choose a project.</h1><p>Agents leave concise intent and rationale here so collaborators can notice divergence before code collides.</p></div>
+
+      <article id="workspace">
+        <div id="empty" class="empty">
+          <h1>Choose a project</h1>
+          <p>ClankSpace keeps the context your agents carry between sessions.</p>
+        </div>
+
         <div id="project-view" class="hidden">
-          <div class="project-head">
-            <div class="project-identity"><p class="eyebrow" id="project-slug"></p><h1 id="project-name"></h1><p id="project-description"></p></div>
-            <div class="head-actions"><button id="agent-key" class="quiet">Agent access</button><button id="add-note" class="quiet">Add context</button></div>
-          </div>
-
-          <div class="project-pulse"><span class="pulse-dot" aria-hidden="true"></span><strong id="pulse-summary"></strong><span>Advisory context, never project law.</span></div>
-
-          <section class="coordination-stage">
-            <div class="stage-copy">
-              <p class="eyebrow">Before your agent changes the code</p>
-              <h2>Check the move against work already in motion.</h2>
-              <p>ClankSpace compares the proposed direction with active trajectories and the rationale collaborators left behind.</p>
+          <header class="project-header">
+            <div class="project-copy">
+              <span id="project-slug" class="project-slug"></span>
+              <h1 id="project-name"></h1>
+              <p id="project-description"></p>
+              <div id="repository-context" class="repository-context"></div>
             </div>
-            <form id="brief-form" class="brief-form">
-              <label>Proposed move<input id="brief-objective" placeholder="Remove the new permission layer"></label>
-              <label>Likely paths<input id="brief-paths" placeholder="apps/web/permissions, apps/server/session"></label>
-              <button>Check current intent</button>
-            </form>
-            <div id="warnings"></div>
-          </section>
+            <div class="project-actions">
+              <button id="add-note" class="secondary-button">Add entry</button>
+              <details class="action-menu">
+                <summary aria-label="Project actions" title="Project actions">•••</summary>
+                <div class="menu" role="menu">
+                  <button id="agent-key" role="menuitem">Issue agent key</button>
+                  <button id="attach-repo" role="menuitem">Connect GitHub repository</button>
+                  <button id="export-project" role="menuitem">Export project log</button>
+                </div>
+              </details>
+            </div>
+          </header>
 
-          <div class="work-grid">
-            <section class="motion-section">
-              <div class="section-head"><div><p class="eyebrow">Now</p><h2>Work in motion</h2><p>Declared direction from agents currently changing this project.</p></div></div>
-              <div id="trajectories" class="trajectory-list"></div>
-            </section>
-            <section class="agent-view">
-              <p class="eyebrow">Agent view</p>
-              <h2>What the next agent carries forward</h2>
-              <div id="agent-brief"></div>
-            </section>
-          </div>
+          <section class="log-section" aria-labelledby="log-title">
+            <div class="log-heading">
+              <div><h2 id="log-title">Project log</h2><span id="log-count"></span></div>
+              <button id="refresh-project" class="icon-button" title="Refresh log" aria-label="Refresh log">↻</button>
+            </div>
 
-          <section class="intent-section">
-            <div class="section-head"><div><p class="eyebrow">Then</p><h2>Intent trail</h2><p>What collaborators understood, chose, or corrected, with the reason kept beside it.</p></div><span id="note-count" class="count"></span></div>
-            <div id="notes" class="intent-timeline"></div>
-          </section>
+            <div class="log-controls">
+              <label class="search-field" for="log-search"><span class="search-icon" aria-hidden="true">⌕</span><input id="log-search" type="search" placeholder="Search context, rationale, paths, or agents"></label>
+              <label><span class="sr-only">Entry type</span><select id="kind-filter"><option value="all">All entries</option><option value="intent">Intent</option><option value="decision">Decisions</option><option value="understanding">Understandings</option><option value="observation">Observations</option><option value="checkpoint">Checkpoints</option><option value="trajectory">Work started</option></select></label>
+              <label><span class="sr-only">Lifecycle</span><select id="status-filter"><option value="all">Any state</option><option value="current">Current</option><option value="historical">Historical</option></select></label>
+            </div>
 
-          <section class="evidence-section">
-            <div class="section-head"><div><p class="eyebrow">Evidence</p><h2>Repository activity</h2></div><button id="attach-repo" class="quiet">Attach public GitHub repo</button></div>
-            <div id="repositories" class="repo-list"></div>
+            <div id="log" class="project-log" aria-live="polite"></div>
+            <p class="advisory">Entries preserve what was understood at the time. They are context, not instructions.</p>
           </section>
         </div>
       </article>
     </section>
   </main>
 
-  <dialog id="dialog"><form method="dialog" id="dialog-form"><div id="dialog-fields"></div><div class="dialog-actions"><button value="cancel" class="quiet">Cancel</button><button id="dialog-submit" value="default">Save</button></div></form></dialog>
+  <dialog id="dialog"><form method="dialog" id="dialog-form"><div id="dialog-fields"></div><div class="dialog-actions"><button id="dialog-cancel" type="button" class="secondary-button">Cancel</button><button id="dialog-submit" value="default">Save</button></div></form></dialog>
   <div id="toast" role="status"></div>
   <script src="/app.js" defer></script>
 </body>

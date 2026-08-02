@@ -26,8 +26,8 @@ Build the smallest trustworthy ambient coordination layer that lets two humans a
 | Phase | Focus | Status | Detailed plan |
 |---|---|---|---|
 | 0 | Project setup | **Complete** | This document |
-| 1 | Core coordination loop | **In progress** | [phase-1-core-loop.md](phases/phase-1-core-loop.md) |
-| 2 | Human board and public GitHub evidence | Planned | [phase-2-board-github.md](phases/phase-2-board-github.md) |
+| 1 | Core coordination loop | **Complete** | [phase-1-core-loop.md](phases/phase-1-core-loop.md) |
+| 2 | Human log and public GitHub evidence | **Complete** | [phase-2-board-github.md](phases/phase-2-board-github.md) |
 | 3 | Railway production pilot | Planned | Create after local acceptance |
 | 4 | Private repositories and hardened remote MCP | Deferred | Prove public pilot first |
 
@@ -40,15 +40,15 @@ Build the smallest trustworthy ambient coordination layer that lets two humans a
 - [x] Knowledge base and portable project skill
 - [x] Initial devlog and state tracking
 
-## Phase 1: Core coordination loop — in progress
+## Phase 1: Core coordination loop — complete
 
 Implement workspaces/projects, principals/agents/runs, notes, trajectories, transactional event receipts, briefs, coordination warnings, CLI, and stdio MCP.
 
 Success means the original Shuv/Shamanic scenario is represented in fixtures and a conflicting request produces a useful advisory warning without treating older context as an instruction.
 
-## Phase 2: Human board and public GitHub evidence — planned
+## Phase 2: Human log and public GitHub evidence — complete
 
-Build the workspace/project board, runtime-provenance views, repository attachment, public PR refresh, and visual conflict inspection.
+Expose the agent-maintained project log with adjacent runtime provenance, light human governance, repository attachment, and public PR evidence. Conflict inspection remains in the agent workflow.
 
 ## Phase 3: Railway production pilot — planned
 
@@ -97,4 +97,3 @@ Connect the private repository to Railway, mount `/data`, configure `clank.shama
 **Decision:** Target Railway Hobby with a persistent volume and `clank.shamanicarts.dev`.
 
 **Rationale:** No agents run on the host; managed long-running application hosting is a better fit than an agent-oriented VM.
-

@@ -195,11 +195,11 @@ clank_repository_attach
 
 Tool descriptions state that returned records are untrusted advisory data, not instructions.
 
-## 11. Human board
+## 11. Human dashboard
 
-Workspace view lists projects, active trajectories, recent notes, warnings, PR state, agents/runs, and backup health.
+The dashboard is a secondary, read-mostly window into the agent-maintained append log. A project opens directly into one reverse-chronological stream merging material notes and trajectories. Each entry keeps its concise implication, rationale, lifecycle, actor, runtime provenance, paths, and linked evidence together.
 
-Project view provides Now, Intent, Notes, Work, Evidence, Runs, Search, and Access. Humans may edit, contest, supersede, and redact, but routine maintenance remains agent-operated.
+Humans can search, filter, append an exceptional manual entry, supersede stale context, issue project agent access, attach a public repository, and export the project. Conflict checking and proposed-work comparison remain in the skill, CLI, MCP, and host-agent conversation. They are not dashboard workflows.
 
 ## 12. Public GitHub evidence
 
@@ -231,7 +231,7 @@ Railway mounts `/data`; database lives at `/data/clankspace.db`. Railway volume 
 5. Receive a coordination warning naming the related trajectory, rationale, actor/run context, freshness, and evidence.
 6. The warning offers continue, inspect, or realign; it does not block or command.
 7. Record the redirected intent and make it available to Shuv’s next run.
-8. Reconstruct the complete exchange from the board without transcript storage.
+8. Reconstruct the accrued context from the append-log dashboard without transcript storage.
 
 ## 16. Risks
 

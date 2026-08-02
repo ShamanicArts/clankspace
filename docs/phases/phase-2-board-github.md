@@ -1,26 +1,27 @@
 ---
 type: phase
-status: in-progress
+status: complete
 phase_number: "2"
 prerequisite: Phase 1 complete
 estimated_effort: 1 focused session
-summary: Add the human project board and read-only public GitHub evidence.
+summary: Add the human append-log viewer and read-only public GitHub evidence.
 note_created: 2026-08-02
 updated: 2026-08-02
 ---
 
-# Phase 2: Human board and public GitHub evidence
+# Phase 2: Human log and public GitHub evidence
 
 ## Goal
 
-Make accrued intent, runtime provenance, trajectories, warnings, repositories, and pull requests easy for humans to scan without turning the dashboard into a mandatory workflow.
+Make accrued intent, runtime provenance, trajectories, repositories, and pull requests easy for humans to scan without turning the dashboard into a workflow.
 
 ## Sub-phases
 
 ### 2a: Dashboard
 
 - [x] Token login and workspace/project navigation
-- [x] Project overview, current notes, active trajectories, and warnings
+- [x] One chronological stream of notes and trajectories
+- [x] Immediate search and lifecycle/type filters
 - [x] Run provenance including harness/model/role/parent/automation context adjacent to records
 - [x] Create and supersede notes
 - [ ] Contest/redact administrative controls

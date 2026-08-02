@@ -1,7 +1,7 @@
 ---
 type: state
 status: active
-summary: First ClankSpace vertical slice is implemented, browser-verified, published, and ready for hosted pilot setup.
+summary: The agent-native vertical slice and understated append-log dashboard are implemented and ready for hosted pilot setup.
 note_created: 2026-08-02
 updated: 2026-08-02
 ---
@@ -14,7 +14,7 @@ Connect the published, deploy-ready vertical slice to Railway.
 
 ## Active phase
 
-Phase 2 — see `docs/phases/phase-2-board-github.md`. Phase 1 is complete.
+Phase 3, Railway production pilot. The agent loop and human append-log viewer are complete locally.
 
 ## Blockers
 
@@ -26,4 +26,4 @@ Phase 2 — see `docs/phases/phase-2-board-github.md`. Phase 1 is complete.
 
 ## Last devlog
 
-`docs/devlogs/2026-08-02-intent-first-dashboard.md` — status: complete
+`docs/devlogs/2026-08-02-append-log-dashboard.md` — status: complete

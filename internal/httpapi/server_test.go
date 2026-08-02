@@ -34,6 +34,15 @@ func TestHealthStaticAndAuthentication(t *testing.T) {
 		if w.Code != 200 {
 			t.Fatalf("%s returned %d", path, w.Code)
 		}
+		if path == "/" {
+			body := w.Body.String()
+			if !strings.Contains(body, "Project log") {
+				t.Fatal("dashboard should open around the project append log")
+			}
+			if strings.Contains(body, "Before your agent changes the code") {
+				t.Fatal("dashboard must not present the agent coordination check as a human workflow")
+			}
+		}
 	}
 	r := httptest.NewRequest("GET", "/api/v1/projects", nil)
 	w := httptest.NewRecorder()
