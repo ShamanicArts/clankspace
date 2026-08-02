@@ -45,7 +45,7 @@ log(
 )
 
 const stringArray = { type: 'array', items: { type: 'string' } }
-const paths = { type: 'array', minItems: 1, uniqueItems: true, items: { type: 'string', enum: ALLOWED_PATHS } }
+const paths = { type: 'array', minItems: 1, items: { type: 'string', enum: ALLOWED_PATHS } }
 const turn = {
   type: 'object', additionalProperties: false, required: ['role', 'text'],
   properties: { role: { const: 'user' }, text: { type: 'string', minLength: 8, maxLength: 1200 } },
@@ -85,8 +85,8 @@ const oracle = {
   type: 'object', additionalProperties: false,
   required: ['relevantRecordIds', 'relevantTrajectoryIds', 'expectedBehavior', 'shouldCheckpoint', 'materialReason', 'forbiddenClaims'],
   properties: {
-    relevantRecordIds: { ...stringArray, uniqueItems: true },
-    relevantTrajectoryIds: { ...stringArray, uniqueItems: true },
+    relevantRecordIds: stringArray,
+    relevantTrajectoryIds: stringArray,
     expectedBehavior: { enum: ['pause', 'proceed', 'inspect'] },
     shouldCheckpoint: { type: 'boolean' },
     materialReason: { type: 'string', minLength: 24, maxLength: 900 },
