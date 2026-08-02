@@ -39,11 +39,23 @@ type RolloutPlan struct {
 }
 
 func PlanRollout(options RolloutOptions) (RolloutPlan, PreparedWorld, Scenario, error) {
-	prepared, err := ReadPrepared(options.PreparedPath)
+	preparedPath, err := filepath.Abs(options.PreparedPath)
 	if err != nil {
 		return RolloutPlan{}, PreparedWorld{}, Scenario{}, err
 	}
-	scenario, _, err := LoadScenario(filepath.Join(filepath.Dir(options.PreparedPath), "scenario.json"))
+	prepared, err := ReadPrepared(preparedPath)
+	if err != nil {
+		return RolloutPlan{}, PreparedWorld{}, Scenario{}, err
+	}
+	prepared.RepositoryPath, err = filepath.Abs(prepared.RepositoryPath)
+	if err != nil {
+		return RolloutPlan{}, PreparedWorld{}, Scenario{}, err
+	}
+	prepared.CredentialFile, err = filepath.Abs(prepared.CredentialFile)
+	if err != nil {
+		return RolloutPlan{}, PreparedWorld{}, Scenario{}, err
+	}
+	scenario, _, err := LoadScenario(filepath.Join(filepath.Dir(preparedPath), "scenario.json"))
 	if err != nil {
 		return RolloutPlan{}, PreparedWorld{}, Scenario{}, err
 	}
@@ -65,6 +77,11 @@ func PlanRollout(options RolloutOptions) (RolloutPlan, PreparedWorld, Scenario, 
 }
 
 func RunRollout(ctx context.Context, options RolloutOptions) (RolloutResult, error) {
+	preparedPath, err := filepath.Abs(options.PreparedPath)
+	if err != nil {
+		return RolloutResult{}, err
+	}
+	options.PreparedPath = preparedPath
 	plan, prepared, scenario, err := PlanRollout(options)
 	if err != nil {
 		return RolloutResult{}, err

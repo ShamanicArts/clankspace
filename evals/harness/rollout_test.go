@@ -16,6 +16,67 @@ func TestThreadIDFromTrace(t *testing.T) {
 	}
 }
 
+func TestPlanRolloutCanonicalizesPortablePaths(t *testing.T) {
+	root := t.TempDir()
+	world := filepath.Join(root, "data", "world")
+	repository := filepath.Join(root, "data", "world", "repo")
+	credential := filepath.Join(root, "data", "secrets", "credentials.json")
+	if err := os.MkdirAll(repository, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(credential), 0700); err != nil {
+		t.Fatal(err)
+	}
+	scenario := Scenario{
+		SchemaVersion: 1,
+		ID:            "train-portable-paths-001",
+		Split:         "train",
+		Category:      "routine-work",
+		Project: ScenarioProject{
+			Slug: "portable-paths", Name: "Portable paths", Description: "A portable rollout fixture.",
+			RepositoryProfile: "fake", Paths: []string{"README.md"},
+		},
+		Repository: RepositoryFixture{Commits: []CommitSpec{{
+			ID: "initial-commit", Message: "add fixture", AuthorName: "Fixture Agent",
+			AuthorEmail: "fixture@example.test", Changes: []FileChange{{Path: "README.md", Content: "fixture\n"}},
+		}}},
+		Actors: []Actor{{
+			Key: "task-agent", PrincipalName: "Fixture principal", AgentName: "Fixture agent",
+			Harness: "codex", Provider: "openai", Model: "gpt-5.6-luna", Reasoning: "high", Role: "primary",
+		}},
+		Records: []Record{{
+			ID: "record-context", ActorKey: "task-agent", Kind: "observation", Title: "Fixture context",
+			Summary: "The fixture has portable paths.", Rationale: "Exercise rollout path resolution.",
+			Status: "current", LedBy: "agent", DirectionBasis: "autonomous_agent_judgment", Paths: []string{"README.md"},
+		}},
+		Conversation: []ConversationTurn{{Role: "user", Text: "Keep the fixture portable."}},
+		Task:         Task{ActorKey: "task-agent", Objective: "Inspect the portable fixture.", UserRequest: "Inspect README.md.", Paths: []string{"README.md"}},
+		Oracle:       Oracle{ExpectedBehavior: "proceed", MaterialReason: "No coordination conflict exists."},
+		Generation:   Generation{CurriculumVersion: "v1", Seed: "portable-paths", GeneratorProvider: "codex", GeneratorModel: "gpt-5.6-luna"},
+	}
+	if err := writeJSONExclusive(filepath.Join(world, "scenario.json"), scenario, 0600); err != nil {
+		t.Fatal(err)
+	}
+	prepared := PreparedWorld{
+		SchemaVersion: 1, ScenarioID: scenario.ID, ScenarioHash: "hash",
+		RepositoryPath: filepath.Join("data", "world", "repo"),
+		CredentialFile: filepath.Join("data", "secrets", "credentials.json"),
+	}
+	if err := writeJSONExclusive(filepath.Join(world, "prepared.json"), prepared, 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(root)
+	plan, resolved, _, err := PlanRollout(RolloutOptions{
+		PreparedPath: filepath.Join("data", "world", "prepared.json"), Model: "gpt-5.6-luna", Reasoning: "high",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Repository != repository || resolved.RepositoryPath != repository || resolved.CredentialFile != credential {
+		t.Fatalf("paths were not canonicalized: plan=%q repository=%q credential=%q", plan.Repository, resolved.RepositoryPath, resolved.CredentialFile)
+	}
+}
+
 func TestScoreRolloutFindsBriefBeforeWriteAndRelevantContext(t *testing.T) {
 	dir := t.TempDir()
 	tracePath := filepath.Join(dir, "events.jsonl")
