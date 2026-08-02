@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/ShamanicArts/clankspace/internal/domain"
@@ -28,6 +29,41 @@ func TestCodexResumePreservesWorkspaceWriteSandbox(t *testing.T) {
 	}
 	if args[0] != "exec" || args[1] != "resume" {
 		t.Fatalf("unexpected resume command: %#v", args)
+	}
+}
+
+func TestRolloutEnvironmentSuppliesRunProvenance(t *testing.T) {
+	t.Setenv("CLANKSPACE_MODEL", "stale-model")
+	t.Setenv("CLANKSPACE_RUN", "stale-run")
+	environment := rolloutEnvironment(
+		PreparedWorld{CredentialFile: "/tmp/credentials.json", RepositoryPath: "/tmp/world", SkillHash: "skill-hash"},
+		RolloutOptions{Model: "gpt-5.6-luna", Reasoning: "high"},
+	)
+	values := map[string]string{}
+	for _, item := range environment {
+		key, value, found := strings.Cut(item, "=")
+		if found {
+			values[key] = value
+		}
+	}
+	for key, expected := range map[string]string{
+		"CLANKSPACE_CREDENTIALS_FILE": "/tmp/credentials.json",
+		"CLANKSPACE_AGENT":            "eval-luna",
+		"CLANKSPACE_HARNESS":          "codex",
+		"CLANKSPACE_PROVIDER":         "openai",
+		"CLANKSPACE_MODEL":            "gpt-5.6-luna",
+		"CLANKSPACE_REASONING":        "high",
+		"CLANKSPACE_ROLE":             "primary",
+		"CLANKSPACE_RUN_TYPE":         "interactive",
+		"CLANKSPACE_WORKTREE":         "/tmp/world",
+		"CLANKSPACE_INSTRUCTIONS":     "AGENTS.md,clankspace:skill-hash",
+	} {
+		if values[key] != expected {
+			t.Fatalf("%s = %q, want %q", key, values[key], expected)
+		}
+	}
+	if _, exists := values["CLANKSPACE_RUN"]; exists {
+		t.Fatal("ambient run ID leaked into a new rollout")
 	}
 }
 

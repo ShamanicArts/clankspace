@@ -15,7 +15,7 @@ Once the human gives a material task:
 
 1. Run `clank context` from the repository. Confirm the expected project and `tokenConfigured: true`.
 2. If authentication is absent, stop and ask the human to perform the one-time `clank auth set --token-stdin`. Do not search for or expose credentials.
-3. Run `clank run --help`, then start a run with `clank run start` and the fullest metadata the harness actually provides: agent name, harness/version, provider/model/reasoning, primary/subagent/reviewer/automation role, interaction type, objective, branch, worktree, and instruction profile. Never guess unavailable fields.
+3. Start a run with `clank run start --objective "<current material task>"`. The harness supplies known agent, provider, model, reasoning, role, worktree, and instruction provenance as defaults; add or override flags only when you have direct evidence that a default is incomplete. Run `clank run --help` only if the command fails or you need an optional field. Never guess unavailable metadata.
 4. Save the returned run ID for subsequent commands.
 5. Before planning material work, run `clank brief --run <id> --objective "..." --paths "..."`.
 6. After alignment and before substantial or collision-prone edits, publish the active objective, rationale, and path scope with `clank trajectory start`.

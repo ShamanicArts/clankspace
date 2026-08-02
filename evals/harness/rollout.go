@@ -198,7 +198,7 @@ func runCodexTurn(ctx context.Context, options RolloutOptions, prepared Prepared
 	args := codexTurnArgs(options, prepared, threadID, prompt, responsePath)
 	cmd := exec.CommandContext(ctx, options.CodexBin, args...)
 	cmd.Dir = prepared.RepositoryPath
-	cmd.Env = rolloutEnvironment(prepared.CredentialFile)
+	cmd.Env = rolloutEnvironment(prepared, options)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Run()
@@ -226,15 +226,36 @@ func codexTurnArgs(options RolloutOptions, prepared PreparedWorld, threadID, pro
 	return args
 }
 
-func rolloutEnvironment(credentialsFile string) []string {
-	env := make([]string, 0, len(os.Environ())+1)
+func rolloutEnvironment(prepared PreparedWorld, options RolloutOptions) []string {
+	overrides := map[string]string{
+		"CLANKSPACE_CREDENTIALS_FILE": prepared.CredentialFile,
+		"CLANKSPACE_AGENT":            "eval-luna",
+		"CLANKSPACE_HARNESS":          "codex",
+		"CLANKSPACE_HARNESS_VERSION":  "codex-cli",
+		"CLANKSPACE_PROVIDER":         "openai",
+		"CLANKSPACE_MODEL":            options.Model,
+		"CLANKSPACE_REASONING":        options.Reasoning,
+		"CLANKSPACE_ROLE":             "primary",
+		"CLANKSPACE_RUN_TYPE":         "interactive",
+		"CLANKSPACE_BRANCH":           "main",
+		"CLANKSPACE_WORKTREE":         prepared.RepositoryPath,
+		"CLANKSPACE_INSTRUCTIONS":     "AGENTS.md,clankspace:" + prepared.SkillHash,
+	}
+	env := make([]string, 0, len(os.Environ())+len(overrides))
 	for _, item := range os.Environ() {
-		if strings.HasPrefix(item, "CLANKSPACE_CREDENTIALS_FILE=") || strings.HasPrefix(item, "CLANKSPACE_RUN=") {
+		key, _, _ := strings.Cut(item, "=")
+		if key == "CLANKSPACE_RUN" {
+			continue
+		}
+		if _, replaced := overrides[key]; replaced {
 			continue
 		}
 		env = append(env, item)
 	}
-	return append(env, "CLANKSPACE_CREDENTIALS_FILE="+credentialsFile)
+	for key, value := range overrides {
+		env = append(env, key+"="+value)
+	}
+	return env
 }
 
 func threadIDFromTrace(trace []byte) string {
