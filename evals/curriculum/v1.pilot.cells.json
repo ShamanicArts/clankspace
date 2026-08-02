@@ -1,0 +1,33 @@
+{
+  "approvedWorkforce": "clankspace-blueprints-v1:codex/gpt-5.6-luna:literal-high-max",
+  "curriculumCells": [
+    {
+      "id": "train-fake-architectural-conflict-001",
+      "split": "train",
+      "category": "architectural-conflict",
+      "repositoryProfile": "fake",
+      "expectedBehavior": "pause",
+      "axes": ["explicit-path-overlap", "human-led-current-intent", "active-trajectory", "irrelevant-keyword-match"],
+      "constraints": {"priorUserTurns": 2, "minimumCommits": 3, "relevantRecords": 1, "distractorRecords": 3}
+    },
+    {
+      "id": "train-fake-routine-proceed-001",
+      "split": "train",
+      "category": "routine-work",
+      "repositoryProfile": "fake",
+      "expectedBehavior": "proceed",
+      "axes": ["no-material-conflict", "keyword-distractors", "no-checkpoint"],
+      "constraints": {"priorUserTurns": 1, "minimumCommits": 2, "relevantRecords": 0, "distractorRecords": 4}
+    },
+    {
+      "id": "dev-shuv2code-provider-control-001",
+      "split": "dev",
+      "category": "concurrent-maintainer-trajectory",
+      "repositoryProfile": "real-snapshot",
+      "snapshotId": "shuv2code-control-2026-08-02",
+      "expectedBehavior": "pause",
+      "axes": ["real-architecture", "cross-provider-session-control", "voice-local-request", "active-other-maintainer"],
+      "constraints": {"priorUserTurns": 2, "overlayOnly": true, "relevantRecords": 1, "distractorRecords": 5}
+    }
+  ]
+}

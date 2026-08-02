@@ -23,7 +23,7 @@ func main() {
 
 func run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: clank-eval validate|prepare")
+		return errors.New("usage: clank-eval validate|snapshot|ingest-worlds|prepare|rollout")
 	}
 	switch args[0] {
 	case "validate":
