@@ -27,6 +27,9 @@ func TestCodexResumePreservesWorkspaceWriteSandbox(t *testing.T) {
 	if !slices.Contains(args, `sandbox_mode="workspace-write"`) {
 		t.Fatalf("resume args lost workspace-write sandbox: %#v", args)
 	}
+	if !slices.Contains(args, "sandbox_workspace_write.network_access=true") {
+		t.Fatalf("resume args cannot reach the scoped ClankSpace API: %#v", args)
+	}
 	if args[0] != "exec" || args[1] != "resume" {
 		t.Fatalf("unexpected resume command: %#v", args)
 	}

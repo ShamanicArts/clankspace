@@ -217,11 +217,12 @@ func runCodexTurn(ctx context.Context, options RolloutOptions, prepared Prepared
 func codexTurnArgs(options RolloutOptions, prepared PreparedWorld, threadID, prompt, responsePath string) []string {
 	effort := fmt.Sprintf("model_reasoning_effort=%q", options.Reasoning)
 	sandbox := `sandbox_mode="workspace-write"`
+	network := "sandbox_workspace_write.network_access=true"
 	args := []string{"exec"}
 	if threadID == "" {
-		args = append(args, "--ignore-user-config", "--model", options.Model, "--config", effort, "--config", sandbox, "--sandbox", "workspace-write", "--cd", prepared.RepositoryPath, "--json", "--color", "never", "--output-last-message", responsePath, prompt)
+		args = append(args, "--ignore-user-config", "--model", options.Model, "--config", effort, "--config", sandbox, "--config", network, "--sandbox", "workspace-write", "--cd", prepared.RepositoryPath, "--json", "--color", "never", "--output-last-message", responsePath, prompt)
 	} else {
-		args = append(args, "resume", "--ignore-user-config", "--model", options.Model, "--config", effort, "--config", sandbox, "--json", "--output-last-message", responsePath, threadID, prompt)
+		args = append(args, "resume", "--ignore-user-config", "--model", options.Model, "--config", effort, "--config", sandbox, "--config", network, "--json", "--output-last-message", responsePath, threadID, prompt)
 	}
 	return args
 }
