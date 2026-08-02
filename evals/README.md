@@ -15,6 +15,7 @@ See [`docs/evals/training-loop.md`](../docs/evals/training-loop.md) for dataset 
 - `cmd/clank-eval`: operational CLI built with `go build ./evals/cmd/clank-eval`.
 - `bin/codex-eval`: lean Codex launcher for model workers; disables unrelated plugin/tool surfaces while preserving the authenticated Codex provider.
 - `fixtures/rendered/relaydesk-001.json`: deterministic non-model canary.
+- `fixtures/collaboration/two-lane-v2.json`: contract fixture for the first event-gated collaboration pilot.
 
 ## Runner layout
 
@@ -45,7 +46,19 @@ clank-eval validate --scenario <rendered-world.json>
 clank-eval ingest-worlds --input <omegacode-output.json> --ledger <data-dir>
 clank-eval prepare --scenario <world.json> --ledger <data-dir> --corpus <version> \
   --admin-env <eval-admin.env> --skill <SKILL.md> [--snapshot id=/path ...]
+clank-eval validate-collaboration --scenario <two-lane-v2.json>
+clank-eval prepare-collaboration --scenario <two-lane-v2.json> --ledger <data-dir> --corpus v2 \
+  --admin-env <eval-admin.env> --skill <SKILL.md> --snapshot id=/sanitized-snapshot-repository
 clank-eval rollout --prepared <prepared.json> --model gpt-5.6-luna --reasoning high --dry-run
+clank-eval collaboration-rollout --prepared <prepared-v2.json> --repository <clean-baseline-repo> \
+  --credentials-dir <secrets-dir> --episode <immutable-episode-id> --server-config <frozen-public-config> \
+  --server-commit <clankspace-commit> --dry-run
 ```
 
 Remove `--dry-run` only after the exact live workforce and command have been approved. A rollout starts a real persisted Codex thread, sends every prior human turn separately, resumes that same thread for the final task, and records only observable events and responses—not hidden reasoning.
+
+`prepare-collaboration` is a separate v2 path; it does not alter v1 preparation or rollout. It content-addresses the scenario, verifies its source snapshot manifest (source URL and commit, sanitized head, bundle hash, and MIT license), builds a clean injected repository, creates one isolated shared project, seeds prior records and trajectories, and issues one distinct mode-0600 `<lane-id>.json` credential below the ledger's external secrets tree. `prepared.json` contains no token or credential path. Re-running the command resolves the same frozen prepared artifact without writing a new project or secret.
+
+`collaboration-rollout` requires the two credential files from that external secrets tree. Its default launcher is `/home/exedev/clankspace-evals/bin/codex-eval`, matching the service-VM runner layout; another launcher must be passed explicitly with `--codex`. Before a live run it hashes and therefore preflights that executable plus the supplied server configuration. The runner first clones and launches lane A, then polls runs plus the project export until it observes the declared checkpoint from exactly one matching lane-A run. It does not clone or launch lane B before that durable observation. The timeout, an observer failure, cancellation, an ambiguous run, or lane A exiting without the checkpoint leaves lane B unstarted and writes an incomplete evidence episode.
+
+Each live episode writes `schedule.json`, exact launched commands, observable Codex JSONL and stderr, public responses, run/project snapshots, `barrier.json`, Git results, required task-check results, lane results, `deterministic-score.json`, `collaboration.json`, `dossier.html`, and `SHA256SUMS` below `traces/<episode>/`. `collaboration.json` pins the Codex launcher hash plus supplied server commit and configuration hash. The dossier is a self-contained offline HTML file with local links only. Credential files, credential contents, and hidden ledger oracles are not copied into worktrees or report artifacts. The dry-run prints the exact planned commands and filesystem paths and does not create worktrees or launch Codex.

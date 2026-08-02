@@ -1,6 +1,7 @@
 package harness
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -18,11 +19,21 @@ type Layout struct {
 }
 
 func CreateLayout(root, corpusVersion string, scenario Scenario, canonical []byte) (Layout, string, error) {
+	return createLayout(root, corpusVersion, scenario.Split, scenario.ID, canonical)
+}
+
+// CreateCollaborationLayout uses the same content-addressed ledger layout as
+// v1 worlds without widening the v1 Scenario loader or its prepared artifact.
+func CreateCollaborationLayout(root, corpusVersion string, scenario CollaborationScenario, canonical []byte) (Layout, string, error) {
+	return createLayout(root, corpusVersion, scenario.Split, scenario.ID, canonical)
+}
+
+func createLayout(root, corpusVersion, split, scenarioID string, canonical []byte) (Layout, string, error) {
 	if root == "" || corpusVersion == "" {
 		return Layout{}, "", errors.New("ledger root and corpus version are required")
 	}
 	hash := ContentHash(canonical)
-	base := filepath.Join(root, "corpora", corpusVersion, scenario.Split, scenario.ID, hash)
+	base := filepath.Join(root, "corpora", corpusVersion, split, scenarioID, hash)
 	layout := Layout{
 		Root:           base,
 		ScenarioPath:   filepath.Join(base, "scenario.json"),
@@ -54,6 +65,22 @@ func CreateLayout(root, corpusVersion string, scenario Scenario, canonical []byt
 func WritePrepared(layout Layout, prepared PreparedWorld) error {
 	if _, err := os.Stat(layout.PreparedPath); err == nil {
 		return fmt.Errorf("prepared artifact already exists: %s", layout.PreparedPath)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return writeJSONExclusive(layout.PreparedPath, prepared, 0600)
+}
+
+// WriteCollaborationPrepared freezes the credential-free v2 artifact. A
+// second call is only safe when it is byte-for-byte the same preparation.
+func WriteCollaborationPrepared(layout Layout, prepared CollaborationPreparedWorld) error {
+	if existing, err := ReadCollaborationPrepared(layout.PreparedPath); err == nil {
+		existingBody, existingErr := json.Marshal(existing)
+		preparedBody, preparedErr := json.Marshal(prepared)
+		if existingErr == nil && preparedErr == nil && string(existingBody) == string(preparedBody) {
+			return nil
+		}
+		return fmt.Errorf("prepared collaboration artifact already exists: %s", layout.PreparedPath)
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}

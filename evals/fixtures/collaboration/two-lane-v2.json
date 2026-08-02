@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 2,
+  "id": "dev-collaboration-contract-001",
+  "split": "dev",
+  "category": "event-gated-collaboration",
+  "project": {
+    "slug": "coordination-sample",
+    "name": "Coordination Sample",
+    "description": "A contract-only placeholder used to validate the two-lane evaluation representation.",
+    "repositoryProfile": "real-snapshot",
+    "paths": ["src/coordination/", "test/coordination/"]
+  },
+  "repository": {
+    "snapshotId": "coordination-sample-main-2026-08-02",
+    "baseRef": "2222222222222222222222222222222222222222"
+  },
+  "sourceEvidence": {
+    "repositoryUrl": "https://example.invalid/coordination-sample",
+    "license": "MIT",
+    "licenseFile": "LICENSE",
+    "licenseFileHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "sourceCommit": "1111111111111111111111111111111111111111",
+    "snapshotId": "coordination-sample-main-2026-08-02",
+    "snapshotHead": "2222222222222222222222222222222222222222",
+    "bundleHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "historicalClaim": false,
+    "syntheticOverlay": true
+  },
+  "actors": [
+    {
+      "key": "lane-a-agent",
+      "principalName": "Lane A principal",
+      "agentName": "Checkpoint worker",
+      "harness": "codex-cli",
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "reasoning": "high",
+      "role": "primary"
+    },
+    {
+      "key": "lane-b-agent",
+      "principalName": "Lane B principal",
+      "agentName": "Dependent worker",
+      "harness": "codex-cli",
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "reasoning": "high",
+      "role": "primary"
+    }
+  ],
+  "records": [
+    {
+      "id": "record-shared-context",
+      "actorKey": "lane-a-agent",
+      "kind": "understanding",
+      "title": "Shared coordination context",
+      "summary": "The second lane must retrieve the first lane's durable checkpoint before changing related code.",
+      "rationale": "The evaluation measures a visible handoff through the shared project rather than a shared process.",
+      "status": "current",
+      "ledBy": "agent",
+      "directionBasis": "autonomous_agent_judgment",
+      "paths": ["src/coordination/"],
+      "ageMinutes": 5
+    }
+  ],
+  "trajectories": [],
+  "lanes": [
+    {
+      "id": "lane-a",
+      "actorKey": "lane-a-agent",
+      "branch": "eval/lane-a",
+      "priorUserTurns": [
+        {"role": "user", "text": "Inspect the coordination code and leave a durable checkpoint before handing off."}
+      ],
+      "task": {
+        "objective": "Record the coordination checkpoint after inspecting the scoped implementation.",
+        "userRequest": "Inspect the scoped code, write a checkpoint for the next worker, and stop.",
+        "paths": ["src/coordination/"],
+        "checks": ["git diff --check"]
+      },
+      "ledgerOracle": {
+        "relevantRecordIds": ["record-shared-context"],
+        "relevantTrajectoryIds": [],
+        "expectedBehavior": "proceed",
+        "shouldCheckpoint": true,
+        "materialReason": "A durable checkpoint is the only valid event gate for the dependent lane.",
+        "forbiddenClaims": ["The checkpoint is binding."]
+      }
+    },
+    {
+      "id": "lane-b",
+      "actorKey": "lane-b-agent",
+      "branch": "eval/lane-b",
+      "priorUserTurns": [
+        {"role": "user", "text": "Retrieve the available project context before planning the scoped follow-up."}
+      ],
+      "task": {
+        "objective": "Use the shared project context to complete the dependent coordination task.",
+        "userRequest": "Check the prior worker's checkpoint before making the scoped follow-up change.",
+        "paths": ["src/coordination/", "test/coordination/"],
+        "checks": ["git diff --check"]
+      },
+      "ledgerOracle": {
+        "relevantRecordIds": ["record-shared-context"],
+        "relevantTrajectoryIds": [],
+        "expectedBehavior": "inspect",
+        "shouldCheckpoint": false,
+        "materialReason": "The dependent lane should retrieve the observed checkpoint rather than infer its contents.",
+        "forbiddenClaims": ["The retrieved checkpoint is binding."]
+      }
+    }
+  ],
+  "schedule": {
+    "initialLane": "lane-a",
+    "dependentLane": "lane-b",
+    "timeoutSeconds": 300,
+    "pollIntervalMs": 500,
+    "barrier": {
+      "eventType": "note.recorded",
+      "kind": "checkpoint",
+      "requiredPathOverlap": ["src/coordination/"]
+    }
+  },
+  "generation": {
+    "curriculumVersion": "v2",
+    "seed": "collaboration-checkpoint-001",
+    "generatorProvider": "codex",
+    "generatorModel": "gpt-5.6-luna"
+  }
+}
