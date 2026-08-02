@@ -25,3 +25,15 @@ func TestRunRejectsUnknownActionBeforeUsingClient(t *testing.T) {
 		t.Fatal("expected an unsupported run action to fail")
 	}
 }
+
+func TestMutationHelpDoesNotRequireAClient(t *testing.T) {
+	if err := note(context.Background(), nil, []string{"create", "--help"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := trajectory(context.Background(), nil, []string{"--help"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := runCommand(context.Background(), nil, []string{"end", "--help"}); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -245,6 +245,10 @@ func runCommand(ctx context.Context, c *client.Client, args []string) error {
 		runUsage()
 		return nil
 	}
+	if len(args) > 1 && isHelp(args[1]) {
+		runUsage()
+		return nil
+	}
 	if args[0] == "end" {
 		f := flag.NewFlagSet("run end", flag.ContinueOnError)
 		id := f.String("id", value("CLANKSPACE_RUN", ""), "run ID")
@@ -288,7 +292,11 @@ func runCommand(ctx context.Context, c *client.Client, args []string) error {
 
 func note(ctx context.Context, c *client.Client, args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: clank note add|supersede")
+		return errors.New("usage: clank note add|create|supersede")
+	}
+	if isHelp(args[0]) || (len(args) > 1 && isHelp(args[1])) {
+		noteUsage()
+		return nil
 	}
 	if args[0] == "supersede" {
 		f := flag.NewFlagSet("note supersede", flag.ContinueOnError)
@@ -304,6 +312,9 @@ func note(ctx context.Context, c *client.Client, args []string) error {
 			printJSON(o)
 		}
 		return e
+	}
+	if args[0] != "add" && args[0] != "create" {
+		return errors.New("usage: clank note add|create|supersede")
 	}
 	f := flag.NewFlagSet("note add", flag.ContinueOnError)
 	project := f.String("project", os.Getenv("CLANKSPACE_PROJECT"), "project")
@@ -326,6 +337,10 @@ func note(ctx context.Context, c *client.Client, args []string) error {
 }
 
 func trajectory(ctx context.Context, c *client.Client, args []string) error {
+	if len(args) > 0 && (isHelp(args[0]) || (len(args) > 1 && isHelp(args[1]))) {
+		trajectoryUsage()
+		return nil
+	}
 	if len(args) == 0 || args[0] != "start" {
 		return errors.New("usage: clank trajectory start")
 	}
@@ -421,7 +436,7 @@ clank run --help
 clank brief --run <id> --objective <text> --paths <comma-separated>
 clank why <topic-or-path> --run <id>
 clank trajectory start --run <id> --objective <text> --rationale <text> --paths <comma-separated>
-clank note add|supersede
+clank note add|create|supersede
 clank run end --id <id> --outcome <completed|aborted> --verification <text>
 clank auth | project | repo | mcp | serve | version`)
 }
@@ -445,4 +460,25 @@ func runUsage() {
 The command returns a JSON run object. Pass its top-level id to brief, trajectory, note, and run end.
 
 clank run end --id <run-id> --outcome <completed|aborted> --verification <text>`)
+}
+
+func noteUsage() {
+	fmt.Fprintln(os.Stdout, `clank note add [options]
+  --run <run-id>
+  --kind <intent|decision|understanding|observation|checkpoint>
+  --title <concise title>
+  --summary <project implication>
+  --rationale <reasoning summary>
+  --led-by <human|agent|joint|external>
+  --basis <direction basis>
+  --paths <comma-separated paths>
+
+"create" is accepted as an alias for "add".
+clank note supersede --id <note-id> --revision <n> --reason <text>`)
+}
+
+func trajectoryUsage() {
+	fmt.Fprintln(os.Stdout, `clank trajectory start --run <run-id> --objective <text> --rationale <text> --paths <comma-separated> [--branch <branch>]
+
+Ending the associated run automatically closes its active trajectories.`)
 }

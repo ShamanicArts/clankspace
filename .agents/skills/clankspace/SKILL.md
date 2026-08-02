@@ -35,6 +35,8 @@ Before reversing surprising architecture later in a task, run `clank why <path-o
 
 ## Write sparingly
 
+Default to **no checkpoint**. Completing the requested feature, passing expected tests, updating documentation, summarizing a diff, or handing work back are routine execution—not durable coordination knowledge. Put verification in `clank run end`, not in a note.
+
 Append only when another competent collaborator might change, pause, or reinterpret work after learning the information:
 
 - non-obvious human or agent intent and its rationale;
@@ -48,4 +50,4 @@ Never record routine narration, full diffs, raw messages, transcripts, exact quo
 
 ## Finish
 
-Before handoff, request another brief for the final scope. Record a checkpoint only if it passes the materiality test. End the run with its outcome and verification state. When nothing reusable happened, write nothing.
+Before handoff, request another brief for the final scope. Record a checkpoint only for a surprising durable implication that could change another collaborator's next action; if you cannot name that implication, write no note. End the run with its outcome and verification state; this automatically closes active trajectories. When nothing reusable happened, write nothing.
