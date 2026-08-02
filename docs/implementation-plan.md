@@ -54,6 +54,11 @@ Expose the agent-maintained project log with adjacent runtime provenance, light 
 
 Connect the private repository to Railway, mount `/data`, configure `clank.shamanicarts.dev`, create the workspace and invitations, enable volume backups, and complete a portable restore drill.
 
+## Research backlog
+
+- Inspect the final Apache-archived Google Wave code and protocol/design documents for reusable collaboration patterns: concurrent append/edit history, identity and presence, threaded context, federation boundaries, and event replay. Treat it as pattern research, not a proposal to inherit Wave's product or deployment complexity.
+- Evaluate API-token-router guardrails that can enforce project, tool, and write boundaries outside the model prompt. Keep ClankSpace context behind bounded CLI/MCP retrieval rather than silently injecting advisory records into system instructions.
+
 ## Design decisions log
 
 ### D1 — Name

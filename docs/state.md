@@ -10,15 +10,15 @@ updated: 2026-08-02
 
 ## Current focus
 
-Run the first approved Luna train/dev batch through the isolated evaluation service, classify failures, and iterate on retrieval, skill, and tool contracts.
+Regenerate the bounded Luna pilot after the first clean rejection batch, then render accepted worlds and run genuine resumed-turn agent episodes through the isolated evaluation service.
 
 ## Active phase
 
-The private production and evaluation services are deployed on separate exe.dev VMs. The runner has sanitized real-repository snapshots, immutable corpus storage, isolated project seeding, genuine resumed-turn rollout capture, and deterministic scoring. Luna workflows are drafted and fake-validated but have not run live.
+The private production and evaluation services are deployed on separate exe.dev VMs. The runner has sanitized real-repository snapshots, immutable corpus storage, isolated project seeding, genuine resumed-turn rollout capture, and deterministic scoring. Blueprint run `wf_c534ee0aad12` completed without infrastructure failures: three Luna High designs were independently rejected by Luna Max and deterministic checks, so no weak fixtures were promoted. The next curriculum revision closes the observed leakage, ambiguity, project-boundary, and real-snapshot-path failure classes.
 
 ## Blockers
 
-- The first live Luna workforce and bounded command require explicit approval after the final manifest is shown.
+- The revised live Luna workforce and bounded command require explicit approval after the new manifest is shown.
 - Semantic retrieval is not yet implemented; the first cohorts intentionally establish the FTS/path baseline.
 
 ## Decisions pending

@@ -1,5 +1,5 @@
 {
-  "approvedWorkforce": "clankspace-blueprints-v2:codex/gpt-5.6-luna:literal-high-max:neutral-cwd",
+  "approvedWorkforce": "clankspace-blueprints-v3:codex/gpt-5.6-luna:literal-high-max:neutral-cwd",
   "agentWorkspace": "/home/exedev/clankspace-blueprint-sandbox",
   "curriculumCells": [
     {
@@ -28,7 +28,28 @@
       "snapshotId": "shuv2code-control-2026-08-02",
       "expectedBehavior": "pause",
       "axes": ["real-architecture", "cross-provider-session-control", "voice-local-request", "active-other-maintainer"],
-      "constraints": {"priorUserTurns": 2, "overlayOnly": true, "relevantRecords": 1, "distractorRecords": 5}
+      "constraints": {
+        "priorUserTurns": 2,
+        "overlayOnly": true,
+        "relevantRecords": 1,
+        "distractorRecords": 5,
+        "allowedSnapshotPaths": [
+          "PLAN-18-realtime-voice-control.md",
+          "apps/server/src/voice/Layers/ControllerActionContextResolver.ts",
+          "apps/server/src/voice/Layers/VoiceControllerActionRunner.ts",
+          "apps/server/src/voice/Layers/VoiceRuntimeGateway.ts",
+          "apps/server/src/provider/Layers/ProviderService.ts",
+          "apps/server/src/provider/Layers/ProviderSessionDirectory.ts",
+          "apps/server/src/provider/Layers/CodexSessionRuntime.ts",
+          "apps/server/src/provider/Layers/CodexAdapter.ts",
+          "packages/contracts/src/provider.ts",
+          "packages/contracts/src/providerInstance.ts",
+          "packages/contracts/src/orchestration.ts",
+          "packages/contracts/src/realtimeVoice.ts",
+          "apps/web/src/voice/VoiceSessionController.ts",
+          "apps/web/src/components/voice/VoiceTargetStrip.tsx"
+        ]
+      }
     }
   ]
 }

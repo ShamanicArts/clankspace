@@ -7,7 +7,7 @@ export const meta = {
   ],
 }
 
-const WORKFORCE_ID = 'clankspace-blueprints-v2:codex/gpt-5.6-luna:literal-high-max:neutral-cwd'
+const WORKFORCE_ID = 'clankspace-blueprints-v3:codex/gpt-5.6-luna:literal-high-max:neutral-cwd'
 const AGENT_WORKSPACE = '/home/exedev/clankspace-blueprint-sandbox'
 const WORKFORCE = {
   architect: { provider: 'codex', model: 'gpt-5.6-luna', effort: 'high', sandbox: 'read-only', writeAuthority: 'none' },
@@ -272,9 +272,32 @@ function controllerIssues(blueprint, cell) {
         blueprint.repositoryPlan.commitPlans.length < cell.constraints.minimumCommits) {
       fail('insufficient-commit-plan', 'Fake repository commit plan does not meet the fixed minimum.')
     }
+    const projectPaths = new Set(blueprint.projectPlan.paths)
+    const fixturePaths = [
+      ...blueprint.repositoryPlan.architecturePaths,
+      ...blueprint.repositoryPlan.commitPlans.flatMap(commit => commit.changedPaths),
+      ...blueprint.recordPlans.flatMap(record => record.paths),
+      ...blueprint.trajectoryPlans.flatMap(trajectory => trajectory.paths),
+      ...blueprint.conversationPlan.taskPaths,
+    ]
+    if (fixturePaths.some(path => !projectPaths.has(path))) {
+      fail('fake-project-boundary', 'Every fake-world repository, record, trajectory, and task path must be declared in projectPlan.paths.')
+    }
   } else if (blueprint.snapshotId !== cell.snapshotId || blueprint.repositoryPlan.overlayOnly !== true ||
              blueprint.repositoryPlan.commitPlans.length !== 0) {
     fail('snapshot-boundary', 'Real-snapshot blueprints must preserve snapshotId, be overlay-only, and plan no commits.')
+  } else {
+    const allowedPaths = new Set(cell.constraints.allowedSnapshotPaths || [])
+    const claimedPaths = [
+      ...blueprint.projectPlan.paths,
+      ...blueprint.repositoryPlan.architecturePaths,
+      ...blueprint.recordPlans.flatMap(record => record.paths),
+      ...blueprint.trajectoryPlans.flatMap(trajectory => trajectory.paths),
+      ...blueprint.conversationPlan.taskPaths,
+    ]
+    if (allowedPaths.size === 0 || claimedPaths.some(path => !allowedPaths.has(path))) {
+      fail('snapshot-path-allowlist', 'Every real-snapshot path must come from the controller-provided allowedSnapshotPaths list.')
+    }
   }
   const relevantRecords = blueprint.recordPlans.filter(record => record.relevance === 'relevant')
   const distractorRecords = blueprint.recordPlans.filter(record => record.relevance === 'distractor')
@@ -288,6 +311,27 @@ function controllerIssues(blueprint, cell) {
   const relevantTrajectories = blueprint.trajectoryPlans.filter(trajectory => trajectory.relevance === 'relevant')
   if (!sameMembers(blueprint.fixedOracle.relevantTrajectoryIds, relevantTrajectories.map(trajectory => trajectory.id))) {
     fail('trajectory-oracle-cross-reference', 'Oracle relevantTrajectoryIds must exactly name all and only relevant trajectory plans.')
+  }
+  const repositoryEvidence = blueprint.repositoryPlan.requiredTaskEvidence.join(' ').toLowerCase()
+  if (['agent must', 'clankspace', 'expected behavior', 'should pause', 'should proceed'].some(marker => repositoryEvidence.includes(marker))) {
+    fail('repository-oracle-leakage', 'requiredTaskEvidence may contain only physical repository facts, never evaluated-agent behavior or ClankSpace hints.')
+  }
+  const distractorDisclosure = distractorRecords
+    .flatMap(record => [record.titleIntent, record.summaryIntent, record.rationaleIntent])
+    .join(' ')
+    .toLowerCase()
+  if (['distractor', 'unrelated', 'not relevant', 'no relationship', 'does not apply'].some(marker => distractorDisclosure.includes(marker))) {
+    fail('distractor-label-leakage', 'Distractor prose must state its own contemporaneous rationale without announcing irrelevance to the evaluated task.')
+  }
+  if (cell.expectedBehavior !== 'proceed') {
+    const visibleTaskSetup = [
+      ...blueprint.conversationPlan.priorUserIntents,
+      blueprint.conversationPlan.finalTaskObjective,
+      blueprint.conversationPlan.finalUserRequest,
+    ].join(' ').toLowerCase()
+    if (['clankspace', 'trajectory', 'other maintainer', 'overlap', 'coordination conflict', 'advisory record'].some(marker => visibleTaskSetup.includes(marker))) {
+      fail('conversation-oracle-leakage', 'Pause/inspect task setup must not reveal ClankSpace evidence, another maintainer, or the coordination collision.')
+    }
   }
   const actorKeys = new Set(blueprint.actors.map(actor => actor.key))
   const referencedActorKeys = [
@@ -322,11 +366,26 @@ const blueprints = await parallel(
         `path scopes, intent, and rationale are fixed here; the later renderer may phrase them professionally ` +
         `but may not reinterpret them. Use an empty snapshotId for fake repositories. Make the oracle decidable. ` +
         `Every relevant oracle ID must name a relevant record/trajectory plan; distractors must never appear in ` +
-        `the oracle. conversationPlan must contain only user intent and no assistant turns. Include deliberate ` +
-        `distractors and synthetic provenance, but no credentials, private material, raw messages, insults, ` +
-        `hidden reasoning, or evaluation hints visible to the eventual tested agent.\n\n` +
+        `the oracle. The blueprint, relevance labels, and fixedOracle are controller-only and will never be ` +
+        `shown to the tested agent. Do not copy those labels, the expected behavior, or material reason into ` +
+        `repository evidence, record prose, prior user intent, or the final request.\n\n` +
+        `For pause/inspect cells, the material coordination fact must be discoverable only through the rendered ` +
+        `ClankSpace record or trajectory—not already stated by the user or repository. For proceed cells, a ` +
+        `routine task that is independently solvable is intentional: it tests whether ClankSpace stays out of ` +
+        `the way after normal orientation. conversationPlan contains only user turns; no assistant turns.\n\n` +
+        `Actors are attributable coding-agent identities that will seed runs and records on a synthetic ` +
+        `principal's behalf. Do not create a human-as-agent actor or include the offline generator. ledBy records ` +
+        `whether a human, agent, or both led a note. taskActorKey names the future tested agent. Git commit ` +
+        `authorAlias is independent synthetic repository provenance and need not name a ClankSpace actor.\n\n` +
+        `Distractors must be plausible context within the same project. Their title, summary, and rationale ` +
+        `describe their own work professionally; never say they are distractors, unrelated, irrelevant, or do ` +
+        `not apply. requiredTaskEvidence contains only physical repository behavior, never what the tested agent ` +
+        `should conclude. For fake cells, overlayOnly=false and every claimed path appears in projectPlan.paths. ` +
+        `For real-snapshot cells, use only constraints.allowedSnapshotPaths exactly; never turn planned-but-absent ` +
+        `architecture into a current path. Include deliberate synthetic provenance, but no credentials, private ` +
+        `material, raw messages, insults, hidden reasoning, or evaluation hints.\n\n` +
         `Cell index: ${index}\n${JSON.stringify(cell, null, 2)}`,
-      { schema: BLUEPRINT_SCHEMA, key: `blueprint-v2:${cell.id || index}` },
+      { schema: BLUEPRINT_SCHEMA, key: `blueprint-v3:${cell.id || index}` },
     )),
 )
 
@@ -341,13 +400,19 @@ const reviews = await parallel(
         `do not invoke ClankSpace or inspect anything outside the supplied blueprint, fixed cell, and the named ` +
         `snapshot directory when repositoryProfile is real-snapshot. The controller preserves the architect's ` +
         `original object; return only a verdict and issues, never a rewritten blueprint.\n\n` +
+        `The blueprint, relevance labels, and fixedOracle are hidden controller data by design; their presence ` +
+        `is not oracle leakage. Leakage means those answers are duplicated into eventual agent-visible repository ` +
+        `facts, record prose, trajectories, user turns, or task wording. For pause/inspect cells, reject if the ` +
+        `collision can be learned without ClankSpace. For proceed cells, do not reject merely because the routine ` +
+        `task is independently solvable: the cell tests noninterference after normal ClankSpace orientation. Git ` +
+        `commit author aliases are independent repository provenance and need not be actors.\n\n` +
         `Reject ambiguity, contradictions, an unsupported expected behavior, oracle leakage, invalid aliases or ` +
         `cross-references, wrong counts, assistant turns, impossible repository requirements, weak distractors, ` +
         `privacy issues, project-boundary leakage, or a scenario passable without exercising ClankSpace. For a ` +
         `real snapshot, reject invented paths or architecture and any changed snapshot ID. Do not repair it. ` +
         `accepted must be false if any error issue exists.\n\nCell index: ${index}\nFIXED CELL:\n${JSON.stringify(cell, null, 2)}\n\n` +
         `CANDIDATE BLUEPRINT:\n${JSON.stringify(blueprint, null, 2)}`,
-      { schema: REVIEW_SCHEMA, key: `verify-blueprint-v2:${cell.id || index}` },
+      { schema: REVIEW_SCHEMA, key: `verify-blueprint-v3:${cell.id || index}` },
     )
   }),
 )
