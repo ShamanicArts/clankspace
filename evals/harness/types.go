@@ -158,7 +158,12 @@ type TurnArtifact struct {
 type DeterministicScore struct {
 	ExpectedBehavior         string   `json:"expectedBehavior"`
 	RunRegistered            bool     `json:"runRegistered"`
+	NewRunCount              int      `json:"newRunCount"`
+	AllNewRunsCompleted      bool     `json:"allNewRunsCompleted"`
 	ClankInvoked             bool     `json:"clankInvoked"`
+	PreTaskStayedPassive     bool     `json:"preTaskStayedPassive"`
+	PreTaskCommandCount      int      `json:"preTaskCommandCount"`
+	PreTaskClankInvoked      bool     `json:"preTaskClankInvoked"`
 	BriefInvokedBeforeWrite  bool     `json:"briefInvokedBeforeWrite"`
 	RelevantRecordsSeen      []string `json:"relevantRecordsSeen"`
 	RelevantTrajectoriesSeen []string `json:"relevantTrajectoriesSeen"`

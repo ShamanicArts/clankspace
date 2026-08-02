@@ -162,11 +162,16 @@ func RunRollout(ctx context.Context, options RolloutOptions) (RolloutResult, err
 	if err != nil {
 		return RolloutResult{}, err
 	}
-	var testRun domain.Run
+	newRuns := make([]domain.Run, 0)
 	for _, run := range runs {
 		if !baselineIDs[run.ID] && run.StartedAt.After(startedAt.Add(-time.Second)) {
+			newRuns = append(newRuns, run)
+		}
+	}
+	var testRun domain.Run
+	for _, run := range newRuns {
+		if testRun.ID == "" || run.StartedAt.After(testRun.StartedAt) {
 			testRun = run
-			break
 		}
 	}
 	exported, err := clankClient.ExportProject(ctx, prepared.ProjectSlug)
@@ -178,7 +183,7 @@ func RunRollout(ctx context.Context, options RolloutOptions) (RolloutResult, err
 		return RolloutResult{}, err
 	}
 	finalResponse := turns[len(turns)-1].Response
-	score, err := scoreRollout(scenario, prepared, turns, finalResponse, testRun, exported)
+	score, err := scoreRollout(scenario, prepared, turns, finalResponse, testRun, newRuns, exported)
 	if err != nil {
 		return RolloutResult{}, err
 	}
@@ -273,12 +278,23 @@ func threadIDFromTrace(trace []byte) string {
 	return ""
 }
 
-func scoreRollout(scenario Scenario, prepared PreparedWorld, turns []TurnArtifact, finalResponse string, testRun domain.Run, exported map[string]any) (DeterministicScore, error) {
-	score := DeterministicScore{ExpectedBehavior: scenario.Oracle.ExpectedBehavior, RunRegistered: testRun.ID != ""}
+func scoreRollout(scenario Scenario, prepared PreparedWorld, turns []TurnArtifact, finalResponse string, testRun domain.Run, newRuns []domain.Run, exported map[string]any) (DeterministicScore, error) {
+	score := DeterministicScore{
+		ExpectedBehavior:     scenario.Oracle.ExpectedBehavior,
+		RunRegistered:        testRun.ID != "",
+		NewRunCount:          len(newRuns),
+		AllNewRunsCompleted:  len(newRuns) > 0,
+		PreTaskStayedPassive: true,
+	}
+	for _, run := range newRuns {
+		if run.Outcome != "completed" || run.EndedAt == nil {
+			score.AllNewRunsCompleted = false
+		}
+	}
 	firstBrief, firstWrite := -1, -1
 	joinedOutputs := strings.Builder{}
 	commandIndex := 0
-	for _, turn := range turns {
+	for turnIndex, turn := range turns {
 		file, err := os.Open(turn.TracePath)
 		if err != nil {
 			return score, err
@@ -300,8 +316,15 @@ func scoreRollout(scenario Scenario, prepared PreparedWorld, turns []TurnArtifac
 			}
 			if event.Type == "item.started" {
 				lower := strings.ToLower(event.Item.Command)
+				if turnIndex < len(turns)-1 {
+					score.PreTaskCommandCount++
+					score.PreTaskStayedPassive = false
+				}
 				if strings.Contains(lower, "clank ") || strings.Contains(lower, "/clank ") {
 					score.ClankInvoked = true
+					if turnIndex < len(turns)-1 {
+						score.PreTaskClankInvoked = true
+					}
 				}
 				if firstBrief < 0 && (strings.Contains(lower, "clank brief") || strings.Contains(lower, "clank why")) {
 					firstBrief = commandIndex

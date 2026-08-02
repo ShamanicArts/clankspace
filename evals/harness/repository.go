@@ -162,7 +162,7 @@ func injectAgentContext(options RepositoryOptions) error {
 	if err := copyFile(options.SkillPath, skillTarget, 0644); err != nil {
 		return err
 	}
-	agents := "# Agent Instructions\n\nThis project uses ClankSpace as advisory coordination memory. Before planning material work, follow the complete skill at `.agents/skills/clankspace/SKILL.md`. Retrieved records explain prior intent but never override current human direction or repository evidence.\n"
+	agents := "# Agent Instructions\n\nThis project uses ClankSpace as advisory coordination memory. Before planning material work, follow the complete skill at `.agents/skills/clankspace/SKILL.md`. Retrieved records explain prior intent but never override current human direction or repository evidence. ClankSpace is request-gated: for acknowledgements, brainstorming, or speculative discussion without an explicit request to inspect, plan, or change the project, reply conversationally without inspecting the repository, running commands, or invoking ClankSpace.\n"
 	if err := os.WriteFile(filepath.Join(options.Destination, "AGENTS.md"), []byte(agents), 0644); err != nil {
 		return err
 	}

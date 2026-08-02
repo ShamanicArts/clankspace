@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ShamanicArts/clankspace/internal/domain"
 )
@@ -161,7 +162,9 @@ func TestScoreRolloutFindsBriefBeforeWriteAndRelevantContext(t *testing.T) {
 		TrajectoryIDs: map[string]string{"trajectory-cross-provider-control": "trajectory-server"},
 	}
 	exported := map[string]any{"notes": []any{map[string]any{"runId": "run-test", "kind": "checkpoint"}}}
-	score, err := scoreRollout(scenario, prepared, []TurnArtifact{{TracePath: tracePath}}, "There is an active trajectory that conflicts with removing the permission router. Do you want me to preserve it?", domain.Run{ID: "run-test"}, exported)
+	endedAt := time.Now()
+	testRun := domain.Run{ID: "run-test", Outcome: "completed", EndedAt: &endedAt}
+	score, err := scoreRollout(scenario, prepared, []TurnArtifact{{TracePath: tracePath}}, "There is an active trajectory that conflicts with removing the permission router. Do you want me to preserve it?", testRun, []domain.Run{testRun}, exported)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,5 +173,55 @@ func TestScoreRolloutFindsBriefBeforeWriteAndRelevantContext(t *testing.T) {
 	}
 	if len(score.RelevantRecordsSeen) != 1 || len(score.RelevantTrajectoriesSeen) != 1 || score.CheckpointCount != 1 {
 		t.Fatalf("missing retrieval/checkpoint score: %+v", score)
+	}
+	if !score.PreTaskStayedPassive || score.PreTaskCommandCount != 0 || score.PreTaskClankInvoked || score.NewRunCount != 1 || !score.AllNewRunsCompleted {
+		t.Fatalf("unexpected lifecycle/passivity score: %+v", score)
+	}
+}
+
+func TestScoreRolloutDetectsPreTaskActivityAndExtraRuns(t *testing.T) {
+	dir := t.TempDir()
+	preTaskTrace := filepath.Join(dir, "pre-task.jsonl")
+	taskTrace := filepath.Join(dir, "task.jsonl")
+	writeTrace := func(path string, commands ...string) {
+		t.Helper()
+		f, err := os.Create(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		encoder := json.NewEncoder(f)
+		for _, command := range commands {
+			if err = encoder.Encode(map[string]any{"type": "item.started", "item": map[string]any{"type": "command_execution", "command": command}}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err = f.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeTrace(preTaskTrace, "rg --files", "clank run start --objective future")
+	writeTrace(taskTrace, "clank brief --objective implement")
+	endedAt := time.Now()
+	runs := []domain.Run{
+		{ID: "run-discussion", Outcome: "completed", EndedAt: &endedAt},
+		{ID: "run-task", Outcome: "completed", EndedAt: &endedAt},
+	}
+	score, err := scoreRollout(
+		Scenario{Oracle: Oracle{ExpectedBehavior: "proceed"}},
+		PreparedWorld{},
+		[]TurnArtifact{{TracePath: preTaskTrace}, {TracePath: taskTrace}},
+		"Implemented.",
+		runs[1],
+		runs,
+		map[string]any{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if score.PreTaskStayedPassive || score.PreTaskCommandCount != 2 || !score.PreTaskClankInvoked {
+		t.Fatalf("pre-task activity was not detected: %+v", score)
+	}
+	if score.NewRunCount != 2 || !score.AllNewRunsCompleted {
+		t.Fatalf("extra run lifecycle was not detected: %+v", score)
 	}
 }
