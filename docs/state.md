@@ -1,7 +1,7 @@
 ---
 type: state
 status: active
-summary: The isolated evaluation substrate is running; blueprint v4 is being prepared after a clean, correctly rejected v3 pilot.
+summary: Blueprint v4 promoted the first fixture; the frozen render-and-verify stage is staged for approval.
 note_created: 2026-08-02
 updated: 2026-08-02
 ---
@@ -10,15 +10,15 @@ updated: 2026-08-02
 
 ## Current focus
 
-Run the bounded Luna v4 blueprint pilot after approval, then render only accepted worlds and run genuine resumed-turn agent episodes through the isolated evaluation service.
+Render the accepted routine-proceed blueprint into a complete Git world, prepare its isolated ClankSpace project, and run a genuine resumed-turn Luna episode.
 
 ## Active phase
 
-The private production and evaluation services are deployed on separate exe.dev VMs. The runner has sanitized real-repository snapshots, immutable corpus storage, isolated project seeding, genuine resumed-turn rollout capture, and deterministic scoring. Blueprint run `wf_497ca9b9f2d0` completed without infrastructure failures and promoted no weak fixtures. Two fake designs passed Luna Max but were caught by deterministic actor-reference or conversation-shape gates. Luna Max rejected the real-snapshot design for contradictory and ambiguous active trajectories; the controller also caught an overlay-only boundary violation. Blueprint v4 constrains aliases, actor provenance, exact trajectory counts, checkpoint expectations, and snapshot commit semantics.
+The private production and evaluation services are deployed on separate exe.dev VMs. Blueprint run `wf_850d4033d253` completed without infrastructure failures: `train-fake-routine-proceed-001` passed Luna Max and all deterministic gates, while the fake conflict and real shuv2code candidates were retained as rejections for an impossible path boundary and agent-visible oracle leakage. The v5 render workflow now preserves the accepted blueprint exactly, permits only deterministic typed-ID namespacing, requires complete physical Git contents, retains the renderer object unchanged through Max review, and applies independent deterministic fidelity checks. It is deployed and passed fake run `wf_5102c795965d`; no live render has started.
 
 ## Blockers
 
-- The revised live Luna workforce and bounded command require explicit approval after the new manifest is shown.
+- The live v5 render workforce and bounded command require explicit approval after the new manifest is shown.
 - Semantic retrieval is not yet implemented; the first cohorts intentionally establish the FTS/path baseline.
 
 ## Decisions pending
