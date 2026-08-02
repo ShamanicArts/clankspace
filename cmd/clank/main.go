@@ -251,13 +251,15 @@ func runCommand(ctx context.Context, c *client.Client, args []string) error {
 	}
 	if args[0] == "end" {
 		f := flag.NewFlagSet("run end", flag.ContinueOnError)
-		id := f.String("id", value("CLANKSPACE_RUN", ""), "run ID")
+		id := value("CLANKSPACE_RUN", "")
+		f.StringVar(&id, "id", id, "run ID")
+		f.StringVar(&id, "run", id, "run ID (alias for --id)")
 		outcome := f.String("outcome", "completed", "outcome")
 		verification := f.String("verification", "", "verification summary")
 		if err := f.Parse(args[1:]); err != nil {
 			return err
 		}
-		o, e := c.EndRun(ctx, *id, domain.EndRunInput{Outcome: *outcome, Verification: *verification})
+		o, e := c.EndRun(ctx, id, domain.EndRunInput{Outcome: *outcome, Verification: *verification})
 		if e == nil {
 			printJSON(o)
 		}
@@ -459,7 +461,8 @@ func runUsage() {
 
 The command returns a JSON run object. Pass its top-level id to brief, trajectory, note, and run end.
 
-clank run end --id <run-id> --outcome <completed|aborted> --verification <text>`)
+clank run end --id <run-id> --outcome <completed|aborted> --verification <text>
+  --run is accepted as an alias for --id`)
 }
 
 func noteUsage() {

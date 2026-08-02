@@ -50,4 +50,4 @@ Never record routine narration, full diffs, raw messages, transcripts, exact quo
 
 ## Finish
 
-Before handoff, request another brief for the final scope. Record a checkpoint only for a surprising durable implication that could change another collaborator's next action; if you cannot name that implication, write no note. End the run with its outcome and verification state; this automatically closes active trajectories. When nothing reusable happened, write nothing.
+Before handoff, request another brief for the final scope. Record a checkpoint only for a surprising durable implication that could change another collaborator's next action; if you cannot name that implication, write no note. End the run with `clank run end --run <run-id> --outcome completed --verification "<concise checks>"`; this automatically closes active trajectories. When nothing reusable happened, write nothing.
