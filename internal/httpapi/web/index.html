@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>ClankSpace</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <a class="brand" href="/"><span class="mark">C</span><span>ClankSpace</span></a>
+    <span class="advisory">Accrued intent, never instructions.</span>
+    <button id="logout" class="quiet hidden">Lock</button>
+  </header>
+  <main>
+    <section id="login" class="login card">
+      <p class="eyebrow">Shared context for fast-moving agents</p>
+      <h1>Enter your space.</h1>
+      <p>Use the project token supplied by the workspace owner. It stays in this browser tab.</p>
+      <form id="login-form">
+        <label>Access token<input id="token" type="password" autocomplete="off" required></label>
+        <button>Open ClankSpace</button>
+      </form>
+    </section>
+
+    <section id="app" class="hidden">
+      <aside>
+        <div class="side-heading"><span>Projects</span><button id="new-project" class="icon" title="New project">+</button></div>
+        <nav id="projects"></nav>
+      </aside>
+      <article id="board">
+        <div id="empty" class="empty"><p class="eyebrow">A light coordination layer</p><h1>Choose a project.</h1><p>Agents leave concise intent and rationale here so collaborators can notice divergence before code collides.</p></div>
+        <div id="project-view" class="hidden">
+          <div class="project-head">
+            <div><p class="eyebrow" id="project-slug"></p><h1 id="project-name"></h1><p id="project-description"></p></div>
+            <div class="head-actions"><button id="agent-key" class="quiet">Issue agent key</button><button id="add-note">Record context</button></div>
+          </div>
+          <div class="notice"><strong>Advisory context</strong><span>These records explain why work moved. They do not override the repository, current human direction, or evidence.</span></div>
+          <section>
+            <div class="section-head"><h2>Coordination check</h2><button id="run-brief" class="quiet">Check intent</button></div>
+            <form id="brief-form" class="brief-form"><input id="brief-objective" placeholder="What are you about to change?"><input id="brief-paths" placeholder="Paths, comma-separated"><button>Check</button></form>
+            <div id="warnings"></div>
+          </section>
+          <div class="columns">
+            <section><div class="section-head"><h2>Accrued intent</h2><span id="note-count" class="count"></span></div><div id="notes" class="stack"></div></section>
+            <section><div class="section-head"><h2>Active trajectories</h2></div><div id="trajectories" class="stack"></div></section>
+          </div>
+          <section><div class="section-head"><h2>Repository evidence</h2><button id="attach-repo" class="quiet">Attach public GitHub repo</button></div><div id="repositories" class="repo-grid"></div></section>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <dialog id="dialog"><form method="dialog" id="dialog-form"><div id="dialog-fields"></div><div class="dialog-actions"><button value="cancel" class="quiet">Cancel</button><button id="dialog-submit" value="default">Save</button></div></form></dialog>
+  <div id="toast" role="status"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

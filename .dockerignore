@@ -1,0 +1,12 @@
+.git
+.gitignore
+.clankspace/
+.clankspace-live/
+bin/
+clank
+data/
+*.db
+*.db-shm
+*.db-wal
+coverage/
+reference/

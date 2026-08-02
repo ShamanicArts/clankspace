@@ -1,0 +1,31 @@
+# Build outputs
+/bin/
+/dist/
+/clank
+
+# Local runtime state
+/.clankspace/
+/.clankspace.json.local
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Secrets and environment
+.env
+.env.*
+!.env.example
+*-token
+credentials/
+
+# Tooling
+/node_modules/
+/coverage/
+*.out
+*.test
+.DS_Store
+
+# Read-only research checkouts
+/reference/
