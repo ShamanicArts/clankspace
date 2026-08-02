@@ -133,7 +133,7 @@ func (s *Server) exportProject(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	notes, err := s.Store.ListNotes(r.Context(), project.ID, 100)
+	notes, err := s.Store.ListNotes(r.Context(), project.ID, -1)
 	if err != nil {
 		writeError(w, err)
 		return
@@ -436,7 +436,9 @@ func requestLog(log *slog.Logger, next http.Handler) http.Handler {
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		if strings.HasPrefix(r.URL.Path, "/api/") { w.Header().Set("Cache-Control", "no-store") }
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			w.Header().Set("Cache-Control", "no-store")
+		}
 		start := time.Now()
 		next.ServeHTTP(w, r)
 		log.Info("http request", "method", r.Method, "path", r.URL.Path, "duration", time.Since(start))

@@ -510,10 +510,16 @@ func scanNote(row *sql.Row) (domain.Note, error) {
 }
 
 func (s *Store) ListNotes(ctx context.Context, projectID string, limit int) ([]domain.Note, error) {
-	if limit <= 0 || limit > 100 {
-		limit = 40
+	query := noteSelect + ` WHERE n.project_id=? ORDER BY n.updated_at DESC`
+	args := []any{projectID}
+	if limit >= 0 {
+		if limit == 0 || limit > 100 {
+			limit = 40
+		}
+		query += ` LIMIT ?`
+		args = append(args, limit)
 	}
-	rows, err := s.db.QueryContext(ctx, noteSelect+` WHERE n.project_id=? ORDER BY n.updated_at DESC LIMIT ?`, projectID, limit)
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
