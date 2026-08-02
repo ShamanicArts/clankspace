@@ -27,6 +27,8 @@ luna-runner         corpus generation, clean rollouts, raw traces, scoring
 
 The runner has evaluation-admin authority and no production credential. Raw transcripts and hidden evaluation oracles never enter ClankSpace records.
 
+Corpus architects and judges run from a neutral directory outside every ClankSpace project. That directory contains only the frozen snapshot evidence explicitly named by the curriculum. The eval Codex launcher disables account plugins, apps, browser tools, and multi-agent tools while retaining read-only shell inspection. This prevents project skills, ambient records, unrelated MCP servers, and repository-wide instructions from contaminating fixture design or exhausting a small runner.
+
 ## Dataset discipline
 
 Every scenario is generated from a structured blueprint before Luna renders natural language. The blueprint fixes actors, material facts, lifecycle, intended conflict relation, relevant record IDs, expected conversational behaviour, and whether a checkpoint is justified. Luna may paraphrase these facts but may not choose the answer after seeing the rendered task.
@@ -45,6 +47,8 @@ Corpora use three stable splits:
 - `holdout`: immutable until a release-candidate evaluation.
 
 A scenario ID, curriculum version, generator model, workflow run, seed, and content hash make every item reproducible. Generated scenarios are append-only. Corrections create a new corpus version rather than silently rewriting evidence.
+
+Failed generation runs are first-class evidence. Their viewer journal, per-agent observable traces, errors, and partial drafts remain immutable; they are never promoted into the corpus or hidden by a retry.
 
 Train/dev cells and holdout cells live in separate files. Holdout structure is not passed to a model or renderer until a release-candidate gate.
 

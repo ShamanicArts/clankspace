@@ -1,5 +1,6 @@
 {
-  "approvedWorkforce": "clankspace-blueprints-v1:codex/gpt-5.6-luna:literal-high-max",
+  "approvedWorkforce": "clankspace-blueprints-v2:codex/gpt-5.6-luna:literal-high-max:neutral-cwd",
+  "agentWorkspace": "/home/exedev/clankspace-blueprint-sandbox",
   "curriculumCells": [
     {
       "id": "train-fake-architectural-conflict-001",

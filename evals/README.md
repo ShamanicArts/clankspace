@@ -13,6 +13,7 @@ See [`docs/evals/training-loop.md`](../docs/evals/training-loop.md) for dataset 
 - `schema/scenario.schema.json`: rendered-world contract. The hidden oracle is stored here but never copied into the repository or ClankSpace.
 - `harness/`: Git-world construction, safe snapshotting, ClankSpace seeding, immutable ledger ingestion, resumed-turn rollouts, and deterministic scoring.
 - `cmd/clank-eval`: operational CLI built with `go build ./evals/cmd/clank-eval`.
+- `bin/codex-eval`: lean Codex launcher for model workers; disables unrelated plugin/tool surfaces while preserving the authenticated Codex provider.
 - `fixtures/rendered/relaydesk-001.json`: deterministic non-model canary.
 
 ## Runner layout
@@ -20,6 +21,7 @@ See [`docs/evals/training-loop.md`](../docs/evals/training-loop.md) for dataset 
 ```text
 /home/exedev/clankspace-evals/
   bin/clank-eval
+  bin/codex-eval
   snapshots/<snapshot-id>/             sanitized one-commit repositories
   snapshot-bundles/<snapshot-id>.bundle
   data/corpora/<version>/<split>/<scenario>/<sha256>/
@@ -30,6 +32,8 @@ See [`docs/evals/training-loop.md`](../docs/evals/training-loop.md) for dataset 
   data/secrets/<version>/<sha256>/      project credentials; mode 0600
   data/generation-runs/<workflow-id>/   immutable OmegaCode output and accepted worlds
 ```
+
+Blueprint workers use `/home/exedev/clankspace-blueprint-sandbox`, outside the repository and its `.clankspace.json`. Only sanitized snapshots named by the curriculum are copied there. Run OmegaCode with `CODEX_BIN=/home/exedev/clankspace-evals/bin/codex-eval` so account plugins and unrelated MCPs cannot enter the generation context.
 
 `synthetic-lab` is the ClankSpace control project. Every runnable world receives its own `eval-<corpus>-...` project. ClankSpace contains agent-visible coordination evidence and batch checkpoints; the external ledger alone contains hidden oracles and raw traces.
 
