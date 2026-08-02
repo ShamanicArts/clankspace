@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -21,6 +22,7 @@ import (
 	"github.com/ShamanicArts/clankspace/internal/domain"
 	"github.com/ShamanicArts/clankspace/internal/githubsync"
 	"github.com/ShamanicArts/clankspace/internal/httpapi"
+	"github.com/ShamanicArts/clankspace/internal/localconfig"
 	"github.com/ShamanicArts/clankspace/internal/mcpserver"
 	"github.com/ShamanicArts/clankspace/internal/service"
 	"github.com/ShamanicArts/clankspace/internal/store"
@@ -44,17 +46,30 @@ func run(ctx context.Context, args []string) error {
 	if args[0] == "serve" {
 		return serve(ctx)
 	}
-	if args[0] == "context" {
-		return localContext()
-	}
-	c := client.New(value("CLANKSPACE_URL", "http://localhost:8080"), os.Getenv("CLANKSPACE_TOKEN"))
-	if c.Token == "" {
-		return errors.New("CLANKSPACE_TOKEN is required")
-	}
-	switch args[0] {
-	case "version":
+	if args[0] == "version" {
 		fmt.Println(version)
 		return nil
+	}
+	resolved, err := localconfig.Resolve("")
+	if err != nil {
+		return err
+	}
+	if args[0] == "context" {
+		return localContext(resolved)
+	}
+	if args[0] == "auth" {
+		return auth(resolved, args[1:])
+	}
+	if os.Getenv("CLANKSPACE_PROJECT") == "" && resolved.Project != "" {
+		if err = os.Setenv("CLANKSPACE_PROJECT", resolved.Project); err != nil {
+			return err
+		}
+	}
+	c := client.New(resolved.URL, resolved.Token)
+	if c.Token == "" {
+		return errors.New("no ClankSpace credential for this project; run: clank auth set --token-stdin")
+	}
+	switch args[0] {
 	case "mcp":
 		return mcpserver.New(c).Run(ctx, &mcp.StdioTransport{})
 	case "project":
@@ -78,6 +93,49 @@ func run(ctx context.Context, args []string) error {
 	default:
 		usage()
 		return fmt.Errorf("unknown command %q", args[0])
+	}
+}
+
+func auth(resolved localconfig.Resolved, args []string) error {
+	if len(args) == 0 {
+		return errors.New("usage: clank auth set|status")
+	}
+	switch args[0] {
+	case "status":
+		printJSON(map[string]any{
+			"url": resolved.URL, "project": resolved.Project,
+			"tokenConfigured": resolved.Token != "", "tokenSource": resolved.TokenSource,
+			"projectFile": resolved.ProjectFilePath, "credentialsFile": resolved.CredentialsPath,
+		})
+		return nil
+	case "set":
+		f := flag.NewFlagSet("auth set", flag.ContinueOnError)
+		url := f.String("url", resolved.URL, "ClankSpace server URL")
+		project := f.String("project", resolved.Project, "project ID or slug")
+		tokenStdin := f.Bool("token-stdin", false, "read the project token from standard input")
+		if err := f.Parse(args[1:]); err != nil {
+			return err
+		}
+		if !*tokenStdin {
+			return errors.New("refusing token in command arguments; pipe it to: clank auth set --token-stdin")
+		}
+		body, err := io.ReadAll(io.LimitReader(os.Stdin, 4097))
+		if err != nil {
+			return err
+		}
+		if len(body) > 4096 {
+			return errors.New("token exceeds 4096 bytes")
+		}
+		if err = localconfig.StoreCredential(resolved.CredentialsPath, *url, *project, string(body)); err != nil {
+			return err
+		}
+		printJSON(map[string]any{
+			"url": strings.TrimRight(*url, "/"), "project": *project,
+			"credentialsFile": resolved.CredentialsPath, "notice": "Project credential stored locally with mode 0600.",
+		})
+		return nil
+	default:
+		return errors.New("usage: clank auth set|status")
 	}
 }
 
@@ -315,24 +373,8 @@ func split(s string) []string {
 	}
 	return out
 }
-func localContext() error {
-	type localFile struct {
-		URL     string `json:"url"`
-		Project string `json:"project"`
-	}
+func localContext(resolved localconfig.Resolved) error {
 	cwd, _ := os.Getwd()
-	local := localFile{URL: value("CLANKSPACE_URL", "http://localhost:8080"), Project: os.Getenv("CLANKSPACE_PROJECT")}
-	for dir := cwd; ; dir = filepath.Dir(dir) {
-		b, err := os.ReadFile(filepath.Join(dir, ".clankspace.json"))
-		if err == nil {
-			_ = json.Unmarshal(b, &local)
-			break
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-	}
 	git := func(args ...string) string {
 		cmd := exec.Command("git", args...)
 		cmd.Dir = cwd
@@ -343,9 +385,10 @@ func localContext() error {
 		return strings.TrimSpace(string(b))
 	}
 	printJSON(map[string]any{
-		"url": local.URL, "project": local.Project, "repository": git("remote", "get-url", "origin"),
-		"branch": git("branch", "--show-current"), "head": git("rev-parse", "HEAD"), "worktree": cwd,
-		"tokenConfigured": os.Getenv("CLANKSPACE_TOKEN") != "", "notice": domain.AdvisoryNotice,
+		"url": resolved.URL, "project": resolved.Project, "projectFile": resolved.ProjectFilePath,
+		"repository": git("remote", "get-url", "origin"),
+		"branch":     git("branch", "--show-current"), "head": git("rev-parse", "HEAD"), "worktree": cwd,
+		"tokenConfigured": resolved.Token != "", "tokenSource": resolved.TokenSource, "notice": domain.AdvisoryNotice,
 	})
 	return nil
 }
@@ -357,5 +400,5 @@ func value(k, d string) string {
 	return d
 }
 func usage() {
-	fmt.Fprintln(os.Stderr, "clank serve | context | project | run | note | trajectory | brief | why | repo | mcp")
+	fmt.Fprintln(os.Stderr, "clank serve | context | auth | project | run | note | trajectory | brief | why | repo | mcp")
 }

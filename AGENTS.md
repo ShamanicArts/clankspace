@@ -10,6 +10,7 @@ ClankSpace is professional ambient coordination memory for humans and coding age
 - **`internal/store`**: SQLite migrations, transactional writes, projections, receipts, and FTS5.
 - **`internal/service`**: Project, identity, run, note, trajectory, brief, and conflict semantics.
 - **`internal/httpapi`**: JSON API and embedded human dashboard.
+- **`internal/localconfig`**: Repository pointer and user-local project credential resolution.
 - **`internal/mcpserver`**: Generic MCP tools backed by the same service layer.
 - **`internal/githubsync`**: Read-only public GitHub repository and PR evidence.
 - **`internal/httpapi/web`**: Browser-native dashboard embedded in the executable.

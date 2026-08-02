@@ -16,6 +16,7 @@ updated: 2026-08-02
 | What may an agent record? | Only minimal, professionally paraphrased, project-relevant information. | `content-boundary.md` |
 | How is it hosted? | One Go service on Railway with a persistent SQLite volume. | `hosting.md` |
 | How does storage work? | Transactional events, projections, receipts, WAL, and FTS5. | `architecture.md` |
+| How does a local agent find its project and token? | Nearest repository pointer plus a user-local project credential. | `local-client.md` |
 
 ## Files
 
@@ -26,4 +27,4 @@ updated: 2026-08-02
 | `content-boundary.md` | privacy, professional, paraphrase | Write-time relevance and privacy policy |
 | `architecture.md` | sqlite, events, receipts, sync | Technical architecture |
 | `hosting.md` | railway, domain, backup | Production hosting target |
-
+| `local-client.md` | cli, config, credentials, local, auth | Repository routing and local authentication |

@@ -46,7 +46,17 @@ go run ./cmd/clank run start \
   --role primary --objective "Unify session permissions"
 ```
 
-Copy `.clankspace.example.json` to `.clankspace.json` in a repository to give any harness a local server/project pointer. Keep the token in `CLANKSPACE_TOKEN`, never in the file.
+Copy `.clankspace.example.json` to `.clankspace.json` in a repository to give any harness a local server/project pointer. Store its project-scoped token once:
+
+```bash
+printf '%s\n' "$CLANKSPACE_TOKEN" | clank auth set --token-stdin
+unset CLANKSPACE_TOKEN
+
+clank context
+clank auth status
+```
+
+The CLI then resolves the nearest `.clankspace.json` and reads the matching token from the user-local credential store. Environment variables still take precedence for automation. Tokens never belong in the repository pointer.
 
 ## Agent integration
 
@@ -56,7 +66,7 @@ Build the binary:
 go build -o bin/clank ./cmd/clank
 ```
 
-Configure an MCP client to run `clank mcp` with `CLANKSPACE_URL` and `CLANKSPACE_TOKEN` in its environment. Copy `.agents/skills/clankspace/SKILL.md` into the harness's skills directory. The skill tells the agent when to read, when to write, and—more importantly—what must never be recorded.
+Configure an MCP client to run `clank mcp` from the connected repository. It uses the same local project and credential resolution as the CLI, while explicit environment variables remain available for unattended automation. Copy `.agents/skills/clankspace/` into the repository or harness skill directory. The skill tells the agent when to read, when to pause, when to write, and what must never be recorded.
 
 Useful direct commands:
 

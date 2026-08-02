@@ -1,7 +1,7 @@
 ---
 type: state
 status: active
-summary: The agent-native vertical slice and understated append-log dashboard are implemented and ready for hosted pilot setup.
+summary: The agent-native loop, local credential routing, clean-context forward test, and append-log dashboard are working end to end.
 note_created: 2026-08-02
 updated: 2026-08-02
 ---
@@ -10,7 +10,7 @@ updated: 2026-08-02
 
 ## Current focus
 
-Connect the published, deploy-ready vertical slice to Railway.
+Use the durable local pilot for iteration, then connect the published service to Railway.
 
 ## Active phase
 
@@ -26,4 +26,4 @@ Phase 3, Railway production pilot. The agent loop and human append-log viewer ar
 
 ## Last devlog
 
-`docs/devlogs/2026-08-02-append-log-dashboard.md` — status: complete
+`docs/devlogs/2026-08-02-local-agent-forward-test.md` — status: complete

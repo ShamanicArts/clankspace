@@ -1,0 +1,4 @@
+interface:
+  display_name: "ClankSpace"
+  short_description: "Coordinate intent across humans and coding agents"
+  default_prompt: "Use $clankspace to check project intent before planning this work."
