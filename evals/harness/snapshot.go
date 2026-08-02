@@ -18,6 +18,7 @@ type SnapshotResult struct {
 	SourceHead    string    `json:"sourceHead"`
 	SnapshotHead  string    `json:"snapshotHead"`
 	Repository    string    `json:"repository"`
+	SourceURL     string    `json:"sourceUrl"`
 	Bundle        string    `json:"bundle"`
 	Includes      []string  `json:"includes,omitempty"`
 	CreatedAt     time.Time `json:"createdAt"`
@@ -92,10 +93,14 @@ func CreateSanitizedSnapshot(id, source, ref, destinationRoot string, includes [
 	if err = runGit(repository, nil, "bundle", "create", bundle, "HEAD"); err != nil {
 		return SnapshotResult{}, err
 	}
+	sourceURL, urlErr := gitOutput(source, "config", "--get", "remote.origin.url")
+	if urlErr != nil {
+		sourceURL = ""
+	}
 	result := SnapshotResult{
 		SchemaVersion: 1, ID: id, SourceHead: strings.TrimSpace(sourceHead),
 		SnapshotHead: strings.TrimSpace(snapshotHead), Repository: repository,
-		Bundle: bundle, Includes: includes, CreatedAt: time.Now().UTC(),
+		SourceURL: strings.TrimSpace(sourceURL), Bundle: bundle, Includes: includes, CreatedAt: time.Now().UTC(),
 	}
 	if err = writeJSONExclusive(filepath.Join(destinationRoot, id+".snapshot.json"), result, 0600); err != nil {
 		return SnapshotResult{}, err
