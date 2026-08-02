@@ -97,6 +97,8 @@ Start a clean Luna session for each episode. Give it only the repository, instru
 
 The first turn starts a persisted Codex thread. Every later human message uses `codex exec resume <thread-id>`, producing an observable per-turn JSONL trace. The harness lists project runs afterward to determine whether the agent registered itself and associates any checkpoints with that run.
 
+Prior conversation turns in the current scenario contract are non-material discussion, not hidden tasks. They must remain passive: no repository commands, tests, ClankSpace calls, or run registration until the final explicit task. The scorer records pre-task command count, pre-task Clank invocation, total new runs, and completion state so global task success cannot hide coordination overhead on an earlier turn.
+
 ### Collaboration
 
 Run multiple independent sessions against the same synthetic project: one establishes intent, another declares overlapping work, and a later session receives a conflicting or adjacent task. Evaluate whether context crosses sessions without requiring human dashboard work.
