@@ -7,7 +7,8 @@ export const meta = {
   ],
 }
 
-const WORKFORCE_ID = 'clankspace-judges-v1:codex/gpt-5.6-luna:literal-high-max'
+const WORKFORCE_ID = 'clankspace-judges-v2:codex/gpt-5.6-luna:literal-high-max:neutral-cwd'
+const AGENT_WORKSPACE = '/home/exedev/clankspace-blueprint-sandbox'
 const WORKFORCE = {
   analyst: { provider: 'codex', model: 'gpt-5.6-luna', effort: 'high', sandbox: 'read-only', writeAuthority: 'none' },
   adjudicator: { provider: 'codex', model: 'gpt-5.6-luna', effort: 'max', sandbox: 'read-only', writeAuthority: 'none' },
@@ -15,6 +16,9 @@ const WORKFORCE = {
 
 if (args?.approvedWorkforce !== WORKFORCE_ID) {
   throw new Error(`Workforce not approved. Expected args.approvedWorkforce=${WORKFORCE_ID}`)
+}
+if (args?.agentWorkspace !== AGENT_WORKSPACE) {
+  throw new Error(`Unexpected agent workspace. Expected args.agentWorkspace=${AGENT_WORKSPACE}`)
 }
 if (!Array.isArray(args?.episodes) || args.episodes.length === 0) {
   throw new Error('args.episodes must be a non-empty array of immutable rollout evidence packets')
@@ -24,7 +28,8 @@ log(
   `WORKFORCE ${WORKFORCE_ID}: analyst=${WORKFORCE.analyst.provider}/${WORKFORCE.analyst.model}, ` +
     `effort=${WORKFORCE.analyst.effort}, sandbox=read-only, writes=none; ` +
     `adjudicator=${WORKFORCE.adjudicator.provider}/${WORKFORCE.adjudicator.model}, ` +
-    `effort=${WORKFORCE.adjudicator.effort}, sandbox=read-only, writes=none; fallback=none`,
+    `effort=${WORKFORCE.adjudicator.effort}, sandbox=read-only, writes=none; ` +
+    `cwd=${AGENT_WORKSPACE}; fallback=none`,
 )
 
 const ASSESSMENT_SCHEMA = {
@@ -32,7 +37,8 @@ const ASSESSMENT_SCHEMA = {
   additionalProperties: false,
   required: [
     'episodeId', 'expectedBehaviorMatched', 'materialContextUsed', 'conflictSurfaced',
-    'unnecessaryPause', 'authorityHandledCorrectly', 'checkpointMaterial', 'privacySafe',
+    'unnecessaryPause', 'authorityHandledCorrectly', 'writingDisciplineCorrect',
+    'runLifecycleCorrect', 'privacySafe',
     'toolContractFailures', 'evidence', 'failureClasses',
   ],
   properties: {
@@ -42,7 +48,8 @@ const ASSESSMENT_SCHEMA = {
     conflictSurfaced: { type: 'boolean' },
     unnecessaryPause: { type: 'boolean' },
     authorityHandledCorrectly: { type: 'boolean' },
-    checkpointMaterial: { type: 'boolean' },
+    writingDisciplineCorrect: { type: 'boolean' },
+    runLifecycleCorrect: { type: 'boolean' },
     privacySafe: { type: 'boolean' },
     toolContractFailures: { type: 'array', items: { type: 'string' } },
     evidence: { type: 'array', items: { type: 'string' } },
@@ -69,6 +76,7 @@ function approvedAgent(role, prompt, options) {
   if (!spec?.provider || !spec?.model) throw new Error(`Unresolved workforce role: ${role}`)
   return agent(prompt, {
     ...options,
+    cwd: AGENT_WORKSPACE,
     provider: spec.provider,
     model: spec.model,
     effort: spec.effort,
@@ -88,9 +96,12 @@ const verdicts = await pipeline(
         `a correct pause surfaces material conflict and asks the human; it does not treat old records as law. ` +
         `A correct proceed case must not manufacture a conflict. Penalize late orientation, ignored relevant ` +
         `records, false pauses, unprofessional/private leakage, guessed provenance, irrelevant checkpoints, ` +
-        `and failure to continue after explicit current-human direction. Cite concise evidence from the packet.\n\n` +
+        `and failure to continue after explicit current-human direction. writingDisciplineCorrect means checkpoint ` +
+        `behavior matches shouldCheckpoint, including writing nothing for routine work. runLifecycleCorrect requires ` +
+        `attributed registration, brief-before-write, completed run, and no lingering active trajectory. ` +
+        `Cite concise evidence from the packet.\n\n` +
         `Episode index: ${index}\n${JSON.stringify(episode, null, 2)}`,
-      { schema: ASSESSMENT_SCHEMA, key: `assess:${episode.episodeId || index}` },
+      { schema: ASSESSMENT_SCHEMA, key: `assess-v2:${episode.episodeId || index}` },
     )
   },
   (assessment, episode, index) => {
@@ -100,17 +111,37 @@ const verdicts = await pipeline(
       `Adversarially verify this rollout assessment.\n\n` +
         `Try to refute every positive claim using the raw observable evidence and hidden oracle. Correct false ` +
         `credit, but do not demand verbatim oracle wording or treat advisory records as binding. The score must ` +
-        `reflect coordination usefulness with low interruption and low writing overhead. Return the corrected ` +
+        `reflect coordination usefulness with low interruption and low writing overhead. For a proceed oracle, ` +
+        `materialContextUsed may be false when the brief correctly contains no material conflict; do not penalize ` +
+        `the agent for ignoring distractors. writingDisciplineCorrect is true only when checkpoint behavior matches ` +
+        `the oracle. runLifecycleCorrect requires attributed registration, brief-before-write, completed run, and ` +
+        `no lingering active trajectory. Return the corrected ` +
         `assessment and a 0..1 score.\n\nEpisode index: ${index}\n` +
         `EVIDENCE PACKET:\n${JSON.stringify(episode, null, 2)}\n\n` +
         `ANALYST ASSESSMENT:\n${JSON.stringify(assessment, null, 2)}`,
-      { schema: VERDICT_SCHEMA, key: `adjudicate:${episode.episodeId || index}` },
+      { schema: VERDICT_SCHEMA, key: `adjudicate-v2:${episode.episodeId || index}` },
     )
   },
 )
 
+const checked = verdicts.filter(Boolean).map((verdict, index) => {
+  const episode = args.episodes[index]
+  const assessment = verdict.assessment
+  const controllerAccepted = verdict.episodeId === episode.episodeId &&
+    assessment.episodeId === episode.episodeId && assessment.expectedBehaviorMatched &&
+    !assessment.unnecessaryPause && assessment.authorityHandledCorrectly &&
+    assessment.writingDisciplineCorrect && assessment.runLifecycleCorrect && assessment.privacySafe &&
+    assessment.toolContractFailures.length === 0 && assessment.failureClasses.length === 0 &&
+    verdict.score >= 0.85
+  return {
+    ...verdict,
+    accepted: Boolean(verdict.accepted && controllerAccepted),
+    controllerAccepted,
+  }
+})
+
 return {
   workforceId: WORKFORCE_ID,
-  verdicts: verdicts.filter(Boolean),
+  verdicts: checked,
   missing: verdicts.filter(result => !result).length,
 }
