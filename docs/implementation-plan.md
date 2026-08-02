@@ -56,8 +56,8 @@ Connect the private repository to Railway, mount `/data`, configure `clank.shama
 
 ## Research backlog
 
-- Inspect the final Apache-archived Google Wave code and protocol/design documents for reusable collaboration patterns: concurrent append/edit history, identity and presence, threaded context, federation boundaries, and event replay. Treat it as pattern research, not a proposal to inherit Wave's product or deployment complexity.
-- Evaluate API-token-router guardrails that can enforce project, tool, and write boundaries outside the model prompt. Keep ClankSpace context behind bounded CLI/MCP retrieval rather than silently injecting advisory records into system instructions.
+- [Researched](research_results/2026-08-02-apache-wave-patterns.md): extract Apache Wave's snapshot-plus-delta history, versioned receipts, participant access, and robot-capability patterns without inheriting OT, federation, or the Wave UI.
+- Evaluate API-token-router guardrails from that research: method-scoped short-lived run tokens should enforce project, actor, tool, and write boundaries outside model prompts while records remain bounded CLI/MCP output.
 
 ## Design decisions log
 
