@@ -29,7 +29,7 @@ for lane in lane-a lane-b; do
 done
 
 jq -n \
-  --arg approvedWorkforce "clankspace-collaboration-judges-v1:codex/gpt-5.6-luna:high-max:observable-evidence" \
+  --arg approvedWorkforce "clankspace-collaboration-judges-v2:codex/gpt-5.6-luna:high-max:resumable-pause-rubric" \
   --arg agentWorkspace "/home/exedev/clankspace-blueprint-sandbox" \
   --slurpfile scenario "$episode_dir/../../scenario.json" \
   --slurpfile collaboration "$episode_dir/collaboration.json" \
