@@ -27,6 +27,12 @@ func TestRunRejectsUnknownActionBeforeUsingClient(t *testing.T) {
 }
 
 func TestMutationHelpDoesNotRequireAClient(t *testing.T) {
+	if err := run(context.Background(), []string{"note", "create", "--help"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := run(context.Background(), []string{"trajectory", "start", "--help"}); err != nil {
+		t.Fatal(err)
+	}
 	if err := note(context.Background(), nil, []string{"create", "--help"}); err != nil {
 		t.Fatal(err)
 	}

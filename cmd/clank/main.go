@@ -51,6 +51,12 @@ func run(ctx context.Context, args []string) error {
 		runUsage()
 		return nil
 	}
+	if args[0] == "note" && len(args) > 1 && (isHelp(args[1]) || (len(args) > 2 && isHelp(args[2]))) {
+		return note(ctx, nil, args[1:])
+	}
+	if args[0] == "trajectory" && len(args) > 1 && (isHelp(args[1]) || (len(args) > 2 && isHelp(args[2]))) {
+		return trajectory(ctx, nil, args[1:])
+	}
 	if args[0] == "serve" {
 		return serve(ctx)
 	}
