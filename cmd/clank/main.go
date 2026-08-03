@@ -23,9 +23,11 @@ import (
 	"github.com/ShamanicArts/clankspace/internal/githubsync"
 	"github.com/ShamanicArts/clankspace/internal/httpapi"
 	"github.com/ShamanicArts/clankspace/internal/localconfig"
+	"github.com/ShamanicArts/clankspace/internal/mailer"
 	"github.com/ShamanicArts/clankspace/internal/mcpserver"
 	"github.com/ShamanicArts/clankspace/internal/service"
 	"github.com/ShamanicArts/clankspace/internal/store"
+	"github.com/ShamanicArts/clankspace/internal/syncclient"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -68,11 +70,14 @@ func run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	if args[0] != "auth" {
+		resolved = localconfig.SelectReachable(ctx, resolved)
+	}
 	if args[0] == "context" {
 		return localContext(resolved)
 	}
 	if args[0] == "auth" {
-		return auth(resolved, args[1:])
+		return auth(ctx, resolved, args[1:])
 	}
 	if os.Getenv("CLANKSPACE_PROJECT") == "" && resolved.Project != "" {
 		if err = os.Setenv("CLANKSPACE_PROJECT", resolved.Project); err != nil {
@@ -88,6 +93,8 @@ func run(ctx context.Context, args []string) error {
 		return mcpserver.New(c).Run(ctx, &mcp.StdioTransport{})
 	case "project":
 		return project(ctx, c, args[1:])
+	case "workspace":
+		return workspaceCommand(ctx, c, args[1:])
 	case "run":
 		return runCommand(ctx, c, args[1:])
 	case "note":
@@ -104,17 +111,70 @@ func run(ctx context.Context, args []string) error {
 		return brief(ctx, c, whyArgs)
 	case "repo":
 		return repo(ctx, c, args[1:])
+	case "replica":
+		return replicaCommand(ctx, c, args[1:])
+	case "sync":
+		return syncCommand(ctx, c, args[1:])
 	default:
 		usage()
 		return fmt.Errorf("unknown command %q", args[0])
 	}
 }
 
-func auth(resolved localconfig.Resolved, args []string) error {
-	if len(args) == 0 {
-		return errors.New("usage: clank auth set|status")
+func workspaceCommand(ctx context.Context, c *client.Client, args []string) error {
+	if len(args) == 0 || isHelp(args[0]) {
+		return errors.New("usage: clank workspace list|create")
 	}
 	switch args[0] {
+	case "list":
+		items, err := c.ListWorkspaces(ctx)
+		if err == nil {
+			printJSON(items)
+		}
+		return err
+	case "create":
+		flags := flag.NewFlagSet("workspace create", flag.ContinueOnError)
+		slug := flags.String("slug", "", "workspace slug")
+		name := flags.String("name", "", "workspace name")
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
+		}
+		item, err := c.CreateWorkspace(ctx, *slug, *name)
+		if err == nil {
+			printJSON(item)
+		}
+		return err
+	default:
+		return errors.New("usage: clank workspace list|create")
+	}
+}
+
+func auth(ctx context.Context, resolved localconfig.Resolved, args []string) error {
+	if len(args) == 0 {
+		return errors.New("usage: clank auth login|logout|set|status")
+	}
+	switch args[0] {
+	case "login":
+		f := flag.NewFlagSet("auth login", flag.ContinueOnError)
+		email := f.String("email", "", "invited ClankSpace email address")
+		url := f.String("url", resolved.URL, "ClankSpace server URL")
+		if err := f.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*email) == "" {
+			return errors.New("email is required")
+		}
+		if err := client.New(*url, "").RequestMagicLink(ctx, *email); err != nil {
+			return err
+		}
+		printJSON(map[string]string{"status": "If that address can sign in, a one-time link has been sent.", "url": strings.TrimRight(*url, "/")})
+		return nil
+	case "logout":
+		if err := localconfig.RemoveCredential(resolved.CredentialsPath, resolved.URL, resolved.Project); err != nil {
+			return err
+		}
+		printJSON(map[string]string{"status": "local project credential removed", "url": resolved.URL, "project": resolved.Project})
+		return nil
 	case "status":
 		printJSON(map[string]any{
 			"url": resolved.URL, "project": resolved.Project,
@@ -149,7 +209,7 @@ func auth(resolved localconfig.Resolved, args []string) error {
 		})
 		return nil
 	default:
-		return errors.New("usage: clank auth set|status")
+		return errors.New("usage: clank auth login|logout|set|status")
 	}
 }
 
@@ -161,7 +221,12 @@ func serve(ctx context.Context) error {
 	if err = os.MkdirAll(cfg.DataDir, 0700); err != nil {
 		return err
 	}
-	db, err := store.Open(cfg.DatabasePath)
+	var db *store.Store
+	if cfg.InstallationSecret != "" {
+		db, err = store.OpenWithSecret(cfg.DatabasePath, cfg.InstallationSecret)
+	} else {
+		db, err = store.Open(cfg.DatabasePath)
+	}
 	if err != nil {
 		return err
 	}
@@ -170,12 +235,39 @@ func serve(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("bootstrap: %w", err)
 	}
+	if cfg.SyncEnabled {
+		if _, err = db.EnsureInstallationIdentity(ctx, cfg.ReplicaName, cfg.BaseURL); err != nil {
+			return fmt.Errorf("replica identity: %w", err)
+		}
+		if err = db.EnsureAllWorkspaceAuthorities(ctx); err != nil {
+			return fmt.Errorf("workspace authority: %w", err)
+		}
+	}
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	core := service.New(db)
-	h := (&httpapi.Server{Store: db, Core: core, GitHub: githubsync.New(cfg.GitHubToken), Log: log}).Handler()
+	h := (&httpapi.Server{Store: db, Core: core, GitHub: githubsync.New(cfg.GitHubToken), Log: log, BaseURL: cfg.BaseURL, AuthMode: cfg.AuthMode, SyncEnabled: cfg.SyncEnabled, ReplicaName: cfg.ReplicaName}).Handler()
 	srv := &http.Server{Addr: cfg.Listen, Handler: h, ReadHeaderTimeout: 5 * time.Second, IdleTimeout: 60 * time.Second}
 	stopCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	var sender mailer.Sender
+	if cfg.MailDir != "" {
+		sender = mailer.File{Dir: cfg.MailDir}
+	} else if cfg.SMTPAddr != "" {
+		sender = mailer.SMTP{Addr: cfg.SMTPAddr, User: cfg.SMTPUser, Password: cfg.SMTPPassword, From: cfg.SMTPFrom}
+	}
+	if (cfg.AuthMode == "email" || cfg.AuthMode == "hybrid") && sender == nil {
+		return errors.New("email or hybrid auth requires CLANKSPACE_MAIL_DIR or SMTP configuration")
+	}
+	if sender != nil {
+		go func() {
+			if mailErr := mailer.Run(stopCtx, db, sender, time.Second); mailErr != nil {
+				log.Error("mail worker stopped", "error", mailErr)
+			}
+		}()
+	}
+	if cfg.SyncEnabled {
+		go syncclient.Run(stopCtx, db, 5*time.Second)
+	}
 	go func() {
 		<-stopCtx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
@@ -402,6 +494,106 @@ func repo(ctx context.Context, c *client.Client, args []string) error {
 	return e
 }
 
+func replicaCommand(ctx context.Context, c *client.Client, args []string) error {
+	if len(args) == 0 || (args[0] != "join" && args[0] != "mirror") {
+		return errors.New("usage: clank replica join|mirror --remote <url> --code <pairing-code>")
+	}
+	f := flag.NewFlagSet("replica "+args[0], flag.ContinueOnError)
+	remote := f.String("remote", "", "authority ClankSpace URL")
+	code := f.String("code", "", "one-time pairing code")
+	workspaceID := f.String("workspace", os.Getenv("CLANKSPACE_WORKSPACE"), "self-hosted workspace ID (mirror only)")
+	if err := f.Parse(args[1:]); err != nil {
+		return err
+	}
+	if *remote == "" || *code == "" {
+		return errors.New("remote URL and pairing code are required")
+	}
+	var workspace domain.Workspace
+	var err error
+	if args[0] == "mirror" {
+		if *workspaceID == "" {
+			return errors.New("workspace ID is required when mirroring")
+		}
+		workspace, err = c.MirrorReplica(ctx, *workspaceID, *remote, *code)
+	} else {
+		workspace, err = c.JoinReplica(ctx, *remote, *code)
+	}
+	if err == nil {
+		printJSON(map[string]any{"workspace": workspace, "notice": "Replica joined. Background synchronization is active while the local server runs."})
+	}
+	return err
+}
+
+func syncCommand(ctx context.Context, c *client.Client, args []string) error {
+	if len(args) == 0 {
+		return errors.New("usage: clank sync once|export|import")
+	}
+	switch args[0] {
+	case "once":
+		if err := c.SyncOnce(ctx); err != nil {
+			return err
+		}
+		printJSON(map[string]string{"status": "synchronized"})
+		return nil
+	case "export":
+		f := flag.NewFlagSet("sync export", flag.ContinueOnError)
+		workspaceID := f.String("workspace", os.Getenv("CLANKSPACE_WORKSPACE"), "workspace ID")
+		output := f.String("output", "", "output file; stdout when omitted")
+		if err := f.Parse(args[1:]); err != nil {
+			return err
+		}
+		if *workspaceID == "" {
+			return errors.New("workspace ID is required")
+		}
+		bundle, err := c.ExportWorkspaceBundle(ctx, *workspaceID)
+		if err != nil {
+			return err
+		}
+		if *output == "" {
+			printJSON(bundle)
+			return nil
+		}
+		body, err := json.MarshalIndent(bundle, "", "  ")
+		if err != nil {
+			return err
+		}
+		body = append(body, '\n')
+		if err = os.WriteFile(*output, body, 0600); err != nil {
+			return err
+		}
+		printJSON(map[string]string{"status": "exported", "path": *output})
+		return nil
+	case "import":
+		f := flag.NewFlagSet("sync import", flag.ContinueOnError)
+		input := f.String("file", "", "bundle file; stdin when omitted")
+		if err := f.Parse(args[1:]); err != nil {
+			return err
+		}
+		var body []byte
+		var err error
+		if *input == "" {
+			body, err = io.ReadAll(io.LimitReader(os.Stdin, 32<<20))
+		} else {
+			body, err = os.ReadFile(*input)
+		}
+		if err != nil {
+			return err
+		}
+		var bundle domain.WorkspaceBundle
+		if err = json.Unmarshal(body, &bundle); err != nil {
+			return err
+		}
+		workspace, err := c.ImportWorkspaceBundle(ctx, bundle)
+		if err != nil {
+			return err
+		}
+		printJSON(map[string]any{"status": "imported", "workspace": workspace})
+		return nil
+	default:
+		return errors.New("usage: clank sync once|export|import")
+	}
+}
+
 func split(s string) []string {
 	var out []string
 	for _, x := range strings.Split(s, ",") {
@@ -446,7 +638,7 @@ clank why <topic-or-path> --run <id>
 clank trajectory start --run <id> --objective <text> --rationale <text> --paths <comma-separated>
 clank note add|create|supersede
 clank run end --id <id> --outcome <completed|aborted> --verification <text>
-clank auth | project | repo | mcp | serve | version`)
+clank auth | workspace | project | repo | replica | sync | mcp | serve | version`)
 }
 
 func runUsage() {

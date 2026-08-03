@@ -2,7 +2,7 @@
 type: knowledge
 keywords: [railway, exe.dev, hosting, domain, sqlite, backup, rollback, clank.shamanicarts.dev]
 related: [docs/design/spec.md, docs/deployment/railway.md, docs/deployment/exe.md]
-summary: Current exe.dev pilot, disposable evaluation infrastructure, and the validated Railway migration path.
+summary: Current hosted pilot, standalone self-hosting, and the signed replica boundary between them.
 last_verified: 2026-08-03
 note_created: 2026-08-02
 updated: 2026-08-03
@@ -12,7 +12,7 @@ updated: 2026-08-03
 
 ## Hosting boundary
 
-ClankSpace separates durable collaboration state from disposable evaluation compute. The stable domain and SQLite backup are the portable contract; provider VMs are replaceable.
+ClankSpace separates durable collaboration state from disposable evaluation compute. A stable domain, signed workspace events, portable bundles, and verified SQLite backups are the portability contract; provider VMs are replaceable.
 
 | Environment | Purpose | Data boundary |
 |---|---|---|
@@ -21,7 +21,7 @@ ClankSpace separates durable collaboration state from disposable evaluation comp
 | Local runner/eval archives | Research evidence and reproducibility material | Checksummed; credentials excluded |
 | Reprovisioned eval/runner VMs | Active campaigns only | Synthetic data and fresh evaluation credentials only |
 
-The current exe.dev origin serves the Railway-restored database. Cloudflare publishes a DNS-only CNAME for `clank.shamanicarts.dev`, and exe.dev owns its managed certificate. Strict-HTTPS health/readiness, CLI context, and authenticated export pass. Bearer authentication remains mandatory and there is no public signup.
+The current exe.dev origin is the small-network hosted pilot. Cloudflare publishes a DNS-only CNAME for `clank.shamanicarts.dev`, and exe.dev owns its managed certificate. The service remains invitation-only: there is no public signup.
 
 ## Current runtime
 
@@ -32,11 +32,25 @@ one VM
 one clank process
 /var/lib/clankspace/clankspace.db
 CLANKSPACE_BASE_URL=https://clank.shamanicarts.dev
+CLANKSPACE_AUTH_MODE=hybrid
+CLANKSPACE_SYNC_ENABLED=true
 ```
 
 The service uses one process and one SQLite writer. Never run multiple replicas against the same database volume.
 
 The service runs as the unprivileged `clankspace` user. systemd owns startup and restart behavior; exe.dev terminates TLS and proxies the stable custom domain to port 8000.
+
+Hosted mode also needs a durable installation secret and an SMTP sender. The installation secret encrypts the local replica signing key, mail outbox bodies, and stored replica credentials. It must be backed up separately from the database and restored with it. A file mail sink is for local E2E testing only.
+
+## Replication boundary
+
+- Every linked workspace names one authority instance for project structure and replica admission.
+- A cloud-created workspace remains cloud-authoritative when a local instance joins it.
+- A self-host-created workspace stays self-host-authoritative when it is mirrored to cloud.
+- Approved replicas may append runs, notes, trajectories, and lifecycle edges offline, then synchronize later.
+- Instances exchange bounded signed snapshots and domain events over HTTPS. They never share a live database or WAL.
+- User accounts, email addresses, sessions, invitations, API keys, SMTP state, and replica credentials remain local to each host.
+- Direct peers use the same explicit authority offer. There is no automatic discovery or transitive mesh.
 
 ## Recovery
 
@@ -51,7 +65,7 @@ Never copy the live database plus WAL files piecemeal or place the live data dir
 
 ## Portability
 
-ClankSpace remains one Go binary and one SQLite database. The stable domain prevents a future host move from changing repository pointers, project semantics, or the CLI/MCP protocol.
+ClankSpace remains one Go binary and one SQLite database per instance. The stable domain prevents a future host move from changing repository pointers, project semantics, or the CLI/MCP protocol. Workspace bundles and signed replication move domain history between instances without making a provider's filesystem the data model.
 
 ## Host migration sequence
 

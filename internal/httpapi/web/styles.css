@@ -73,13 +73,17 @@ label { display: grid; gap: 6px; color: var(--muted); font-size: 0.76rem; font-w
 .brand { display: flex; align-items: center; gap: 9px; color: var(--ink); text-decoration: none; font-size: 0.88rem; font-weight: 720; }
 .mark { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; background: var(--ink); color: var(--surface); font-size: 0.76rem; font-weight: 760; }
 .product-note { margin-left: 18px; padding-left: 18px; border-left: 1px solid var(--line); color: var(--muted); font-size: 0.75rem; }
-.topbar #logout { margin-left: auto; }
+.account-actions { margin-left: auto; display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 0.75rem; }
 
 .login { width: min(430px, calc(100% - 32px)); margin: 14vh auto 0; }
 .login-mark { margin-bottom: 28px; width: 32px; height: 32px; }
 .login h1 { margin: 0; font-size: 1.65rem; line-height: 1.2; letter-spacing: -0.025em; }
-.login > p { margin: 9px 0 28px; color: var(--muted); font-size: 0.88rem; line-height: 1.55; }
+.login p { margin: 9px 0 28px; color: var(--muted); font-size: 0.88rem; line-height: 1.55; }
 .login-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.form-status { min-height: 1.4em; margin-top: 12px !important; color: var(--accent) !important; }
+.bootstrap-login { margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--line); }
+.bootstrap-login summary { color: var(--muted); cursor: pointer; font-size: 0.76rem; }
+.bootstrap-login form, #consume-form { display: grid; gap: 14px; margin-top: 18px; }
 
 #app { display: grid; grid-template-columns: 214px minmax(0, 1fr); min-height: calc(100vh - 56px); }
 .project-rail { padding: 22px 12px; border-right: 1px solid var(--line); background: color-mix(in oklch, var(--canvas) 72%, var(--surface)); }
@@ -88,9 +92,46 @@ nav { display: grid; gap: 2px; }
 nav button { width: 100%; padding: 0.58rem 0.7rem; border-color: transparent; background: transparent; color: var(--muted); text-align: left; font-size: 0.8rem; font-weight: 570; }
 nav button:hover { background: var(--surface); border-color: transparent; color: var(--ink); }
 nav button.active { background: var(--surface); border-color: var(--line); color: var(--ink); font-weight: 670; }
+nav button span, nav button small { display: block; }
+nav button small { margin-top: 2px; color: var(--faint); font-size: 0.62rem; font-weight: 540; text-transform: capitalize; }
+.rail-subheading { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
+.rail-empty { padding: 8px; color: var(--faint); font-size: 0.72rem; }
 
-#workspace { min-width: 0; padding: 40px clamp(28px, 5vw, 68px) 80px; }
-#project-view { max-width: 920px; }
+#content { min-width: 0; padding: 40px clamp(28px, 5vw, 68px) 80px; }
+.content-view { max-width: 920px; }
+.page-header { padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+.page-header h1 { margin: 4px 0 8px; font-size: 1.72rem; line-height: 1.2; letter-spacing: -0.03em; }
+.page-header p { margin: 0; max-width: 70ch; color: var(--muted); font-size: 0.86rem; line-height: 1.55; }
+.eyebrow { color: var(--accent); font-size: 0.67rem; font-weight: 760; letter-spacing: 0.075em; text-transform: uppercase; }
+.workspace-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.setup-callout { display: flex; align-items: center; justify-content: space-between; gap: 28px; margin: 0 0 28px; padding: 16px 18px; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--surface); }
+.setup-callout h2 { margin: 2px 0 4px; font-size: 1rem; }
+.setup-callout p { margin: 0; color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
+.section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin: 30px 0 12px; }
+.section-heading h2, .section-heading h3 { margin: 0; font-size: 1rem; letter-spacing: -0.012em; }
+.section-heading h3 { font-size: 0.82rem; }
+.section-heading span { color: var(--muted); font-size: 0.72rem; }
+.sub-section { margin-top: 26px; }
+.ruled-list { border-top: 1px solid var(--line-strong); }
+.list-row { width: 100%; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 17px 2px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; color: var(--ink); text-align: left; }
+button.list-row:hover { border-color: var(--line); background: color-mix(in oklch, var(--surface) 75%, transparent); }
+.list-row > span { min-width: 0; }
+.list-row strong, .list-row small { display: block; }
+.list-row strong { font-size: 0.86rem; font-weight: 650; }
+.list-row small { margin-top: 4px; color: var(--muted); font-size: 0.72rem; font-weight: 450; line-height: 1.45; overflow-wrap: anywhere; }
+.row-state { flex: 0 0 auto; color: var(--muted); font-size: 0.7rem; font-weight: 560; text-transform: capitalize; }
+.empty-row { padding: 26px 2px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 0.8rem; }
+.empty-row strong, .empty-row span { display: block; }
+.empty-row span { margin-top: 5px; }
+.access-section { margin-top: 42px; padding-top: 4px; border-top: 1px solid var(--line); }
+.compact-list .list-row { padding: 13px 2px; }
+.member-controls { display: flex; align-items: center; gap: 12px; }
+.back-link { display: block; margin: 0 0 18px; padding: 0; border: 0; background: transparent; color: var(--muted); font-size: 0.72rem; }
+.back-link:hover { border: 0; background: transparent; color: var(--ink); }
+.token-list { border-top: 1px solid var(--line); }
+.token-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.token-row strong, .token-row small { display: block; }
+.token-row small { margin-top: 4px; color: var(--muted); font-size: 0.68rem; }
 .empty { margin-top: 10vh; max-width: 480px; }
 .empty h1 { margin: 0; font-size: 1.6rem; letter-spacing: -0.02em; }
 .empty p { color: var(--muted); line-height: 1.55; }
@@ -175,7 +216,9 @@ dialog::backdrop { background: oklch(20% 0.01 120 / 0.48); }
   .rail-heading { padding: 0 2px 6px; }
   nav { display: flex; overflow-x: auto; gap: 4px; }
   nav button { width: auto; flex: 0 0 auto; }
-  #workspace { padding: 28px 18px 60px; }
+  #content { padding: 28px 18px 60px; }
+  #project-nav-wrap { border-top: 1px solid var(--line); margin-top: 8px; }
+  .rail-subheading { margin-top: 8px; padding-top: 10px; border-top: 0; }
   .project-header { gap: 18px; }
   .project-header h1 { font-size: 1.5rem; }
   .log-controls { grid-template-columns: 1fr 1fr; }
@@ -187,6 +230,9 @@ dialog::backdrop { background: oklch(20% 0.01 120 / 0.48); }
   .topbar { padding: 0 15px; }
   .login-row { grid-template-columns: 1fr; }
   .project-header { display: block; }
+  .workspace-header, .section-heading { align-items: flex-start; }
+  .workspace-header { display: block; }
+  .workspace-header .secondary-button { margin-top: 18px; }
   .project-actions { margin-top: 18px; }
   .action-menu { margin-left: auto; }
   .log-controls { grid-template-columns: 1fr; }

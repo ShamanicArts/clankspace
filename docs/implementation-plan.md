@@ -1,7 +1,7 @@
 ---
 type: strategy
 status: active
-summary: Delivery roadmap from the validated hosted candidate through permanent production, collaborator use, and hardened hosting.
+summary: Delivery roadmap from the validated core through hosted accounts, portable replication, collaborator use, and hardened hosting.
 note_created: 2026-08-02
 updated: 2026-08-03
 ---
@@ -10,7 +10,7 @@ updated: 2026-08-03
 
 ## Overview
 
-The smallest trustworthy ambient coordination layer is implemented and validated. The candidate has been migrated to a durable Railway service with its database intact. The active milestone is completing stable DNS and recovery acceptance before onboarding Shuv and other real collaborators. Research remains in service of normal product use.
+The smallest trustworthy ambient coordination layer is implemented and validated. Hosted accounts, multi-workspace membership, project-scoped agent keys, signed replication, offline writes, cloud mirrors, and self-hosted authority are now implemented on `feat/hosted-replication`. The next milestone is packaging that candidate for real trusted-collaborator use. Research remains in service of normal product use.
 
 ## Architecture principles
 
@@ -30,9 +30,10 @@ The smallest trustworthy ambient coordination layer is implemented and validated
 | 2 | Human log and public GitHub evidence | **Complete** | [phase-2-board-github.md](phases/phase-2-board-github.md) |
 | 3 | Hosted candidate validation on exe.dev | **Complete** | [exe.md](deployment/exe.md) |
 | 4 | Railway migration and portability proof | **Complete** | [railway.md](deployment/railway.md) |
-| 5 | Trusted collaborator onboarding and packaging | Next | [pilot-onboarding.md](pilot-onboarding.md) |
+| 5 | Trusted collaborator onboarding and packaging | **Next** | [pilot-onboarding.md](pilot-onboarding.md) |
 | 6 | Matched controls and retrieval iteration | Planned | [training-loop.md](evals/training-loop.md) |
-| 7 | Private repositories and public multi-tenant hardening | Deferred | Prove the trusted pilot first |
+| 7 | Hosted accounts and workspace replication | **Complete on feature branch** | [hosted-replication-spec.md](design/hosted-replication-spec.md) |
+| 8 | Private repositories and wider public hardening | Deferred | Prove the invited multi-workspace service first |
 
 ## Phase 0: Project setup — complete
 
@@ -87,6 +88,20 @@ That exercise validated the application, isolation boundaries, and migration mec
 ## Phase 6: matched controls and retrieval iteration — planned
 
 Measure time, token, tool-call, interruption, false-pause, and useful-conflict deltas against matched no-Clank runs. Expand repository/model/seed coverage before introducing embeddings. Add semantic retrieval only when deterministic lexical baselines and failure cases are frozen.
+
+## Phase 7: hosted accounts and workspace replication — complete on feature branch
+
+The approved extension in
+[`docs/design/hosted-replication-spec.md`](design/hosted-replication-spec.md) is implemented:
+scoped authorization, invitation-only email accounts, multi-workspace membership, quiet
+human management surfaces, signed snapshot-and-event replication, cloud mirrors, direct
+trusted peers, offline local writes, and backward-compatible self-hosting.
+
+The completion campaign exercised two invited humans, two cloud workspaces, a paired local
+replica, a standalone self-hosted authority, a cloud mirror, a third imported peer, an
+offline conflicting decision, reconciliation, and revocation. The browser and PTY evidence,
+including the defect found and fixed during the run, is indexed in
+[`docs/research_results/2026-08-03-hosted-replication-e2e.md`](research_results/2026-08-03-hosted-replication-e2e.md).
 
 ## Research backlog
 

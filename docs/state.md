@@ -1,7 +1,7 @@
 ---
 type: state
 status: active
-summary: Lean exe.dev production and daily off-provider backups are live; disposable eval infrastructure is archived and removed.
+summary: Hosted accounts and signed replication are implemented and E2E-validated on the feature branch; the lean exe.dev pilot remains the current public deployment.
 note_created: 2026-08-02
 updated: 2026-08-03
 ---
@@ -10,9 +10,31 @@ updated: 2026-08-03
 
 ## Current focus
 
-Operate the trusted pilot from the smallest useful topology: one exe.dev production VM behind the stable domain, verified off-provider backups, and no idle evaluation fleet. Reprovision isolated eval and runner VMs only for a defined product question. Research remains subordinate to observed product friction.
+Prepare the hosted-replication candidate for trusted collaborators. The new product slice is implemented and locally validated; it is not yet merged into or deployed over the existing lean exe.dev pilot. The next useful signal should come from real Shuv/Shamanic use, not a larger synthetic campaign.
 
 ## Active phase
+
+Branch `feat/hosted-replication` adds invitation-only email accounts, many workspaces per
+human, workspace roles, project-scoped agent keys, a quiet human management surface, signed
+snapshot-plus-event replication, offline local writes, self-hosted authority, cloud mirrors,
+replica revocation, encrypted local secrets, migration backups, and downgrade protection.
+
+The final end-to-end campaign passed. It registered a hosted owner, invited a second human,
+created separate workspaces, issued an agent key, paired a local replica, stopped the cloud,
+recorded a conflicting local checkpoint, restarted and reconciled the cloud, created a
+separate self-hosted authority, mirrored it to the cloud, imported it into a third peer, and
+proved that a revoked replica could no longer publish. The run exposed one real transaction
+bug in local-account promotion; the fix was applied and the failed step was replayed
+successfully. Focused store, service, HTTP, client, sync, local-routing, and CLI tests pass.
+
+The shareable validation index is
+`docs/research_results/2026-08-03-hosted-replication-e2e.md`. The phone-readable visual
+implementation report and six recordings are preserved outside the repository under
+`~/.agent/diagrams/clankspace-e2e-final-2026-08-03/`; no live credentials are stored in the
+repository.
+
+The currently deployed service remains the earlier public-main pilot described below until
+the hosted-replication branch is intentionally reviewed and promoted.
 
 Production runs from public `main` on `clankspace-prod.exe.xyz`, published through `clank.shamanicarts.dev`. The final Railway database was downloaded quiescently, passed `PRAGMA integrity_check`, and was restored with the matching production bootstrap credential. Strict-HTTPS health/readiness, CLI context, and deterministic authenticated export pass; the project contains the expected four notes. A persistent daily local timer performs SQLite's online backup remotely, pulls the completed snapshot off-provider, verifies integrity, and writes a checksum manifest; its first live run passed. Railway has no active deployment. The runner and evaluation VM evidence was checksum-verified locally before both disposable VMs were deleted.
 

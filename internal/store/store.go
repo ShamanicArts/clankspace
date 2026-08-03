@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
@@ -10,6 +11,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -26,8 +29,15 @@ var (
 )
 
 type Store struct {
-	db      *sql.DB
-	writeMu sync.Mutex
+	db             *sql.DB
+	writeMu        sync.Mutex
+	secretKey      [32]byte
+	replicaMu      sync.RWMutex
+	replicaID      string
+	replicaName    string
+	replicaBaseURL string
+	replicaPublic  ed25519.PublicKey
+	replicaPrivate ed25519.PrivateKey
 }
 
 type scanQuerier interface {
@@ -35,6 +45,14 @@ type scanQuerier interface {
 }
 
 func Open(path string) (*Store, error) {
+	secret, err := installationSecret(path)
+	if err != nil {
+		return nil, err
+	}
+	return OpenWithSecret(path, secret)
+}
+
+func OpenWithSecret(path, secret string) (*Store, error) {
 	separator := "?"
 	if strings.Contains(path, "?") {
 		separator = "&"
@@ -50,7 +68,73 @@ func Open(path string) (*Store, error) {
 		db.Close()
 		return nil, fmt.Errorf("apply schema: %w", err)
 	}
-	return &Store{db: db}, nil
+	if err := prepareMigrationBackup(db, path); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("prepare migration backup: %w", err)
+	}
+	if err := applyMigrations(db); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("apply migrations: %w", err)
+	}
+	return &Store{db: db, secretKey: sha256.Sum256([]byte(secret))}, nil
+}
+
+func prepareMigrationBackup(db *sql.DB, path string) error {
+	if path == ":memory:" || strings.Contains(path, "mode=memory") {
+		return nil
+	}
+	var version int
+	if err := db.QueryRow(`SELECT COALESCE(MAX(version),0) FROM schema_migrations`).Scan(&version); err != nil {
+		return err
+	}
+	if version == 0 || version >= latestSchemaVersion {
+		return nil
+	}
+	var integrity string
+	if err := db.QueryRow(`PRAGMA integrity_check`).Scan(&integrity); err != nil {
+		return err
+	}
+	if integrity != "ok" {
+		return fmt.Errorf("database integrity check failed: %s", integrity)
+	}
+	cleanPath := strings.Split(path, "?")[0]
+	backupPath := fmt.Sprintf("%s.pre-migration-v%d-%d", cleanPath, version, time.Now().UTC().UnixNano())
+	if _, err := db.Exec(`VACUUM INTO ?`, backupPath); err != nil {
+		return err
+	}
+	if err := os.Chmod(backupPath, 0600); err != nil {
+		return err
+	}
+	return nil
+}
+
+func installationSecret(path string) (string, error) {
+	if value := strings.TrimSpace(os.Getenv("CLANKSPACE_INSTALLATION_SECRET")); value != "" {
+		return value, nil
+	}
+	secretPath := filepath.Join(filepath.Dir(path), "clankspace.secret")
+	body, err := os.ReadFile(secretPath)
+	if err == nil {
+		if len(body) < 32 {
+			return "", errors.New("installation secret file is invalid")
+		}
+		return string(body), nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+	random := make([]byte, 32)
+	if _, err = rand.Read(random); err != nil {
+		return "", err
+	}
+	encoded := base64.RawURLEncoding.EncodeToString(random)
+	if err = os.MkdirAll(filepath.Dir(secretPath), 0700); err != nil {
+		return "", err
+	}
+	if err = os.WriteFile(secretPath, []byte(encoded), 0600); err != nil {
+		return "", err
+	}
+	return encoded, nil
 }
 
 func (s *Store) Close() error                   { return s.db.Close() }
@@ -97,10 +181,10 @@ func (s *Store) EnsureBootstrap(ctx context.Context, token, workspaceName, owner
 		return domain.Principal{}, err
 	}
 	defer tx.Rollback()
-	if _, err = tx.ExecContext(ctx, `INSERT INTO workspaces(id,name,created_at) VALUES(?,?,?)`, workspaceID, workspaceName, ts(t)); err != nil {
+	if _, err = tx.ExecContext(ctx, `INSERT INTO workspaces(id,name,created_at,slug) VALUES(?,?,?,?)`, workspaceID, workspaceName, ts(t), slugForWorkspace(workspaceName, workspaceID)); err != nil {
 		return domain.Principal{}, err
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO principals(id,workspace_id,display_name,kind,created_at) VALUES(?,?,?,?,?)`, principalID, workspaceID, ownerName, "human", ts(t)); err != nil {
+	if _, err = tx.ExecContext(ctx, `INSERT INTO principals(id,workspace_id,display_name,kind,created_at,portable_actor_id) VALUES(?,?,?,?,?,?)`, principalID, workspaceID, ownerName, "human", ts(t), newID("actor")); err != nil {
 		return domain.Principal{}, err
 	}
 	prefix := token
@@ -117,17 +201,60 @@ func (s *Store) EnsureBootstrap(ctx context.Context, token, workspaceName, owner
 }
 
 func (s *Store) Authenticate(ctx context.Context, token string) (domain.Principal, error) {
+	auth, err := s.AuthenticateContext(ctx, token)
+	return auth.Principal, err
+}
+
+func (s *Store) AuthenticateContext(ctx context.Context, token string) (domain.AuthContext, error) {
 	var p domain.Principal
-	var created string
-	err := s.db.QueryRowContext(ctx, `SELECT p.id,p.workspace_id,p.display_name,p.kind,p.created_at FROM api_tokens t JOIN principals p ON p.id=t.principal_id WHERE t.token_hash=? AND t.revoked_at IS NULL`, hashToken(token)).Scan(&p.ID, &p.WorkspaceID, &p.DisplayName, &p.Kind, &created)
+	var created, tokenID, scopesJSON, workspaceStatus string
+	var expires, issuerMembershipStatus, issuerUserStatus sql.NullString
+	err := s.db.QueryRowContext(ctx, `SELECT p.id,p.workspace_id,p.display_name,p.kind,p.created_at,t.id,t.scopes_json,t.expires_at,w.status,m.status,u.status FROM api_tokens t JOIN principals p ON p.id=t.principal_id JOIN workspaces w ON w.id=p.workspace_id LEFT JOIN workspace_memberships m ON m.id=t.issued_by_membership_id LEFT JOIN users u ON u.id=m.user_id WHERE t.token_hash=? AND t.revoked_at IS NULL`, hashToken(token)).Scan(&p.ID, &p.WorkspaceID, &p.DisplayName, &p.Kind, &created, &tokenID, &scopesJSON, &expires, &workspaceStatus, &issuerMembershipStatus, &issuerUserStatus)
 	if errors.Is(err, sql.ErrNoRows) {
-		return p, ErrNotFound
+		return domain.AuthContext{}, ErrNotFound
 	}
 	if err != nil {
-		return p, err
+		return domain.AuthContext{}, err
+	}
+	if expires.Valid && !parseTime(expires.String).After(now()) {
+		return domain.AuthContext{}, ErrNotFound
+	}
+	if (issuerMembershipStatus.Valid && issuerMembershipStatus.String != "active") || (issuerUserStatus.Valid && issuerUserStatus.String != "active") {
+		return domain.AuthContext{}, ErrNotFound
 	}
 	p.CreatedAt = parseTime(created)
-	return p, nil
+	var scopes []string
+	if err = json.Unmarshal([]byte(scopesJSON), &scopes); err != nil {
+		return domain.AuthContext{}, fmt.Errorf("parse token scopes: %w", err)
+	}
+	if workspaceStatus != "active" {
+		isAdmin := false
+		for _, scope := range scopes {
+			isAdmin = isAdmin || scope == "admin"
+		}
+		if !isAdmin {
+			return domain.AuthContext{}, ErrNotFound
+		}
+	}
+	projectIDs := []string{}
+	if p.Kind != "human" {
+		rows, queryErr := s.db.QueryContext(ctx, `SELECT project_id FROM project_principals WHERE principal_id=? ORDER BY project_id`, p.ID)
+		if queryErr != nil {
+			return domain.AuthContext{}, queryErr
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id string
+			if queryErr = rows.Scan(&id); queryErr != nil {
+				return domain.AuthContext{}, queryErr
+			}
+			projectIDs = append(projectIDs, id)
+		}
+		if queryErr = rows.Err(); queryErr != nil {
+			return domain.AuthContext{}, queryErr
+		}
+	}
+	return domain.AuthContext{Principal: p, TokenID: tokenID, Scopes: scopes, ProjectIDs: projectIDs}, nil
 }
 
 func (s *Store) ListProjects(ctx context.Context, workspaceID string) ([]domain.Project, error) {
@@ -205,7 +332,12 @@ func (s *Store) IssueProjectToken(ctx context.Context, owner domain.Principal, p
 		token := "clank_" + base64.RawURLEncoding.EncodeToString(random)
 		t := now()
 		p := domain.Principal{ID: newID("principal"), WorkspaceID: owner.WorkspaceID, DisplayName: displayName, Kind: "project", CreatedAt: t}
-		if _, err = tx.ExecContext(ctx, `INSERT INTO principals(id,workspace_id,display_name,kind,created_at) VALUES(?,?,?,?,?)`, p.ID, p.WorkspaceID, p.DisplayName, p.Kind, ts(t)); err != nil {
+		var issuerMembership string
+		queryErr := tx.QueryRowContext(ctx, `SELECT id FROM workspace_memberships WHERE principal_id=? AND status='active'`, owner.ID).Scan(&issuerMembership)
+		if queryErr != nil && !errors.Is(queryErr, sql.ErrNoRows) {
+			return "", "", nil, queryErr
+		}
+		if _, err = tx.ExecContext(ctx, `INSERT INTO principals(id,workspace_id,display_name,kind,created_at,portable_actor_id,created_by_membership_id,origin_replica_id) VALUES(?,?,?,?,?,?,?,?)`, p.ID, p.WorkspaceID, p.DisplayName, p.Kind, ts(t), newID("actor"), nullable(issuerMembership), s.LocalReplicaID()); err != nil {
 			return "", "", nil, err
 		}
 		if _, err = tx.ExecContext(ctx, `INSERT INTO project_principals(project_id,principal_id,role,created_at) VALUES(?,?,?,?)`, project.ID, p.ID, "agent", ts(t)); err != nil {
@@ -215,7 +347,7 @@ func (s *Store) IssueProjectToken(ctx context.Context, owner domain.Principal, p
 		if len(prefix) > 12 {
 			prefix = prefix[:12]
 		}
-		if _, err = tx.ExecContext(ctx, `INSERT INTO api_tokens(id,principal_id,token_hash,token_prefix,scopes_json,created_at) VALUES(?,?,?,?,?,?)`, newID("token"), p.ID, hashToken(token), prefix, `["project:agent"]`, ts(t)); err != nil {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO api_tokens(id,principal_id,token_hash,token_prefix,scopes_json,created_at,issued_by_membership_id) VALUES(?,?,?,?,?,?,?)`, newID("token"), p.ID, hashToken(token), prefix, `["project:agent"]`, ts(t), nullable(issuerMembership)); err != nil {
 			return "", "", nil, err
 		}
 		credential := domain.ProjectCredential{Principal: p, Token: token, Notice: "Copy this project agent token now. It is stored only as a hash and cannot be shown again."}
@@ -269,7 +401,8 @@ func (s *Store) mutate(ctx context.Context, workspaceID, projectID, principalID,
 		if existingHash != requestHash {
 			return nil, domain.Receipt{}, ErrIdempotencyKeyReuse
 		}
-		return []byte(responseJSON), domain.Receipt{ID: rid, IdempotencyKey: key, EventID: eventID, Sequence: sequence, Response: []byte(responseJSON), CreatedAt: parseTime(created)}, nil
+		originReplicaID, originSequence := s.domainEventInfoTx(ctx, tx, eventID)
+		return []byte(responseJSON), domain.Receipt{ID: rid, IdempotencyKey: key, EventID: eventID, Sequence: sequence, Response: []byte(responseJSON), CreatedAt: parseTime(created), OriginReplicaID: originReplicaID, OriginSequence: originSequence}, nil
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return nil, domain.Receipt{}, err
@@ -292,6 +425,10 @@ func (s *Store) mutate(ctx context.Context, workspaceID, projectID, principalID,
 	if err != nil {
 		return nil, domain.Receipt{}, err
 	}
+	originReplicaID, originSequence, err := s.appendDomainEventTx(ctx, tx, eventID, workspaceID, projectID, principalID, runID, eventType, entityID, responseBytes, t)
+	if err != nil {
+		return nil, domain.Receipt{}, err
+	}
 	rid = newID("receipt")
 	if _, err = tx.ExecContext(ctx, `INSERT INTO receipts(id,actor_id,idempotency_key,request_hash,event_id,sequence,response_json,created_at) VALUES(?,?,?,?,?,?,?,?)`, rid, actorID, key, requestHash, eventID, sequence, string(responseBytes), ts(t)); err != nil {
 		return nil, domain.Receipt{}, err
@@ -299,7 +436,7 @@ func (s *Store) mutate(ctx context.Context, workspaceID, projectID, principalID,
 	if err = tx.Commit(); err != nil {
 		return nil, domain.Receipt{}, err
 	}
-	return responseBytes, domain.Receipt{ID: rid, IdempotencyKey: key, EventID: eventID, Sequence: sequence, Response: responseBytes, CreatedAt: t}, nil
+	return responseBytes, domain.Receipt{ID: rid, IdempotencyKey: key, EventID: eventID, Sequence: sequence, Response: responseBytes, CreatedAt: t, OriginReplicaID: originReplicaID, OriginSequence: originSequence}, nil
 }
 
 func nullable(s string) any {
@@ -425,6 +562,33 @@ func (s *Store) ListRuns(ctx context.Context, projectID string, limit int) ([]do
 		limit = 100
 	}
 	rows, err := s.db.QueryContext(ctx, runSelect+` WHERE r.project_id=? ORDER BY r.started_at DESC LIMIT ?`, projectID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	runs := make([]domain.Run, 0)
+	for rows.Next() {
+		var run domain.Run
+		var profile, started, ended string
+		if err = rows.Scan(&run.ID, &run.ProjectID, &run.AgentID, &run.AgentName, &run.PrincipalID, &run.PrincipalName, &run.Harness, &run.HarnessVersion, &run.Provider, &run.Model, &run.Reasoning, &run.Role, &run.ParentRunID, &run.RootRunID, &run.RunType, &run.PermissionMode, &run.InteractionMode, &run.RepositoryID, &run.Branch, &run.Worktree, &run.BaseSHA, &run.HeadSHA, &run.Objective, &profile, &started, &ended, &run.Outcome, &run.Verification); err != nil {
+			return nil, err
+		}
+		_ = json.Unmarshal([]byte(profile), &run.InstructionProfile)
+		run.StartedAt = parseTime(started)
+		if ended != "" {
+			t := parseTime(ended)
+			run.EndedAt = &t
+		}
+		runs = append(runs, run)
+	}
+	return runs, rows.Err()
+}
+
+// ListAllRuns is reserved for portable snapshots and exports. Interactive API
+// callers should use ListRuns so a single request cannot accidentally return an
+// unbounded history.
+func (s *Store) ListAllRuns(ctx context.Context, projectID string) ([]domain.Run, error) {
+	rows, err := s.db.QueryContext(ctx, runSelect+` WHERE r.project_id=? ORDER BY r.started_at DESC`, projectID)
 	if err != nil {
 		return nil, err
 	}

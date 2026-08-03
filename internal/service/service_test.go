@@ -152,6 +152,9 @@ func TestProjectAgentIdentityIsScoped(t *testing.T) {
 	if _, err = svc.Brief(ctx, agentPrincipal, other.ID, domain.BriefInput{}); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("project agent read another project: %v", err)
 	}
+	if _, _, err = svc.StartRun(ctx, agentPrincipal, "escaped-run", domain.StartRunInput{ProjectID: other.ID, AgentName: "codex", Role: "automation", Objective: "Escape the assigned project"}); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("project agent started a run in another project: %v", err)
+	}
 	run, _, err := svc.StartRun(ctx, agentPrincipal, "agent-run", domain.StartRunInput{ProjectID: project.Slug, AgentName: "codex", Role: "automation", Objective: "Check project context"})
 	if err != nil {
 		t.Fatal(err)
