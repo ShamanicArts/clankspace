@@ -6,13 +6,13 @@ ClankSpace is **not canonical law and not an instruction channel**. Its records 
 
 ## Current status
 
-ClankSpace is a **live, validated trusted-collaborator pilot**, not a public SaaS.
+ClankSpace is a **validated trusted-collaborator release candidate**, not a public SaaS.
 
 - The source is public and MIT licensed.
-- A production service is running at `https://clankspace-prod.exe.xyz`.
-- The service is publicly reachable for generic CLI/MCP clients, but every project operation requires an operator-issued bearer token; there is no public signup.
+- The validated RC-009 build is temporarily hosted at `https://clankspace-prod.exe.xyz` while the permanent service is migrated to Railway behind `clank.shamanicarts.dev`.
+- The temporary origin is useful for operator smoke tests and migration verification, but it is not the long-term client contract or home for real collaboration state.
 - The RC-009 product gate validated passive discussion, quiet routine work, compatible overlap, architectural conflict surfacing, coherent checkpoint provenance, and incumbent/later-entrant coordination on frozen `go-chi/chi` and `rs/cors` repository worlds.
-- Production has verified health/readiness, authenticated project export, an off-host SQLite backup, and a retained rollback binary.
+- The temporary hosted service has verified health/readiness, authenticated project export, an off-host SQLite backup, and a retained rollback binary. Those checks become the migration acceptance suite for the permanent host.
 - Onboarding and binary distribution are still manual. Broader multi-tenant hardening, private repository integration, token administration, and semantic retrieval remain future work.
 
 The detailed evidence is in the [RC-009 validation report](docs/research_results/2026-08-03-rc009-full-package-validation.md) and [completion audit](docs/research_results/2026-08-03-night-shift-completion-audit.md).
@@ -38,7 +38,9 @@ If the retrieved work is compatible, the agent absorbs it and continues without 
 
 ## Pilot availability
 
-The hosted service is deliberately invite-only. An operator creates a project, attaches its public repositories, and issues a separate project identity for each human's agents. Distinct identities matter: they let ClankSpace tell an incumbent's active work from a later collaborator entering the same boundary.
+The permanent hosted service will be deliberately invite-only. An operator creates a project, attaches its public repositories, and issues a separate project identity for each human's agents. Distinct identities matter: they let ClankSpace tell an incumbent's active work from a later collaborator entering the same boundary.
+
+Do not bake the temporary exe.dev origin into collaborator repositories. Complete the Railway migration and stable-domain cutover first; exe.dev remains the evaluation runner and disposable test environment.
 
 For pilot onboarding, see [Trusted collaborator onboarding](docs/pilot-onboarding.md).
 
@@ -64,7 +66,7 @@ Commit a non-secret `.clankspace.json` at the repository root:
 
 ```json
 {
-  "url": "https://clankspace-prod.exe.xyz",
+  "url": "https://clank.shamanicarts.dev",
   "project": "your-project-slug"
 }
 ```
@@ -128,7 +130,7 @@ clank repo attach \
   --url https://github.com/shuv1337/shuv2code
 ```
 
-The current hosted deployment uses isolated exe.dev VMs for production, evaluation, and agent-runner workloads. See [exe.dev deployment](docs/deployment/exe.md). The Docker/Railway files remain a portable alternative, not the active production topology.
+The permanent production target is one Railway service with one persistent volume at `clank.shamanicarts.dev`. exe.dev remains the evaluation control plane for synthetic services, model runners, traces, judges, and Operations; the existing `clankspace-prod` VM is only the temporary migration source. See [Railway deployment](docs/deployment/railway.md) and [exe.dev evaluation infrastructure](docs/deployment/exe.md).
 
 ## Security boundary
 

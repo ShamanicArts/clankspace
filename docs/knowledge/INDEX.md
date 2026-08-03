@@ -14,7 +14,7 @@ updated: 2026-08-03
 | Are notes canonical? | No; they are advisory accrued intent and rationale. | `memory-semantics.md` |
 | What identifies an agent action? | Principal → agent → run plus harness/model/Git context. | `identity-and-provenance.md` |
 | What may an agent record? | Only minimal, professionally paraphrased, project-relevant information. | `content-boundary.md` |
-| How is it hosted? | Isolated exe.dev production/evaluation/runner VMs; one Go service and SQLite database in production. | `hosting.md` |
+| How is it hosted? | Permanent production is one Railway service and SQLite volume; exe.dev is the isolated eval and runner control plane. | `hosting.md` |
 | How does storage work? | Transactional events, projections, receipts, WAL, and FTS5. | `architecture.md` |
 | How does a local agent find its project and token? | Nearest repository pointer plus a user-local project credential. | `local-client.md` |
 | How does a trusted collaborator join? | Operator-issued project identity, non-secret repository pointer, local token storage, and the portable skill. | `../pilot-onboarding.md` |
@@ -27,5 +27,5 @@ updated: 2026-08-03
 | `identity-and-provenance.md` | principal, agent, model, harness, automation | Runtime attribution model |
 | `content-boundary.md` | privacy, professional, paraphrase | Write-time relevance and privacy policy |
 | `architecture.md` | sqlite, events, receipts, sync | Technical architecture |
-| `hosting.md` | exe.dev, domain, backup, rollback | Active production topology and recovery boundary |
+| `hosting.md` | railway, exe.dev, domain, backup, rollback | Permanent production, evaluation boundary, migration, and recovery |
 | `local-client.md` | cli, config, credentials, local, auth | Repository routing and local authentication |

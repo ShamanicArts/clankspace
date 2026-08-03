@@ -1,7 +1,7 @@
 ---
 type: strategy
 status: active
-summary: Delivery roadmap from the live trusted pilot to easier distribution, real collaborator use, and hardened hosting.
+summary: Delivery roadmap from the validated hosted candidate through permanent production, collaborator use, and hardened hosting.
 note_created: 2026-08-02
 updated: 2026-08-03
 ---
@@ -10,7 +10,7 @@ updated: 2026-08-03
 
 ## Overview
 
-The smallest trustworthy ambient coordination layer is implemented, validated, and running as a trusted-collaborator production pilot. The roadmap now shifts from proving the original collision to making the client easy to distribute, onboarding Shuv and other real collaborators, measuring value during normal work, and hardening only the boundaries demanded by that use.
+The smallest trustworthy ambient coordination layer is implemented and validated. A hosted candidate has passed deployment, backup, restore, and rollback checks on exe.dev. The active milestone is moving that exact service to durable production infrastructure before onboarding Shuv and other real collaborators. Research remains in service of normal product use.
 
 ## Architecture principles
 
@@ -28,10 +28,11 @@ The smallest trustworthy ambient coordination layer is implemented, validated, a
 | 0 | Project setup | **Complete** | This document |
 | 1 | Core coordination loop | **Complete** | [phase-1-core-loop.md](phases/phase-1-core-loop.md) |
 | 2 | Human log and public GitHub evidence | **Complete** | [phase-2-board-github.md](phases/phase-2-board-github.md) |
-| 3 | Hosted production pilot on exe.dev | **Complete** | [exe.md](deployment/exe.md) |
-| 4 | Trusted collaborator onboarding and packaging | **Active** | [pilot-onboarding.md](pilot-onboarding.md) |
-| 5 | Matched controls and retrieval iteration | Planned | [training-loop.md](evals/training-loop.md) |
-| 6 | Private repositories and public multi-tenant hardening | Deferred | Prove the trusted pilot first |
+| 3 | Hosted candidate validation on exe.dev | **Complete** | [exe.md](deployment/exe.md) |
+| 4 | Permanent Railway production migration | **Active** | [railway.md](deployment/railway.md) |
+| 5 | Trusted collaborator onboarding and packaging | Next | [pilot-onboarding.md](pilot-onboarding.md) |
+| 6 | Matched controls and retrieval iteration | Planned | [training-loop.md](evals/training-loop.md) |
+| 7 | Private repositories and public multi-tenant hardening | Deferred | Prove the trusted pilot first |
 
 ## Phase 0: Project setup — complete
 
@@ -52,23 +53,33 @@ Success means the original Shuv/Shamanic scenario is represented in fixtures and
 
 Expose the agent-maintained project log with adjacent runtime provenance, light human governance, repository attachment, and public PR evidence. Conflict inspection remains in the agent workflow.
 
-## Phase 3: hosted production pilot — complete
+## Phase 3: hosted candidate validation — complete
 
-Production, evaluation, and model-runner workloads are isolated on separate exe.dev VMs. RC-009 was promoted through the lab branch and public `main`; production health/readiness, authenticated reads, online backup, off-host copy, restore drill, and binary rollback are verified.
+Candidate, evaluation, and model-runner workloads were isolated on separate exe.dev VMs. RC-009 was promoted through the lab branch and public `main`; health/readiness, authenticated reads, online backup, off-host copy, restore drill, and binary rollback were verified against the candidate service.
 
-Railway remains a portable alternative rather than the active topology. The stable `clank.shamanicarts.dev` route is reserved but not yet connected to the production origin.
+That exercise validated the application and the migration mechanics. It did not make exe.dev the permanent production topology.
 
-## Phase 4: trusted collaborator onboarding and packaging — active
+## Phase 4: permanent Railway production migration — active
+
+- [ ] Create the human-owned Railway project and single service from this repository.
+- [ ] Attach one persistent volume at `/data`; keep the service at one replica for SQLite.
+- [ ] Take a fresh online backup of the exe.dev candidate, verify it, and copy it off-provider.
+- [ ] Restore the snapshot into Railway and verify record counts plus authenticated export.
+- [ ] Configure secrets, health checks, and `clank.shamanicarts.dev` with managed TLS.
+- [ ] Enable scheduled Railway volume backups and retain provider-neutral online SQLite backups.
+- [ ] Run local, managed-origin, and stable-domain smoke checks plus a restore rehearsal.
+- [ ] Retain the exe.dev candidate only for a short rollback window, then retire it; keep exe.dev for evals and runners.
+
+## Phase 5: trusted collaborator onboarding and packaging — next
 
 - [ ] Publish checksummed Linux, macOS, and Windows binaries as `v0.1.0-pilot`.
 - [ ] Add a one-line installer or package-manager path.
-- [ ] Route `clank.shamanicarts.dev` to the production service.
 - [ ] Provision the real `shuv2code` project with distinct Shuv and Shamanic project identities.
 - [ ] Open the repository integration PR containing the pointer, skill, and lean agent instruction.
 - [ ] Run one real cross-maintainer canary and inspect the resulting append log with both humans.
 - [ ] Schedule the proven online backup and external health checks.
 
-## Phase 5: matched controls and retrieval iteration — planned
+## Phase 6: matched controls and retrieval iteration — planned
 
 Measure time, token, tool-call, interruption, false-pause, and useful-conflict deltas against matched no-Clank runs. Expand repository/model/seed coverage before introducing embeddings. Add semantic retrieval only when deterministic lexical baselines and failure cases are frozen.
 
@@ -117,6 +128,6 @@ Measure time, token, tool-call, interruption, false-pause, and useful-conflict d
 
 ### D7 — Hosting
 
-**Decision:** Run the first trusted production pilot on a persistent exe.dev VM, with separate evaluation and runner VMs. Keep Railway/Docker portability and reserve `clank.shamanicarts.dev` as the stable client endpoint.
+**Decision:** Run permanent production as one Railway service with one persistent SQLite volume behind `clank.shamanicarts.dev`. Use exe.dev for disposable evaluation services, model runners, traces, judges, and Operations. The existing `clankspace-prod` VM is only the validated migration source.
 
-**Rationale:** exe.dev was immediately available, supports the current operational workflow, and now has verified systemd restart, backup, restore, and rollback behavior. The product remains one portable Go binary and SQLite database, so moving to Railway or another managed host later does not change the client contract.
+**Rationale:** exe.dev is excellent for agent-driven experiments and replaceable test infrastructure, but shared collaboration state needs a boring, durable application host with a persistent volume, stable domain, managed TLS, and scheduled backups. Railway already matches the repository's container shape while the stable domain keeps the client contract provider-neutral.

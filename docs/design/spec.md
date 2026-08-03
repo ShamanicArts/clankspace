@@ -1,7 +1,7 @@
 ---
 type: spec
 status: approved
-summary: Implemented specification for the live trusted ClankSpace pilot and its remaining hardening boundary.
+summary: Implemented specification for the validated ClankSpace pilot and its permanent-production boundary.
 note_created: 2026-08-02
 updated: 2026-08-03
 ---
@@ -14,7 +14,7 @@ ClankSpace is a lightweight hosted glue space where agents maintain professional
 
 It is not a canonical decision authority. A note records what an actor understood or chose at a moment in time and why. Current human direction and real repository state remain authoritative.
 
-The core specification is implemented and deployed as a trusted-collaborator pilot. RC-009 validated the intended passive, proceed, conflict-pause, provenance, and incumbent/later-entrant behavior. Packaging, stable-domain routing, real collaborator onboarding, wider population measurement, and multi-tenant hardening remain outside the completed core.
+The core specification is implemented and RC-009 validated the intended passive, proceed, conflict-pause, provenance, and incumbent/later-entrant behavior. The validated build is temporarily hosted on exe.dev while the permanent Railway service is established. Stable-domain routing, real collaborator onboarding, wider population measurement, and multi-tenant hardening remain outside the completed core.
 
 ## 2. Initial problem
 
@@ -64,11 +64,11 @@ The first product must surface:
 
 **Why not OAuth first:** It adds identity and security work before the core coordination loop is proven.
 
-### G. Portable hosted pilot
+### G. Portable service with separated production and evaluation
 
-**Pick:** One Go service and one persistent SQLite volume on any suitable host. The active pilot uses an exe.dev production VM, with separate evaluation and runner VMs. `clank.shamanicarts.dev` remains the intended stable client endpoint.
+**Pick:** Permanent production is one Railway service and one persistent SQLite volume behind `clank.shamanicarts.dev`. exe.dev hosts disposable evaluation services, model runners, traces, judges, and Operations. The current `clankspace-prod` VM is a temporary validated migration source.
 
-**Why not couple the product to exe.dev:** Hosting is operational, not architectural. Clients resolve a URL/project pair; the server remains portable to Railway, a VPS, or another single-instance host.
+**Why separate them:** exe.dev is well suited to agent-driven experiments and replaceable runners. Shared collaboration state needs a boring persistent application host, stable provider-independent domain, managed TLS, scheduled backups, and a deliberate recovery path. Hosting remains operational rather than architectural: clients resolve a URL/project pair and the server stays portable to any single-instance host.
 
 ## 4. Domain hierarchy
 
@@ -222,7 +222,7 @@ Parse `github.com/{owner}/{repo}` URLs, fetch repository metadata and open PRs, 
 
 Server database is canonical. Deterministic per-project JSON exports are portable and rebuildable. A local cache/outbox and Markdown/JSONL variants remain later optimizations. Never replicate the live SQLite/WAL files across hosts.
 
-The active exe.dev service stores the database under `/var/lib/clankspace` and runs as a restricted systemd user. SQLite online backups are integrity-checked and copied off-host; deterministic project exports provide provider-neutral portability. Railway may instead mount `/data` and use the same binary, but it is not the current production host.
+The permanent Railway service mounts its SQLite data directory at `/data` and runs one replica. Railway volume backups cover fast platform recovery; scheduled SQLite online backups are integrity-checked and copied off-provider, while deterministic project exports provide project-level portability. The temporary exe.dev candidate stores its database under `/var/lib/clankspace` until migration and rollback retention are complete.
 
 ## 15. Acceptance test
 
@@ -261,7 +261,8 @@ The active exe.dev service stores the database under `/var/lib/clankspace` and r
 - [x] Implement dashboard and GitHub evidence.
 - [x] Verify local API, CLI, MCP, GitHub, export, and scoped-identity flow.
 - [x] Publish the repository under the MIT license.
-- [x] Deploy isolated production/evaluation services with verified backup, restore, and rollback.
+- [x] Deploy isolated candidate/evaluation services with verified backup, restore, and rollback.
 - [x] Validate the core interaction on real-repository worlds and an event-gated two-maintainer episode.
-- [ ] Route `clank.shamanicarts.dev` to production.
+- [ ] Migrate the validated candidate to one persistent Railway service and rehearse recovery.
+- [ ] Route `clank.shamanicarts.dev` to Railway and retire the temporary exe.dev candidate after its rollback window.
 - [ ] Publish prebuilt pilot release binaries and onboard the first external collaborator project.
