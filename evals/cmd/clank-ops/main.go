@@ -35,6 +35,7 @@ type status struct {
 	Shift         shiftSummary        `json:"shift"`
 	Deployments   []deployment        `json:"deployments"`
 	Gates         []gateSummary       `json:"gates"`
+	Episodes      []episodeSummary    `json:"episodes"`
 	Runs          []runSummary        `json:"runs"`
 	ClaimsProven  []string            `json:"claimsProven"`
 	ClaimsOpen    []string            `json:"claimsOpen"`
@@ -101,6 +102,19 @@ type runSummary struct {
 	Score       *float64       `json:"score,omitempty"`
 }
 
+type episodeSummary struct {
+	ID              string     `json:"id"`
+	Kind            string     `json:"kind"`
+	Scenario        string     `json:"scenario"`
+	Status          string     `json:"status"`
+	Stage           string     `json:"stage"`
+	BarrierObserved bool       `json:"barrierObserved"`
+	LaneAStarted    bool       `json:"laneAStarted"`
+	LaneBStarted    bool       `json:"laneBStarted"`
+	Score           *float64   `json:"score,omitempty"`
+	UpdatedAt       *time.Time `json:"updatedAt,omitempty"`
+}
+
 type collectionWarning struct {
 	Source string `json:"source"`
 	Error  string `json:"error"`
@@ -116,6 +130,13 @@ type event struct {
 	Label      string `json:"label"`
 	State      string `json:"state"`
 	T          int64  `json:"t"`
+}
+
+type controllerEvent struct {
+	At      time.Time `json:"at"`
+	Type    string    `json:"type"`
+	LaneID  string    `json:"laneId"`
+	Message string    `json:"message"`
 }
 
 func main() {
@@ -229,6 +250,7 @@ func collect(cfg config) status {
 		GeneratedAt:   time.Now().UTC(),
 		Deployments:   []deployment{},
 		Gates:         []gateSummary{},
+		Episodes:      []episodeSummary{},
 		Runs:          []runSummary{},
 		ClaimsProven:  []string{},
 		ClaimsOpen:    []string{},
@@ -249,6 +271,11 @@ func collect(cfg config) status {
 		out.CollectionErr = append(out.CollectionErr, collectionWarning{Source: "gates", Error: err.Error()})
 	}
 	out.Gates, out.ClaimsProven, out.ClaimsOpen = gates, supported, open
+	episodes, err := readEpisodes(filepath.Join(cfg.Root, "data", "corpora"), 20)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		out.CollectionErr = append(out.CollectionErr, collectionWarning{Source: "episodes", Error: err.Error()})
+	}
+	out.Episodes = episodes
 	runs, err := readRuns(cfg.OmegaRoot, 30)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		out.CollectionErr = append(out.CollectionErr, collectionWarning{Source: "omegacode", Error: err.Error()})
@@ -259,6 +286,9 @@ func collect(cfg config) status {
 	}
 	if out.Gates == nil {
 		out.Gates = []gateSummary{}
+	}
+	if out.Episodes == nil {
+		out.Episodes = []episodeSummary{}
 	}
 	if out.Runs == nil {
 		out.Runs = []runSummary{}
@@ -433,6 +463,198 @@ func readRuns(root string, limit int) ([]runSummary, error) {
 		runs = append(runs, run)
 	}
 	return runs, nil
+}
+
+func readEpisodes(root string, limit int) ([]episodeSummary, error) {
+	if _, err := os.Stat(root); err != nil {
+		return nil, err
+	}
+	var controllerPaths []string
+	var rolloutDirs []string
+	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if !entry.IsDir() && entry.Name() == "controller-events.jsonl" {
+			controllerPaths = append(controllerPaths, path)
+		}
+		if entry.IsDir() && strings.HasPrefix(entry.Name(), "episode_") && filepath.Base(filepath.Dir(path)) == "traces" {
+			rolloutDirs = append(rolloutDirs, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	var episodes []episodeSummary
+	for _, path := range controllerPaths {
+		episode, err := readEpisode(path, root)
+		if err == nil {
+			episodes = append(episodes, episode)
+		}
+	}
+	for _, dir := range rolloutDirs {
+		episode, err := readRolloutEpisode(dir, root)
+		if err == nil {
+			episodes = append(episodes, episode)
+		}
+	}
+	sort.Slice(episodes, func(i, j int) bool {
+		if episodes[i].UpdatedAt == nil {
+			return false
+		}
+		if episodes[j].UpdatedAt == nil {
+			return true
+		}
+		return episodes[i].UpdatedAt.After(*episodes[j].UpdatedAt)
+	})
+	if len(episodes) > limit {
+		episodes = episodes[:limit]
+	}
+	return episodes, nil
+}
+
+func readEpisode(eventsPath, root string) (episodeSummary, error) {
+	episodeDir := filepath.Dir(eventsPath)
+	rel, _ := filepath.Rel(root, episodeDir)
+	parts := strings.Split(filepath.ToSlash(rel), "/")
+	e := episodeSummary{ID: filepath.Base(episodeDir), Kind: "collaboration", Status: "running", Stage: "starting"}
+	for i, part := range parts {
+		if part == "traces" && i >= 2 {
+			e.Scenario = parts[i-2]
+			break
+		}
+	}
+	f, err := os.Open(eventsPath)
+	if err != nil {
+		return e, err
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		var item controllerEvent
+		if json.Unmarshal(scanner.Bytes(), &item) != nil {
+			continue
+		}
+		at := item.At.UTC()
+		e.UpdatedAt = &at
+		switch item.Type {
+		case "episode.started":
+			e.Stage = "episode started"
+		case "lane.started":
+			if item.LaneID == "lane-a" {
+				e.LaneAStarted = true
+				e.Stage = "lane A running"
+			} else if item.LaneID == "lane-b" {
+				e.LaneBStarted = true
+				e.Stage = "lane B running"
+			}
+		case "barrier.candidate":
+			e.Stage = "checkpoint candidate observed"
+		case "barrier.observed":
+			e.BarrierObserved = true
+			e.Stage = "barrier passed"
+		case "episode.finished":
+			e.Status = "completed"
+			e.Stage = "completed"
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return e, err
+	}
+	if b, err := os.ReadFile(filepath.Join(episodeDir, "collaboration.json")); err == nil {
+		var result struct {
+			ScenarioID string  `json:"scenarioId"`
+			Status     string  `json:"status"`
+			Score      float64 `json:"score"`
+		}
+		if json.Unmarshal(b, &result) == nil {
+			if result.ScenarioID != "" {
+				e.Scenario = result.ScenarioID
+			}
+			if result.Status != "" {
+				e.Status = result.Status
+			}
+			e.Score = &result.Score
+		}
+	}
+	if e.Status == "running" && e.UpdatedAt != nil && time.Since(*e.UpdatedAt) > 30*time.Minute {
+		e.Status = "incomplete"
+		e.Stage = "stale after " + e.Stage
+	}
+	return e, nil
+}
+
+func readRolloutEpisode(episodeDir, root string) (episodeSummary, error) {
+	rel, _ := filepath.Rel(root, episodeDir)
+	parts := strings.Split(filepath.ToSlash(rel), "/")
+	e := episodeSummary{ID: filepath.Base(episodeDir), Kind: "single-agent", Status: "running", Stage: "starting"}
+	for i, part := range parts {
+		if part == "traces" && i >= 2 {
+			e.Scenario = parts[i-2]
+			break
+		}
+	}
+	entries, err := os.ReadDir(episodeDir)
+	if err != nil {
+		return e, err
+	}
+	turns, completedTurns := 0, 0
+	var newest time.Time
+	for _, entry := range entries {
+		if !entry.IsDir() || !strings.HasPrefix(entry.Name(), "turn-") {
+			continue
+		}
+		turns++
+		turnDir := filepath.Join(episodeDir, entry.Name())
+		if _, err := os.Stat(filepath.Join(turnDir, "response.txt")); err == nil {
+			completedTurns++
+		}
+		_ = filepath.WalkDir(turnDir, func(path string, item os.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return nil
+			}
+			if info, infoErr := item.Info(); infoErr == nil && info.ModTime().After(newest) {
+				newest = info.ModTime()
+			}
+			return nil
+		})
+	}
+	if turns > 0 {
+		e.Stage = fmt.Sprintf("turn %d running", turns)
+	}
+	if turns > 0 && completedTurns == turns {
+		e.Stage = "finalizing"
+	}
+	if b, err := os.ReadFile(filepath.Join(episodeDir, "rollout.json")); err == nil {
+		var result struct {
+			EpisodeID  string    `json:"episodeId"`
+			ScenarioID string    `json:"scenarioId"`
+			EndedAt    time.Time `json:"endedAt"`
+		}
+		if json.Unmarshal(b, &result) == nil {
+			e.Status = "completed"
+			e.Stage = "completed"
+			if result.EpisodeID != "" {
+				e.ID = result.EpisodeID
+			}
+			if result.ScenarioID != "" {
+				e.Scenario = result.ScenarioID
+			}
+			if !result.EndedAt.IsZero() {
+				newest = result.EndedAt
+			}
+		}
+	}
+	if !newest.IsZero() {
+		at := newest.UTC()
+		e.UpdatedAt = &at
+	}
+	if e.Status == "running" && e.UpdatedAt != nil && time.Since(*e.UpdatedAt) > 30*time.Minute {
+		e.Status = "incomplete"
+		e.Stage = "stale after " + e.Stage
+	}
+	return e, nil
 }
 
 func readRun(path, id string) (runSummary, error) {
