@@ -28,11 +28,13 @@ Optional `GITHUB_TOKEN` raises the public GitHub API rate limit. It does not ena
 
 ## Railway setup
 
-1. Create a human-owned Railway project from this GitHub repository. Hobby is sufficient for an initial low-traffic trusted pilot; move to Pro when team access or support requirements justify it.
+1. Create a human-owned Railway project from this GitHub repository. The service itself is small enough for a low-traffic plan, but Railway-native volume backups and PITR require Pro. Either use Pro or put a verified external online-backup schedule in place before onboarding collaborators.
 2. Add a persistent volume mounted at `/data`.
 3. Set the variables above and deploy with the included `Dockerfile` and `railway.toml`.
 4. Pin the service to one replica. SQLite cannot safely scale horizontally across this volume.
 5. Verify `/healthz` and `/readyz` on the Railway-provided origin before restoring data.
+
+The container starts briefly as root because a newly attached Railway volume replaces the image-owned `/data` directory with a root-owned mount. [`deploy/railway/entrypoint.sh`](../../deploy/railway/entrypoint.sh) restricts ownership repair to `/data` and the three SQLite files, applies restrictive modes, and permanently drops to the unprivileged `clank` user before starting the service.
 
 ## Migration and cutover
 
@@ -47,7 +49,7 @@ Optional `GITHUB_TOKEN` raises the public GitHub API rate limit. It does not ena
 
 ## Backup and restore
 
-Enable scheduled Railway volume backups—daily, weekly, and monthly as appropriate—for fast same-platform recovery. For a provider-neutral logical copy, run `clank project export` for each project. Do not copy a live `.db-wal` piecemeal or place the live SQLite directory in a sync drive.
+On Pro, enable scheduled Railway volume backups—daily, weekly, and monthly as appropriate—for fast same-platform recovery. Trial/Hobby does not currently expose volume backups or PITR. For a provider-neutral logical copy, run `clank project export` for each project. Do not copy a live `.db-wal` piecemeal or place the live SQLite directory in a sync drive.
 
 A portable full-database backup uses SQLite's online backup operation, followed by `PRAGMA integrity_check`, a checksum, and an encrypted off-provider copy. Railway backups belong to the Railway project/environment recovery boundary, so they do not replace an off-provider snapshot. Deterministic project JSON exports provide project-level portability.
 
