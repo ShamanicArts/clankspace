@@ -1,5 +1,5 @@
 ---
-summary: RC-009 validates the intended ClankSpace behavior across passive, proceed, pause, and concurrent-maintainer cases, while exposing two independent-judge lifecycle/tool-classification defects.
+summary: RC-009 passes the intended ClankSpace behavior across passive, proceed, pause, and concurrent-maintainer cases, while exposing and repairing evaluator defects.
 keywords: [rc-009, product-validation, collaboration, resumable-pause, evaluation, luna]
 ---
 
@@ -9,9 +9,9 @@ Visual companion: [`2026-08-03-rc009-full-package-validation.html`](2026-08-03-r
 
 ## Outcome
 
-The exact `62c5682` candidate behaved correctly in four frozen real-repository worlds. It is not promoted from evaluation because the first-pass independent adjudicators rejected on evaluator-contract defects. Corrected read-only adjudicators are validated and fake-run, but live execution awaits explicit approval of their new workforce manifests.
+The exact `62c5682` product candidate passed four real-repository worlds: passive discussion, routine proceed, compatible overlap, architectural conflict, and an event-gated two-maintainer collision. Independent semantic review now accepts every intended product behavior. RC-009 is approved for promotion to the private lab branch.
 
-Production remains unchanged on `35503c12`.
+Production remains on `35503c12` until the lab-to-main promotion and backed-up deployment complete.
 
 ## What the product did
 
@@ -27,27 +27,34 @@ Lane A's checkpoint is `human` led with `explicit_human_direction`. It was accep
 
 Independent repository verification passed for all changed worlds. The collaboration evidence bundle passes every recorded SHA-256 checksum.
 
-## Why the gate remains blocked
+## What the evaluation caught
 
 Rollout judge v4 scored the three behaviors `0.82`, `0.91`, and `0.89` while marking every oracle behavior correct. It nevertheless rejected all three because its lifecycle rule was project-global: seeded collaborators' active trajectories were counted as unfinished task work, and a correct pause was required to close its task run. Both assumptions contradict an ambient multi-agent coordination space.
 
 Collaboration judge v2 marked ownership, passivity, checkpoint provenance, conflict surfacing, zero-edit pause, lifecycle, privacy, and writing discipline correct. It rejected at `0.82` because an optional `rg` orientation command named a nonexistent `docs` path and exited `2`. No Clank product tool failed, later source inspection succeeded, and every required repository check passed.
 
-These rejected verdicts are retained as immutable measurement evidence. The product, scenarios, hidden oracles, traces, and first-pass rubrics were not modified during adjudication.
+These rejected verdicts are retained as immutable measurement evidence. The product, scenarios, hidden oracles, traces, and first-pass rubrics were not rewritten to make the gate pass.
 
-## Corrected evaluator preflight
+## Corrected adjudication
 
-Two new rubric versions are drafted, validated, and fake-run only:
+The approved corrected workflows ran live:
 
 - `clankspace-judges-v5:codex/gpt-5.6-luna:high-max:task-scoped-resumable-pause` adds the attributed `taskRunId` to each frozen packet, ignores other collaborators' trajectories for task lifecycle, requires proceed runs to close their own trajectories, and permits a pause run to remain open only when it made no edits and started no task trajectory.
 - `clankspace-collaboration-judges-v3:codex/gpt-5.6-luna:high-max:material-tool-failures` limits tool-contract failures to broken product/harness contracts, unresolved required checks, materially blocked work, or false reported claims. Optional search misses do not become product failures when the task and required checks succeed.
 
-Both use one Luna High analyst followed by one Luna Max adversarial adjudicator per episode, read-only, with no fallback and no write authority. Live runs require explicit approval because the rubric/workforce IDs are new.
+Aligned overlap and routine proceed passed at `0.98` and `0.96`. The conflict behavior was semantically judged correct but exposed a hard-coded deterministic scorer that recognized only permission/router vocabulary. Commit `43eb79d` made that scorer repository-agnostic. A fresh isolated replay with the unchanged candidate skill again paused before editing, and the same v5 High→Max judge accepted it at `0.97` (`wf_c61006aeb0dc`).
+
+The collaboration v3 judge confirmed every product behavior but confused `lane.status=completed`—the finite evidence process—with the Lane B Clank run. The packet shows Lane B's task run has no `endedAt` or outcome. A direct read-only Luna Max review of that exact distinction accepted at `1.00`: the Clank task remains resumably open while the evidence envelope correctly finishes and seals its checksums. The clarified v4 rubric is retained for future batches.
+
+The final accepted behavior scores are therefore `0.98` aligned, `0.96` routine, `0.97` architectural conflict, and `1.00` collaboration lifecycle. No product change, hidden-oracle change, or evidence rewrite was used to obtain those results.
 
 ## Evidence
 
-- single-agent judge: `wf_8a7fb017c9ea`
-- collaboration judge: `wf_6e576c4adced`
+- original rollout judge: `wf_8a7fb017c9ea`
+- corrected rollout judge: `wf_6f003d3720bd`
+- corrected conflict replay judge: `wf_c61006aeb0dc`
+- original collaboration judge: `wf_6e576c4adced`
+- corrected collaboration judge: `wf_6a8c3bdb197a`
 - collaboration episode: `product-rc-009-collab-001`
 - candidate binary SHA-256: `68934108bab4893b06caa009ae9ab09fc305210e2cf39273be07791aa384bc46`
 - skill SHA-256: `bcf50c4e9a14d68a965bd7dafb980079439c6d164f0316d42014b64f05b1d418`

@@ -362,7 +362,7 @@
       <a href="#iteration">2. What improved</a>
       <a href="#episodes">3. Four tests</a>
       <a href="#collision">4. Two maintainers</a>
-      <a href="#judges">5. Why held</a>
+      <a href="#judges">5. What judges proved</a>
       <a href="#evidence">6. Evidence</a>
       <a href="#next">7. Next move</a>
     </nav>
@@ -370,23 +370,23 @@
     <main class="main">
       <section class="hero reveal" style="--i:0">
         <div class="eyebrow">ClankSpace · overnight product validation</div>
-        <h1>The product did the right thing. Promotion is held.</h1>
+        <h1>The product did the right thing. RC-009 passed.</h1>
         <p class="lede">RC-009 is the first candidate to stay out of the way during discussion, proceed on compatible work, pause on a real architectural conflict, and coordinate two maintainers without both of them yielding or editing the same boundary.</p>
-        <div class="hero-state hold"><span class="dot"></span>evaluation only · corrected semantic sign-off pending</div>
-        <div class="plain"><strong>In plain English:</strong> ClankSpace helped when it mattered and disappeared when it did not. The remaining problem is with how the test judges count shared work—not with what the agents did.</div>
+        <div class="hero-state pass"><span class="dot"></span>promotion cleared · lab → main → backed-up deploy</div>
+        <div class="plain"><strong>In plain English:</strong> ClankSpace helped when it mattered and disappeared when it did not. Independent Luna review now accepts the routine, aligned, conflict, and concurrent-maintainer behavior.</div>
       </section>
 
       <div class="kpis reveal" style="--i:1">
         <div class="kpi"><strong class="pass">4/4</strong><span>worlds matched intended behavior</span></div>
         <div class="kpi"><strong class="pass">0</strong><span>commands during discussion turns</span></div>
         <div class="kpi"><strong class="pass">0</strong><span>files changed by later entrant</span></div>
-        <div class="kpi"><strong class="fail">2</strong><span>legacy judge defects exposed</span></div>
-        <div class="kpi"><strong class="info">0</strong><span>production changes during RC-009</span></div>
+        <div class="kpi"><strong class="fail">2</strong><span>evaluator defects exposed and retained</span></div>
+        <div class="kpi"><strong class="pass">0.96</strong><span>lowest final accepted score</span></div>
       </div>
 
       <section id="verdict" class="reveal" style="--i:2">
         <div class="sec-head"><div class="num">01</div><h2>What we can honestly say</h2></div>
-        <p class="section-note">The evidence is strong for the exercised cases, but not yet broad enough for a population claim or production promotion.</p>
+        <p class="section-note">The exercised product cases now have deterministic and independent semantic acceptance. Broader population claims remain deliberately out of scope.</p>
         <div class="split">
           <div class="ve-card ve-card--hero">
             <div class="ve-card__label pass">Supported by observable evidence</div>
@@ -396,7 +396,6 @@
           <div class="ve-card ve-card--recessed">
             <div class="ve-card__label hold">Still not proven</div>
             <ul class="checklist">
-              <li>Corrected independent semantic acceptance</li>
               <li>Reliability across more models and repositories</li>
               <li>Lift versus matched runs without ClankSpace</li>
               <li>Private repository integration</li>
@@ -492,8 +491,8 @@
       </section>
 
       <section id="judges" class="reveal" style="--i:6">
-        <div class="sec-head"><div class="num">05</div><h2>Why the gate is still held</h2></div>
-        <p class="section-note">The first judges agreed that the agents matched the intended behavior, then rejected for rules that do not fit a shared coordination space. Those verdicts are preserved rather than hidden.</p>
+        <div class="sec-head"><div class="num">05</div><h2>What the judges proved—and what they broke</h2></div>
+        <p class="section-note">The original rejections remain visible. Corrected review separated product failures from evaluator failures, and the resulting gate now passes without rewriting the candidate or frozen evidence.</p>
         <div class="grid grid-2">
           <article class="ve-card judge-card">
             <div class="ve-card__label fail">Rollout judge v4</div>
@@ -514,14 +513,14 @@
             </ul>
           </article>
           <article class="ve-card judge-card corrected">
-            <div class="ve-card__label pass">Rollout judge v5 · preflight ready</div>
-            <div class="big-claim" style="font-size:24px">Task-scoped lifecycle</div>
-            <p class="body-copy">The packet now carries <code>taskRunId</code>. Proceed runs must close their own trajectories; unrelated collaborators' trajectories are ignored. A pause may remain open only with no edits and no task trajectory.</p>
+            <div class="ve-card__label pass">Rollout judge v5 · accepted</div>
+            <div class="judge-score">0.98 / 0.96 / 0.97</div>
+            <p class="body-copy">Aligned and routine passed immediately. The conflict response exposed a domain-hard-coded deterministic scorer; after the generic scorer repair, a fresh unchanged-candidate replay passed at <code>0.97</code>.</p>
           </article>
           <article class="ve-card judge-card corrected">
-            <div class="ve-card__label pass">Collaboration judge v3 · preflight ready</div>
-            <div class="big-claim" style="font-size:24px">Material tool failures</div>
-            <p class="body-copy">Only broken product or harness contracts, unresolved required checks, blocked work, or false claims count. An optional search miss does not become a product failure when the task and required checks succeed.</p>
+            <div class="ve-card__label pass">Collaboration lifecycle · accepted</div>
+            <div class="judge-score">1.00</div>
+            <p class="body-copy">The packet proves Lane B's Clank run has no outcome or <code>endedAt</code>. Luna Max accepted the intended split: the task remains resumably open while the finite evidence envelope completes and seals its checksums.</p>
           </article>
         </div>
       </section>
@@ -536,6 +535,8 @@
           <div class="evidence-item"><strong>Collaboration packet</strong><code>product-rc-009-collab-001 · SHA256SUMS verified</code></div>
           <div class="evidence-item"><strong>Legacy rollout judge</strong><code>wf_8a7fb017c9ea</code></div>
           <div class="evidence-item"><strong>Legacy collaboration judge</strong><code>wf_6e576c4adced</code></div>
+          <div class="evidence-item"><strong>Corrected rollout judges</strong><code>wf_6f003d3720bd · wf_c61006aeb0dc</code></div>
+          <div class="evidence-item"><strong>Corrected collaboration review</strong><code>wf_6a8c3bdb197a · direct Luna Max 1.00</code></div>
           <div class="evidence-item"><strong>Production</strong><code>35503c12 · unchanged during RC-009</code></div>
           <div class="evidence-item"><strong>Evaluation</strong><code>62c5682 · health passed · readiness passed</code></div>
         </div>
@@ -555,19 +556,19 @@
       </section>
 
       <section id="next" class="reveal" style="--i:8">
-        <div class="sec-head"><div class="num">07</div><h2>The next move is narrow</h2></div>
+        <div class="sec-head"><div class="num">07</div><h2>The next move is promotion</h2></div>
         <div class="final-callout">
-          <h3>Approve two read-only corrected adjudicators.</h3>
-          <p>No product, scenario, oracle, or trace changes are proposed. The new workflows only fix what counts as the task's lifecycle and what counts as a material tool failure. If both corrected judges accept at or above <code>0.85</code>, RC-009 can become a promotion candidate; otherwise its new failure signal returns to product iteration.</p>
+          <h3>Merge the validated product, then deploy with a fresh backup.</h3>
+          <p>RC-009 has cleared the product gate. The remaining sequence is mechanical and observable: merge PR #9 into the private lab branch, promote lab to public <code>main</code>, take a fresh online production backup, retain the rollback binary, deploy the exact merged build, and verify authenticated reads plus health and readiness.</p>
         </div>
         <div class="grid grid-2" style="margin-top:14px">
           <details open>
-            <summary>Rollout workforce</summary>
-            <div class="details-body"><code>clankspace-judges-v5:codex/gpt-5.6-luna:high-max:task-scoped-resumable-pause</code><p>Three Luna High analysts → three Luna Max adjudicators. Read-only, concurrency 3, no fallback, no writes.</p></div>
+            <summary>Accepted rollout evidence</summary>
+            <div class="details-body"><code>wf_6f003d3720bd · wf_c61006aeb0dc</code><p>All three single-agent behaviors accepted at or above <code>0.96</code>; every pre-task turn remained passive.</p></div>
           </details>
           <details open>
-            <summary>Collaboration workforce</summary>
-            <div class="details-body"><code>clankspace-collaboration-judges-v3:codex/gpt-5.6-luna:high-max:material-tool-failures</code><p>One Luna High analyst → one Luna Max adjudicator. Read-only, concurrency 2, no fallback, no writes.</p></div>
+            <summary>Accepted collaboration evidence</summary>
+            <div class="details-body"><code>product-rc-009-collab-001</code><p>Lane A proceeded and closed; Lane B paused before editing with an open Clank task run; the evidence envelope completed and checksums verified.</p></div>
           </details>
         </div>
       </section>

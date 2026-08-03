@@ -1,7 +1,7 @@
 ---
 type: state
 status: active
-summary: RC-009 matches the intended passive, proceed, conflict-pause, provenance, and incumbent/later-entrant behavior; production promotion is held for corrected semantic adjudication.
+summary: RC-009 passed deterministic and independent semantic validation; promotion through lab, main, and production is in progress.
 note_created: 2026-08-02
 updated: 2026-08-03
 ---
@@ -10,7 +10,7 @@ updated: 2026-08-03
 
 ## Current focus
 
-Complete the frozen RC-009 gate with corrected read-only semantic adjudication. Do not change the candidate, scenarios, hidden oracles, or traces while that gate is pending. Promote only after both corrected judges meet the `0.85` threshold and the full completion audit remains clean.
+Promote the validated RC-009 product from the evaluation branch through `lab/pilot-v1-base` and public `main`, then deploy the exact merged build with a fresh production backup and rollback binary.
 
 ## Active phase
 
@@ -27,7 +27,9 @@ Every pre-task discussion turn stayed passive with zero commands. Independent re
 
 First-pass rollout judge v4 and collaboration judge v2 preserved useful semantic findings but rejected on evaluator defects: project-global trajectory lifecycle, no resumable single-agent pause, and an immaterial optional-search failure classified as a product tool failure. The rejected outputs remain immutable evidence.
 
-Corrected rollout judge v5 and collaboration judge v3 are authored, validated, and fake-run only. Their exact new workforce manifests require explicit approval before live use. Draft PR `#9` remains open against `lab/pilot-v1-base`; production is intentionally untouched.
+Corrected rollout judge v5 accepted aligned overlap at `0.98`, routine proceed at `0.96`, and a fresh architectural-conflict replay at `0.97`. The replay was required because the first v5 pass exposed a repository-specific deterministic scorer; commit `43eb79d` repaired it without changing the product or skill.
+
+Collaboration judge v3 confirmed every product behavior but conflated the finite lane evidence process with the human-facing Clank task. The packet proves Lane B's task run has no outcome or `endedAt`; a direct read-only Luna Max review accepted the split lifecycle at `1.00`. RC-009 is `passed` / `promote-to-lab-base`. Draft PR `#9` remains open only for the mechanical promotion sequence; production is still untouched at this point.
 
 ## Operations and evidence
 
@@ -41,14 +43,9 @@ Corrected rollout judge v5 and collaboration judge v3 are authored, validated, a
 
 The operations journal is append-only on the persistent runner and the dashboard labels fake OmegaCode schema runs as `preflight only`, not product verdicts.
 
-## Blocker
+## Promotion status
 
-Live corrected adjudication requires explicit approval of both new manifests:
-
-- `clankspace-judges-v5:codex/gpt-5.6-luna:high-max:task-scoped-resumable-pause`
-- `clankspace-collaboration-judges-v3:codex/gpt-5.6-luna:high-max:material-tool-failures`
-
-Until they run, RC-009 stays `blocked-adjudication` / `hold-evaluation-only`; PR #9 stays draft and production stays on `35503c12`.
+No product-gate blocker remains. The outstanding steps are PR #9 → lab, lab → main, fresh backup, exact-build production deployment, authenticated smoke verification, and a final evidence audit.
 
 ## Decisions pending after RC-009
 
