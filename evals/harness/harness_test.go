@@ -55,6 +55,15 @@ func TestRelayDeskFixtureValidatesAndBuildsReproducibleRepository(t *testing.T) 
 	}
 	resumeDir := filepath.Join(t.TempDir(), "repo")
 	resumeHead := build(resumeDir)
+	agentInstructions, err := os.ReadFile(filepath.Join(resumeDir, "AGENTS.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, required := range []string{"without reading the skill", "Future-tense constraints", "passive until the human asks you to act"} {
+		if !strings.Contains(string(agentInstructions), required) {
+			t.Fatalf("generated AGENTS.md omitted passive bootstrap rule %q: %s", required, agentInstructions)
+		}
+	}
 	if got := build(resumeDir); got != resumeHead {
 		t.Fatalf("resumed repository head = %s, want %s", got, resumeHead)
 	}
@@ -242,6 +251,9 @@ func TestSeedScenarioCreatesIsolatedProjectAndAliasMap(t *testing.T) {
 	}
 	if len(brief.Trajectories) != 1 || len(brief.Warnings) != 1 {
 		t.Fatalf("active trajectory was not preserved: trajectories=%d warnings=%d", len(brief.Trajectories), len(brief.Warnings))
+	}
+	if brief.Warnings[0].ExecutionRisk != "active-automation-overlap" {
+		t.Fatalf("seeded automation trajectory received wrong execution risk: %#v", brief.Warnings[0])
 	}
 	prepared.RepositoryHead = "deadbeef"
 	if err = harness.TrackPrepared(t.Context(), prepared, harness.SeedOptions{

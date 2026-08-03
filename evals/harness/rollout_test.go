@@ -225,3 +225,34 @@ func TestScoreRolloutDetectsPreTaskActivityAndExtraRuns(t *testing.T) {
 		t.Fatalf("extra run lifecycle was not detected: %+v", score)
 	}
 }
+
+func TestResponseSurfacesConflictAcrossRepositoryDomains(t *testing.T) {
+	tests := []struct {
+		name     string
+		response string
+		want     bool
+	}{
+		{
+			name:     "matcher architecture",
+			response: "There's an advisory coordination conflict: another active maintainer is changing the same matcher state.",
+			want:     true,
+		},
+		{
+			name:     "incompatible storage work",
+			response: "This is incompatible with the active SQLite migration.",
+			want:     true,
+		},
+		{
+			name:     "routine no conflict",
+			response: "No relevant coordination issue was found, so I completed the focused test change.",
+			want:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := responseSurfacesConflict(strings.ToLower(tt.response)); got != tt.want {
+				t.Fatalf("responseSurfacesConflict() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

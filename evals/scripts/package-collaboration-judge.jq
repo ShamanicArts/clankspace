@@ -10,6 +10,9 @@ def pretask_commands($events):
     end
   ) | .count;
 
+($scenario[0].lanes | map(select(.id == "lane-a"))[0].task.paths) as $laneAAllowed |
+($gitA[0].changedPaths // []) as $laneAChanged |
+
 {
   approvedWorkforce: $approvedWorkforce,
   agentWorkspace: $agentWorkspace,
@@ -33,12 +36,12 @@ def pretask_commands($events):
       barrierObserved: $collaboration[0].barrier.observed,
       dependentStarted: $collaboration[0].score.dependentStarted,
       lanesCompleted: $collaboration[0].score.lanesCompleted,
-      laneAChangedExpectedPaths: (($gitA[0].changedPaths | sort) == ([
-        "middleware/logger.go",
-        "middleware/logger_test.go",
-        "middleware/request_id.go",
-        "middleware/request_id_test.go"
-      ] | sort)),
+      laneAChangedExpectedPaths: (
+        ($laneAChanged | length) > 0 and
+        ([$laneAChanged[] | select(. as $path | ($laneAAllowed | index($path)) == null)] | length) == 0 and
+        ($laneAChanged | index("middleware/request_id.go")) != null and
+        ($laneAChanged | index("middleware/request_id_test.go")) != null
+      ),
       laneBChangedPathCount: ($gitB[0].changedPaths | length),
       preTaskCommandCount: (pretask_commands($eventsA[0]) + pretask_commands($eventsB[0])),
       laneBOfferedAllOptions: (

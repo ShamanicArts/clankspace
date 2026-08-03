@@ -447,8 +447,9 @@ const blueprints = await parallel(
         `The union of commitPlans.changedPaths must equal projectPlan.paths exactly: every declared project path, ` +
         `including paths used only by distractor records or trajectories, must be created by at least one planned ` +
         `commit, and no planned commit may create an undeclared path. ` +
-        `For real-snapshot cells, use only constraints.allowedSnapshotPaths exactly; never turn planned-but-absent ` +
-        `architecture into a current path. Include deliberate synthetic provenance, but no credentials, private ` +
+        `For real-snapshot cells, set repositoryPlan.overlayOnly=true, repositoryPlan.minimumCommits=0, and ` +
+        `repositoryPlan.commitPlans=[]; use only constraints.allowedSnapshotPaths exactly and never turn ` +
+        `planned-but-absent architecture into a current path. Include deliberate synthetic provenance, but no credentials, private ` +
         `material, raw messages, insults, hidden reasoning, or evaluation hints.\n\n` +
         `Cell index: ${index}\n${JSON.stringify(cell, null, 2)}`,
       { schema: BLUEPRINT_SCHEMA, key: `blueprint-v4:${cell.id || index}` },

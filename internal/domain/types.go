@@ -208,12 +208,13 @@ type BriefInput struct {
 }
 
 type CoordinationWarning struct {
-	Kind         string      `json:"kind"`
-	Summary      string      `json:"summary"`
-	Reason       string      `json:"reason"`
-	Trajectory   *Trajectory `json:"trajectory,omitempty"`
-	RelatedNotes []Note      `json:"relatedNotes,omitempty"`
-	Options      []string    `json:"options"`
+	Kind          string      `json:"kind"`
+	Summary       string      `json:"summary"`
+	Reason        string      `json:"reason"`
+	ExecutionRisk string      `json:"executionRisk"`
+	Trajectory    *Trajectory `json:"trajectory,omitempty"`
+	RelatedNotes  []Note      `json:"relatedNotes,omitempty"`
+	Options       []string    `json:"options"`
 }
 
 type Brief struct {

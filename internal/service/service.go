@@ -61,6 +61,12 @@ func (s *Service) canAccess(ctx context.Context, p domain.Principal, projectID s
 var validKinds = map[string]bool{"intent": true, "decision": true, "understanding": true, "observation": true, "checkpoint": true}
 var validLead = map[string]bool{"human": true, "agent": true, "joint": true, "external": true}
 var validBasis = map[string]bool{"explicit_human_direction": true, "interpreted_human_intent": true, "joint_reasoning": true, "autonomous_agent_judgment": true, "external_evidence": true}
+var validLeadBasis = map[string]map[string]bool{
+	"human":    {"explicit_human_direction": true},
+	"agent":    {"interpreted_human_intent": true, "autonomous_agent_judgment": true},
+	"joint":    {"explicit_human_direction": true, "interpreted_human_intent": true, "joint_reasoning": true},
+	"external": {"external_evidence": true},
+}
 
 func normalizeNote(in domain.CreateNoteInput) (domain.CreateNoteInput, error) {
 	in.Kind = strings.TrimSpace(in.Kind)
@@ -90,6 +96,9 @@ func normalizeNote(in domain.CreateNoteInput) (domain.CreateNoteInput, error) {
 	}
 	if !validBasis[in.DirectionBasis] {
 		return in, errors.New("invalid directionBasis")
+	}
+	if !validLeadBasis[in.LedBy][in.DirectionBasis] {
+		return in, fmt.Errorf("directionBasis %q is incompatible with ledBy %q", in.DirectionBasis, in.LedBy)
 	}
 	if in.Confidence == "" {
 		in.Confidence = "reasoned"
@@ -261,15 +270,40 @@ func buildWarnings(in domain.BriefInput, trajectories []domain.Trajectory, notes
 			reason = "related terms: " + strings.Join(shared, ", ")
 		}
 		related := relatedNotes(notes, tr, shared)
+		risk := executionRisk(pathReason, tr)
+		summary := "An active trajectory matched by path or terms. This is not a conflict determination; compare semantic direction and separately assess whether a distinct concurrent objective would collide."
+		options := []string{"compare", "continue-if-compatible-or-same-objective", "pause-if-incompatible-or-distinct-collision-prone"}
+		if risk == "live-interactive-overlap" {
+			summary = "A currently open interactive run has an active path-overlapping trajectory. This is a live collision candidate, not a conflict determination; compare objectives before either run edits the shared boundary."
+			options = []string{"compare", "continue-if-same-objective", "pause-if-distinct-concurrent-objective"}
+		}
 		out = append(out, domain.CoordinationWarning{
-			Kind:    "possible-overlap",
-			Summary: "An active trajectory matched by path or terms. This is a retrieval hint, not a conflict determination; compare its objective and rationale with the current human direction.",
-			Reason:  reason, Trajectory: tr, RelatedNotes: related,
-			Options: []string{"compare", "continue-if-compatible", "pause-if-incompatible"},
+			Kind:          "possible-overlap",
+			Summary:       summary,
+			Reason:        reason,
+			ExecutionRisk: risk,
+			Trajectory:    tr,
+			RelatedNotes:  related,
+			Options:       options,
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Trajectory.UpdatedAt.After(out[j].Trajectory.UpdatedAt) })
 	return out
+}
+
+func executionRisk(pathReason string, tr *domain.Trajectory) string {
+	if pathReason == "" {
+		return "related-terms"
+	}
+	if tr.Run != nil && tr.Run.EndedAt == nil {
+		switch tr.Run.RunType {
+		case "interactive":
+			return "live-interactive-overlap"
+		case "automation":
+			return "active-automation-overlap"
+		}
+	}
+	return "path-scope-overlap"
 }
 
 func terms(s string) map[string]bool {

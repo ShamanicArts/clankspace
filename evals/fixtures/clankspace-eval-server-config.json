@@ -1,6 +1,6 @@
 {
   "service": "clankspace-eval",
   "origin": "https://clankspace-eval.exe.xyz",
-  "version": "eval-harness-v4",
-  "binarySha256": "9478c9c1526e7293fec7a8ad1e79fcba61f37307e109b3cf9749aa8921de7f3b"
+  "version": "candidate-62c5682",
+  "binarySha256": "68934108bab4893b06caa009ae9ab09fc305210e2cf39273be07791aa384bc46"
 }

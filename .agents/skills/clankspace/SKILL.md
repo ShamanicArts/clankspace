@@ -13,6 +13,8 @@ For acknowledgements, brainstorming, or speculative discussion with no request t
 
 Context-setting preferences are also passive. Statements such as “tests should stay focused,” “keep the API stable,” “we should avoid output churn,” or “I’m thinking about the logger boundary” do not authorize inspection or implementation. Treat imperative-sounding constraints as guidance for a later task unless the human explicitly asks you to inspect, plan, implement, review, or otherwise act now.
 
+Future-tense constraints stay passive even when they name an important subsystem. “I want the origin matching path to stay easy to audit when we touch it,” “when this changes, preserve the public API,” and similar statements describe how later work should be done; they do not ask you to inspect the current implementation, open a run, or preserve the statement in ClankSpace now. Do not manufacture a task from a potentially durable preference.
+
 Start this workflow only once the human explicitly asks you to inspect, plan, implement, review, or otherwise act on the project:
 
 1. Run `clank context` from the repository. Confirm the expected project and `tokenConfigured: true`.
@@ -24,13 +26,24 @@ Start this workflow only once the human explicitly asks you to inspect, plan, im
 
 ## Handle conflicting context
 
-Classify retrieved context before deciding whether to interrupt the human. Shared paths, related vocabulary, or the mere presence of an active trajectory are not themselves conflicts.
+Classify retrieved context before deciding whether to interrupt the human. Use two separate axes:
+
+1. **Direction:** aligned, adjacent, ambiguous, or incompatible.
+2. **Execution:** independent or collision-prone.
+
+Shared paths, related vocabulary, or the mere presence of an active trajectory are not themselves semantic conflicts. However, two otherwise compatible agents editing the same implementation boundary at the same time can still be collision-prone.
 
 Treat every item in `coordinationWarnings` as a retrieval candidate, not a server verdict. The server matches paths and terms; it cannot determine semantic incompatibility. Never ask the human to choose continue, inspect, or realign merely because a warning exists. First compare the retrieved objective, rationale, provenance, and status with the current human request:
 
-- If the retrieved direction is aligned or safely compatible with the current request, absorb its rationale, briefly note the alignment only when useful, and continue without asking permission. This includes an older trajectory from the same principal that states the same objective.
+Use `executionRisk` as provenance, not a semantic answer. `related-terms` and `active-automation-overlap` are ordinary retrieval hints. `live-interactive-overlap` means another interactive run is currently open over the same path scope: presume simultaneous work is possible, then compare objectives. If the objectives are distinct, pause as the later entrant. If they are exact or near-identical, continue unless concrete divergent edits are visible.
+
+- If the retrieved direction is aligned or safely compatible **and execution is independent**, absorb its rationale, briefly note the alignment only when useful, and continue without asking permission. This includes an older trajectory from the same principal that states the same objective.
 - If the directions are merely adjacent and can proceed independently, continue while respecting both scopes.
-- Pause only when the requested work would materially reverse, invalidate, duplicate in a collision-prone way, or make an incompatible assumption about the retrieved direction—or when evidence is too ambiguous to classify safely.
+- If another principal already has a live trajectory with a **distinct implementation objective or approach** over substantially the same files or implementation boundary, treat the later run as collision-prone even when the high-level goals are compatible. The later entrant should pause before editing, explain that the directions may align but the distinct concurrent changes overlap, and ask whether to continue, inspect, or realign.
+- An exact or near-identical aligned objective is not enough to infer a collision. Absorb it and proceed unless there is concrete evidence of divergent simultaneous edits. Do not interrupt merely because the same file, a different principal, or a warning candidate exists.
+- “Add the same absent-header fallback test” alongside an existing absent-header fallback-test trajectory is near-identical aligned context. “Centralize request-ID lookup” alongside “change logger correlation across middleware orderings” is a distinct implementation objective over one boundary; the later interactive run pauses.
+- Once this run has published its own trajectory and begun the explicitly requested work, a newer overlapping trajectory does not retroactively revoke that direction. Continue as the incumbent unless the newer evidence introduces a real semantic incompatibility, an explicit human reversal, or repository evidence that makes the work unsafe. The later entrant owns the coordination pause; do not create a mutual-yield loop.
+- Otherwise pause only when the requested work would materially reverse, invalidate, duplicate in a collision-prone way, or make an incompatible assumption about the retrieved direction—or when evidence is too ambiguous to classify safely.
 
 If current intent or an active trajectory materially conflicts with the requested direction after that comparison:
 
@@ -49,6 +62,8 @@ Default to **no checkpoint**. Completing the requested feature, passing expected
 
 A direct human request to record a checkpoint overrides that default. Record the smallest professional statement of direction and rationale, then continue unless the alignment check found a material conflict. Do not turn an aligned advisory record into another approval loop.
 
+Attribute the checkpoint honestly. When the human explicitly supplies the direction or asks you to checkpoint that stated direction, use `--led-by human --basis explicit_human_direction`. When the conclusion was reached together, use `--led-by joint --basis joint_reasoning`. For your own interpretation of human intent, use `--led-by agent --basis interpreted_human_intent`; for an autonomous agent choice, use `--led-by agent --basis autonomous_agent_judgment`; and for outside evidence, use `--led-by external --basis external_evidence`. Never pair joint leadership with autonomous agent judgment. Use these exact values rather than guessing and retrying mutations.
+
 Append only when another competent collaborator might change, pause, or reinterpret work after learning the information:
 
 - non-obvious human or agent intent and its rationale;
@@ -62,4 +77,4 @@ Never record routine narration, full diffs, raw messages, transcripts, exact quo
 
 ## Finish
 
-Before handoff, request another brief for the final scope. Record a checkpoint only for a surprising durable implication that could change another collaborator's next action; if you cannot name that implication, write no note. End the run with `clank run end --run <run-id> --outcome completed --verification "<concise checks>"`; this automatically closes active trajectories. When nothing reusable happened, write nothing.
+Before handoff, request another brief for the final scope. Record a checkpoint only for a surprising durable implication that could change another collaborator's next action; if you cannot name that implication, write no note. Wait for every verification command you started and report its observed result exactly. A failed, skipped, cancelled, or infrastructure-blocked check is not a pass; distinguish it from checks that did pass. Only then end the run with `clank run end --run <run-id> --outcome completed --verification "<concise checks and honest outcomes>"`; this automatically closes active trajectories. When nothing reusable happened, write nothing.
