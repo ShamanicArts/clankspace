@@ -95,3 +95,17 @@ func TestPostRequiresBoundedFields(t *testing.T) {
 		t.Fatalf("unexpected entries: %#v", entries)
 	}
 }
+
+func TestResultOutcomeLabelsFakeWorkflowAsPreflight(t *testing.T) {
+	raw := map[string]any{
+		"verdicts": []any{
+			map[string]any{"episodeId": "fake", "accepted": false, "score": float64(0)},
+			map[string]any{"episodeId": "fake", "accepted": false, "score": float64(0)},
+		},
+	}
+
+	outcome, score, preflight := resultOutcome(raw)
+	if outcome != "preflight only" || score != nil || !preflight {
+		t.Fatalf("unexpected fake result summary: outcome=%q score=%v preflight=%v", outcome, score, preflight)
+	}
+}

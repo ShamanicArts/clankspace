@@ -100,6 +100,7 @@ type runSummary struct {
 	Workforce   []string       `json:"workforce,omitempty"`
 	Outcome     string         `json:"outcome,omitempty"`
 	Score       *float64       `json:"score,omitempty"`
+	Preflight   bool           `json:"preflight,omitempty"`
 }
 
 type episodeSummary struct {
@@ -719,7 +720,7 @@ func readRun(path, id string) (runSummary, error) {
 	if b, err := os.ReadFile(filepath.Join(path, "result.json")); err == nil {
 		var raw map[string]any
 		if json.Unmarshal(b, &raw) == nil {
-			r.Outcome, r.Score = resultOutcome(raw)
+			r.Outcome, r.Score, r.Preflight = resultOutcome(raw)
 			if r.Status == "started" || r.Status == "unknown" {
 				r.Status = "completed"
 			}
@@ -728,8 +729,19 @@ func readRun(path, id string) (runSummary, error) {
 	return r, nil
 }
 
-func resultOutcome(raw map[string]any) (string, *float64) {
+func resultOutcome(raw map[string]any) (string, *float64, bool) {
 	if verdicts, ok := raw["verdicts"].([]any); ok && len(verdicts) > 0 {
+		preflight := true
+		for _, value := range verdicts {
+			verdict, ok := value.(map[string]any)
+			if !ok || stringValue(verdict["episodeId"], "") != "fake" {
+				preflight = false
+				break
+			}
+		}
+		if preflight {
+			return "preflight only", nil, true
+		}
 		if first, ok := verdicts[0].(map[string]any); ok {
 			accepted := boolValue(first["accepted"])
 			outcome := "rejected"
@@ -737,17 +749,17 @@ func resultOutcome(raw map[string]any) (string, *float64) {
 				outcome = "accepted"
 			}
 			if score, ok := numberValue(first["score"]); ok {
-				return outcome, &score
+				return outcome, &score, false
 			}
-			return outcome, nil
+			return outcome, nil, false
 		}
 	}
 	accepted, aok := raw["accepted"].([]any)
 	rejected, rok := raw["rejected"].([]any)
 	if aok || rok {
-		return fmt.Sprintf("%d accepted / %d rejected", len(accepted), len(rejected)), nil
+		return fmt.Sprintf("%d accepted / %d rejected", len(accepted), len(rejected)), nil, false
 	}
-	return "completed", nil
+	return "completed", nil, false
 }
 
 func securityHeaders(next http.Handler) http.Handler {
