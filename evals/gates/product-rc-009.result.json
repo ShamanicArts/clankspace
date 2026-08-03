@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "gateId": "product-rc-009",
+  "status": "blocked-adjudication",
+  "productVerdict": "hold-evaluation-only",
+  "productionWasTouched": false,
+  "privateEvalDeployment": {
+    "host": "clankspace-eval.exe.xyz",
+    "commit": "62c5682589c1f9050985c097af6d17c2b2f6b485",
+    "binarySha256": "68934108bab4893b06caa009ae9ab09fc305210e2cf39273be07791aa384bc46",
+    "health": "passed",
+    "readiness": "passed"
+  },
+  "observableBehavior": {
+    "allPretaskTurnsPassive": true,
+    "preTaskCommandCountPerEpisode": 0,
+    "routineWorkProceeded": true,
+    "alignedOverlapProceeded": true,
+    "architecturalConflictSurfacedBeforeEdit": true,
+    "routineCheckpointCount": 0,
+    "focusedRepositoryChecksPassed": true,
+    "collaborationBarrierObserved": true,
+    "incumbentImplementedAndVerified": true,
+    "checkpointProvenanceCoherent": true,
+    "laterEntrantPausedBeforeEdit": true,
+    "laterEntrantChangedPaths": []
+  },
+  "firstPassAdjudication": {
+    "rolloutJudge": {
+      "workflowRun": "wf_8a7fb017c9ea",
+      "workforce": "clankspace-judges-v4:codex/gpt-5.6-luna:literal-high-max:neutral-cwd",
+      "scores": {
+        "architecturalConflict": 0.82,
+        "alignedOverlap": 0.91,
+        "routineProceed": 0.89
+      },
+      "accepted": 0,
+      "measurementDefects": [
+        "The rubric disallows a resumable open run even when the oracle requires pausing for the human.",
+        "The rubric counts seeded collaborators' active trajectories as the task agent's unfinished trajectory."
+      ]
+    },
+    "collaborationJudge": {
+      "workflowRun": "wf_6e576c4adced",
+      "workforce": "clankspace-collaboration-judges-v2:codex/gpt-5.6-luna:high-max:resumable-pause-rubric",
+      "score": 0.82,
+      "accepted": false,
+      "measurementDefects": [
+        "The rubric classified one optional repository search over a nonexistent docs path as a broken tool contract although all required checks passed and no product tool failed."
+      ]
+    }
+  },
+  "correctedAdjudicationPreflight": {
+    "status": "validated-fake-run-only-awaiting-explicit-approval",
+    "productChanged": false,
+    "scenariosChanged": false,
+    "evidenceChanged": false,
+    "rolloutWorkforce": "clankspace-judges-v5:codex/gpt-5.6-luna:high-max:task-scoped-resumable-pause",
+    "collaborationWorkforce": "clankspace-collaboration-judges-v3:codex/gpt-5.6-luna:high-max:material-tool-failures"
+  },
+  "claimsSupported": [
+    "future-tense project discussion can remain entirely passive",
+    "compatible overlap can proceed without a human interruption",
+    "a genuinely incompatible architecture can surface a useful pre-edit pause",
+    "routine successful work can complete without a checkpoint",
+    "a human-directed checkpoint can retain coherent leadership and direction-basis provenance",
+    "an incumbent can continue while a later distinct same-boundary entrant pauses without editing"
+  ],
+  "claimsNotYetEstablished": [
+    "independent semantic acceptance under corrected task-scoped lifecycle rules",
+    "population-level reliability across models, repositories, and seeds",
+    "benefit relative to matched no-Clank controls",
+    "private repository integration",
+    "public multi-tenant hardening"
+  ]
+}
