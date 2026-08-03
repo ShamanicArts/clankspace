@@ -5,6 +5,8 @@ keywords: [rc-009, product-validation, collaboration, resumable-pause, evaluatio
 
 # RC-009 full-package validation
 
+Visual companion: [`2026-08-03-rc009-full-package-validation.html`](2026-08-03-rc009-full-package-validation.html)
+
 ## Outcome
 
 The exact `62c5682` candidate behaved correctly in four frozen real-repository worlds. It is not promoted from evaluation because the first-pass independent adjudicators rejected on evaluator-contract defects. Corrected read-only adjudicators are validated and fake-run, but live execution awaits explicit approval of their new workforce manifests.
