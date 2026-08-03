@@ -67,9 +67,10 @@ That exercise validated the application and the migration mechanics. It did not 
 - [x] Restore the snapshot into Railway and verify record counts plus authenticated export.
 - [x] Configure secrets and health checks; register `clank.shamanicarts.dev` with Railway.
 - [x] Add the Cloudflare CNAME and Railway ownership TXT records.
-- [ ] Complete Railway-managed TLS and repeat acceptance through the stable domain.
+- [x] Complete Railway-managed TLS and repeat health, readiness, browser, CLI, and authenticated export acceptance through the stable domain.
 - [ ] Enable scheduled Railway volume backups and retain provider-neutral online SQLite backups.
-- [ ] Complete the stable-domain smoke checks and a disposable restore rehearsal; local and managed-origin checks pass.
+- [x] Complete local, managed-origin, and stable-domain smoke checks.
+- [ ] Complete a disposable restore rehearsal from the production backup path.
 - [x] Stop and freeze the exe.dev candidate for the rollback window; keep exe.dev for evals and runners.
 - [ ] Retire the frozen exe.dev candidate after the rollback window.
 
