@@ -50,10 +50,13 @@ clank-eval validate-collaboration --scenario <two-lane-v2.json>
 clank-eval prepare-collaboration --scenario <two-lane-v2.json> --ledger <data-dir> --corpus v2 \
   --admin-env <eval-admin.env> --skill <SKILL.md> --snapshot id=/sanitized-snapshot-repository
 clank-eval rollout --prepared <prepared.json> --model gpt-5.6-luna --reasoning high --dry-run
+clank-eval isolation-probe --admin-env <eval-admin.env> --probe <stable-id>
 clank-eval collaboration-rollout --prepared <prepared-v2.json> --repository <clean-baseline-repo> \
   --credentials-dir <secrets-dir> --episode <immutable-episode-id> --server-config <frozen-public-config> \
   --server-commit <clankspace-commit> --dry-run
 ```
+
+`isolation-probe` creates two isolated eval projects, places an attractive matching record only in project B, issues a project-A agent token, and verifies that list, brief, export, run-list, and mutation surfaces cannot cross the project boundary. Its JSON result contains no token.
 
 Remove `--dry-run` only after the exact live workforce and command have been approved. A rollout starts a real persisted Codex thread, sends every prior human turn separately, resumes that same thread for the final task, and records only observable events and responses—not hidden reasoning.
 

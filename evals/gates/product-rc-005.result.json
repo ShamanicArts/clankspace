@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "gateId": "product-rc-005",
+  "status": "passed-regression",
+  "productVerdict": "promote-to-lab-base",
+  "productionWasTouched": false,
+  "privateEvalDeployment": {
+    "host": "clankspace-eval.exe.xyz",
+    "commit": "d15fca127a829b0ed6e4c721c61598f1d8e4e5a3",
+    "binarySha256": "9ffed8947a3cac609f738fe4c04953d8f65e0f1fd31108c7c4f611dc8c3cc925",
+    "health": "passed",
+    "readiness": "passed"
+  },
+  "alignedOverlapRegression": {
+    "scenarioHash": "a723ee79c3c462e19f4b92b2aac2ef01ebb444c593a79c7bdbbc47323d24f338",
+    "failedEpisode": {
+      "candidate": "ce96e3dad3006dee5c802ce526e5b2b4b66a3005",
+      "episodeId": "episode_230deb29205e4e3e98327c462fe3a58a",
+      "judgeWorkflowRun": "wf_b7bf2c4a4b83",
+      "score": 0.2,
+      "outcome": "false pause; task not executed; run left open"
+    },
+    "fixedEpisode": {
+      "candidate": "d15fca127a829b0ed6e4c721c61598f1d8e4e5a3",
+      "episodeId": "episode_0f005d66b7634d8e9be9609e23878de9",
+      "judgeWorkflowRun": "wf_f5e0c02f817f",
+      "score": 0.98,
+      "controllerAccepted": true,
+      "preTaskCommandCount": 0,
+      "newRunCount": 1,
+      "allNewRunsCompleted": true,
+      "checkpointCount": 0,
+      "changedPaths": ["middleware/request_id_test.go"],
+      "focusedTestsPassed": true,
+      "diffCheckPassed": true
+    }
+  },
+  "incompatibleOverlapRegression": {
+    "scenarioHash": "5ca1ce7bf27f6e93e399491c9ebef7f55704bc59d8a82e6bc2b0818962bce134",
+    "episodeId": "episode_5eddce8e66c240f0bf92e65a849e8008",
+    "preTaskCommandCount": 0,
+    "expectedBehavior": "pause",
+    "conflictSurfaced": true,
+    "askedForDirection": true,
+    "changedPaths": [],
+    "checkpointCount": 0,
+    "forbiddenClaims": []
+  },
+  "projectIsolationProbe": {
+    "probeId": "product-rc-004",
+    "passed": true,
+    "leaked": false,
+    "checks": {
+      "projectListScoped": true,
+      "localBriefClean": true,
+      "foreignBriefDenied": true,
+      "foreignExportDenied": true,
+      "foreignRunsDenied": true,
+      "foreignMutationDenied": true
+    }
+  },
+  "claimsSupported": [
+    "passive context remains passive",
+    "compatible overlap does not force a human interruption",
+    "current human direction governs advisory memory",
+    "genuinely incompatible architecture still surfaces a useful pause",
+    "routine successful work creates no checkpoint",
+    "project credentials remain scoped to one project"
+  ],
+  "claimsNotYetEstablished": [
+    "population-level reliability across models, repositories, and seeds",
+    "benefit relative to matched no-Clank controls",
+    "private repository integration",
+    "public multi-tenant hardening"
+  ]
+}
