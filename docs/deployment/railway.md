@@ -1,13 +1,15 @@
 ---
 type: knowledge
-summary: Railway pilot deployment and recovery procedure.
+summary: Portable Railway alternative; not the active ClankSpace production topology.
 keywords: [railway, deployment, volume, sqlite, backup, dns]
 related: [../knowledge/hosting.md]
 note_created: 2026-08-02
-updated: 2026-08-02
+updated: 2026-08-03
 ---
 
-# Railway pilot deployment
+# Railway deployment alternative
+
+ClankSpace production currently runs on exe.dev. This document is retained because the product remains portable to one Railway service and one persistent SQLite volume; it is not the current deployment checklist or project blocker. See [exe.dev deployment](exe.md) for the live topology.
 
 ## Shape
 
@@ -36,8 +38,8 @@ Optional `GITHUB_TOKEN` raises the public GitHub API rate limit. It does not ena
 
 Enable Railway volume backups. For a provider-neutral logical copy, run `clank project export` for each project. Do not copy a live `.db-wal` piecemeal or place the live SQLite directory in a sync drive.
 
-A full portable database backup command will use SQLite's online backup API in a later hardening phase. Until then, Railway volume snapshots are the full-instance recovery mechanism and JSON exports are the project-level portability mechanism.
+A portable full-database backup can use SQLite's online backup operation, followed by `PRAGMA integrity_check` and an off-provider copy. Railway volume snapshots remain useful for quick platform recovery; deterministic project JSON exports provide project-level portability.
 
 ## Current external handoff
 
-The repository contains everything needed to deploy, but this bootstrap session had no Railway account/project credentials and no Railway CLI. Creating the service, volume, custom domain, DNS record, and backup schedule therefore remains a human-authenticated deployment step rather than a code blocker.
+Moving the active pilot to Railway would require a human-owned Railway project, persistent volume, environment secrets, custom-domain/DNS configuration, health verification, and a restore rehearsal. It is an optional hosting migration, not unfinished core product work.

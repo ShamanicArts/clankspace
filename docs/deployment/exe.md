@@ -1,13 +1,19 @@
 ---
 type: knowledge
-summary: Private ClankSpace pilot and isolated evaluation deployment on exe.dev VMs.
+summary: Active trusted-pilot production, isolated evaluation, runner operations, and recovery on exe.dev VMs.
 keywords: [exe.dev, deployment, sqlite, systemd, evaluation, isolation]
 related: [../knowledge/hosting.md]
 note_created: 2026-08-02
-updated: 2026-08-02
+updated: 2026-08-03
 ---
 
 # exe.dev deployment
+
+## Current status
+
+This is the active production topology, not a proposed deployment. The validated RC-009 runtime is live at `https://clankspace-prod.exe.xyz`; production passes local/external health and readiness plus authenticated project export. A fresh online backup, off-host copy, restore drill, and prior-binary rollback have been verified.
+
+The service is a trusted-group pilot. The origin is publicly reachable for provider-neutral clients, but project APIs remain bearer-token protected and there is no public signup. See [trusted collaborator onboarding](../pilot-onboarding.md) before provisioning a real project.
 
 ## VM boundaries
 
@@ -19,7 +25,7 @@ updated: 2026-08-02
 
 Production and evaluation use separate bootstrap tokens, databases, process users, and HTTPS origins. Raw model transcripts belong on the runner or in evaluation artifacts, never in either ClankSpace append log.
 
-The runner stores immutable corpora under `/home/exedev/clankspace-evals/data`, sanitized real-repository snapshots under `snapshots/`, and project credentials under the corpus-versioned `data/secrets/` tree. It has the evaluation bootstrap token only; no production token is installed.
+The runner stores immutable corpora under `/home/exedev/clankspace-evals/data`, sanitized real-repository snapshots under `snapshots/`, and project credentials under the corpus-versioned `data/secrets/` tree. It has the evaluation bootstrap token only; no production token is installed. Tailnet-only Operations and raw workflow views are served from the runner through local SSH forwarding.
 
 ## Service shape
 
@@ -56,6 +62,7 @@ For each service:
 3. Set the exe.dev proxy to port `8000` and public visibility.
 4. Verify the HTTPS origin from outside the VM.
 5. Create a disposable project, issue a project-scoped token, use it from a clean client, and export the project.
-6. Perform an off-host backup and restore drill before storing real collaboration context.
+6. Create an online backup, run `PRAGMA integrity_check`, copy it off-host, and retain the current binary for rollback.
+7. Verify an authenticated project context and export from an external client.
 
-Never copy the live SQLite database or individual WAL files while the service is running. Use the SQLite online backup path or continuous replication once implemented.
+Never copy the live SQLite database or individual WAL files while the service is running. Use SQLite's online `.backup` path, verify the resulting database, and copy only that completed snapshot off-host.
