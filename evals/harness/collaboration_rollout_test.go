@@ -5,11 +5,29 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/ShamanicArts/clankspace/internal/domain"
 )
+
+func TestCollaborationResumeUsesSupportedCodexFlags(t *testing.T) {
+	args := collaborationCodexArgs(
+		"/opt/codex-eval",
+		PreparedLane{Model: "gpt-5.6-luna", Reasoning: "high"},
+		"/tmp/world", "thread-123", "continue", "/tmp/response.txt",
+	)
+	if len(args) < 3 || args[1] != "exec" || args[2] != "resume" {
+		t.Fatalf("unexpected resume command: %#v", args)
+	}
+	if slices.Contains(args, "--color") || slices.Contains(args, "--sandbox") {
+		t.Fatalf("resume uses flags rejected by codex exec resume: %#v", args)
+	}
+	if !slices.Contains(args, `sandbox_mode="workspace-write"`) || !slices.Contains(args, "sandbox_workspace_write.network_access=true") {
+		t.Fatalf("resume lost workspace-write or network configuration: %#v", args)
+	}
+}
 
 func TestCollaborationDryRunPlansExactProcessesWithoutCreatingWorktrees(t *testing.T) {
 	world, options := collaborationTestWorld(t)
