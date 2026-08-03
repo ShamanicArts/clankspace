@@ -258,3 +258,33 @@ func TestSeedScenarioCreatesIsolatedProjectAndAliasMap(t *testing.T) {
 		t.Fatalf("control project checkpoint missing: %#v", export["notes"])
 	}
 }
+
+func TestIsolationProbeDeniesForeignProjectAccess(t *testing.T) {
+	db, err := store.Open(filepath.Join(t.TempDir(), "db.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err = db.EnsureBootstrap(t.Context(), "admin-token", "Eval", "Owner"); err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer((&httpapi.Server{
+		Store: db, Core: service.New(db), GitHub: githubsync.New(""),
+		Log: slog.New(slog.NewTextHandler(&strings.Builder{}, nil)),
+	}).Handler())
+	defer server.Close()
+	adminEnvironment := filepath.Join(t.TempDir(), "admin.env")
+	if err = os.WriteFile(adminEnvironment, []byte("CLANKSPACE_URL="+server.URL+"\nCLANKSPACE_TOKEN=admin-token\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	result, err := harness.RunIsolationProbe(t.Context(), harness.IsolationProbeOptions{
+		AdminEnvironment: adminEnvironment,
+		ProbeID:          "unit-isolation",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Passed || result.Leaked || len(result.VisibleProjects) != 1 || result.VisibleProjects[0] != result.ProjectA {
+		t.Fatalf("unexpected isolation result: %+v", result)
+	}
+}

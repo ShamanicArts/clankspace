@@ -23,7 +23,7 @@ func main() {
 
 func run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: clank-eval validate|validate-collaboration|snapshot|ingest-worlds|prepare|prepare-collaboration|rollout|collaboration-rollout")
+		return errors.New("usage: clank-eval validate|validate-collaboration|snapshot|ingest-worlds|prepare|prepare-collaboration|rollout|collaboration-rollout|isolation-probe")
 	}
 	switch args[0] {
 	case "validate":
@@ -51,9 +51,28 @@ func run(ctx context.Context, args []string) error {
 		return snapshot(args[1:])
 	case "ingest-worlds":
 		return ingestWorlds(args[1:])
+	case "isolation-probe":
+		return isolationProbe(ctx, args[1:])
 	default:
 		return fmt.Errorf("unknown command %q", args[0])
 	}
+}
+
+func isolationProbe(ctx context.Context, args []string) error {
+	f := flag.NewFlagSet("isolation-probe", flag.ContinueOnError)
+	adminEnvironment := f.String("admin-env", "", "0600 file containing CLANKSPACE_URL and CLANKSPACE_TOKEN")
+	probeID := f.String("probe", "", "stable lowercase probe identifier")
+	if err := f.Parse(args); err != nil {
+		return err
+	}
+	result, err := harness.RunIsolationProbe(ctx, harness.IsolationProbeOptions{
+		AdminEnvironment: *adminEnvironment,
+		ProbeID:          *probeID,
+	})
+	if printErr := printJSON(result); printErr != nil {
+		return printErr
+	}
+	return err
 }
 
 func validateCollaboration(args []string) error {
