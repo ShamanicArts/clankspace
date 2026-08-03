@@ -1,7 +1,7 @@
 ---
 type: state
 status: active
-summary: The candidate is validated; current work is permanent Railway production before real collaborator onboarding.
+summary: Railway production and stable DNS are live; managed TLS, backup scheduling, and restore acceptance remain before collaborator onboarding.
 note_created: 2026-08-02
 updated: 2026-08-03
 ---
@@ -10,11 +10,11 @@ updated: 2026-08-03
 
 ## Current focus
 
-Move the validated candidate to permanent Railway infrastructure behind `clank.shamanicarts.dev`, verify migration and recovery, then hand the pilot to Shuv and other trusted collaborators. exe.dev remains the reusable agent-compute plane; ClankSpace eval and runner services are one isolated workload on it. Research remains subordinate to observed product friction.
+Finish the stable-domain and recovery gate for the live Railway deployment, then hand the pilot to Shuv and other trusted collaborators. exe.dev remains the reusable agent-compute plane; ClankSpace eval and runner services are one isolated workload on it. Research remains subordinate to observed product friction.
 
 ## Active phase
 
-The validated hosted candidate, evaluation service, and runner are isolated on separate exe.dev VMs. The temporary candidate runs runtime commit `6b20f444` with binary SHA-256 `559666937035`; public `main` is ahead only by deployment-evidence documentation. Evaluation retains frozen candidate `62c5682` with binary SHA-256 `68934108bab4`. Both service deployments pass external health and readiness checks. The candidate is not the permanent production topology.
+Permanent production is deployed from public `main` to a single Railway service and persistent `/data` volume in EU West. The Railway-managed origin passes external health, readiness, authenticated context, and deterministic project export checks. The restored database contains the expected project and four notes. `clankspace-prod` on exe.dev is stopped and frozen as the short-lived rollback source; evaluation and runner VMs remain isolated agent-compute workloads.
 
 RC-009 exercised three frozen single-agent worlds and one event-gated two-maintainer world on MIT repository snapshots:
 
@@ -31,7 +31,7 @@ Corrected rollout judge v5 accepted aligned overlap at `0.98`, routine proceed a
 
 Collaboration judge v3 confirmed every product behavior but conflated the finite lane evidence process with the human-facing Clank task. The packet proves Lane B's task run has no outcome or `endedAt`; a direct read-only Luna Max review accepted the split lifecycle at `1.00`.
 
-PR #9 merged the gate into `lab/pilot-v1-base`; PR #10 promoted that lab state to public `main`. Exact merged-main build `6b20f444` is live on the temporary hosted candidate. A fresh SQLite online backup exists on-host and off-host with SHA-256 `82f91f393f41`; the prior `35503c12` binary is retained as `clank.rollback-35503c12-pre-rc009`. Local and external health/readiness, authenticated context, and authenticated export pass.
+PR #9 merged the gate into `lab/pilot-v1-base`; PR #10 promoted that lab state to public `main`. The migration used a fresh SQLite online backup, verified by `PRAGMA integrity_check` and SHA-256, with a completed copy retained off-provider. That snapshot is restored on Railway and its authenticated export matches the expected project data. PR #15 hardened Railway volume ownership and permanently drops the service to the unprivileged `clank` user after narrowly scoped mount preparation.
 
 ## Operations and evidence
 
@@ -45,14 +45,14 @@ PR #9 merged the gate into `lab/pilot-v1-base`; PR #10 promoted that lab state t
 
 The operations journal is append-only on the persistent runner and the dashboard labels fake OmegaCode schema runs as `preflight only`, not product verdicts.
 
-## Hosted candidate status
+## Production migration status
 
-RC-009's frozen result is labelled `passed-production` / `promoted-to-production`; in context, that means the candidate passed the product gate and a real hosted deployment. It does not designate exe.dev as the permanent infrastructure. The remaining deployment gate is Railway migration, stable-domain cutover, scheduled backups, and restore acceptance. The next product uncertainty is population behavior: more models, repositories, seeds, matched no-Clank controls, and eventual semantic retrieval.
+RC-009's frozen result established that the product behavior and deployment artifact were viable. Railway now owns the permanent runtime and migrated collaboration state. Cloudflare publishes the required CNAME and ownership TXT records for `clank.shamanicarts.dev`; Railway-managed certificate issuance is pending. The remaining deployment gate is valid stable-domain TLS, a scheduled backup policy, and a disposable restore rehearsal. The next product uncertainty is population behavior: more models, repositories, seeds, matched no-Clank controls, and eventual semantic retrieval.
 
 ## Decisions pending after RC-009
 
-- Which human-owned Railway plan and region to use for the permanent single-service deployment.
-- The exact migration freeze, stable-domain cutover, and rollback-window timing.
+- Whether to upgrade Railway to Pro for native volume backups/PITR or operate a verified external online-backup schedule. Pro is the preferred production path.
+- The exact rollback-window duration before deleting the stopped exe.dev migration source.
 - Do not issue the exe.dev origin as a supported collaborator pointer; use `clank.shamanicarts.dev` after acceptance.
 - Which binary targets and installer surface to support for `v0.1.0-pilot`.
 - The exact real `shuv2code` seed records and collaborator identity names.
