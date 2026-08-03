@@ -9,9 +9,9 @@ Visual companion: [`2026-08-03-rc009-full-package-validation.html`](2026-08-03-r
 
 ## Outcome
 
-The exact `62c5682` product candidate passed four real-repository worlds: passive discussion, routine proceed, compatible overlap, architectural conflict, and an event-gated two-maintainer collision. Independent semantic review now accepts every intended product behavior. RC-009 is approved for promotion to the private lab branch.
+The exact `62c5682` product candidate passed four real-repository worlds: passive discussion, routine proceed, compatible overlap, architectural conflict, and an event-gated two-maintainer collision. Independent semantic review accepts every intended product behavior. The validated tree was promoted through PR #9 and PR #10 and is live on production as public-main commit `6b20f444`.
 
-Production remains on `35503c12` until the lab-to-main promotion and backed-up deployment complete.
+Production binary SHA-256 is `55966693703568d094a52d889c55a2cf45a8d127fd9cef1020d5cd15fd1c1a6f`. External health/readiness and authenticated project context/export pass. The pre-deploy SQLite backup is verified on-host and off-host, and the previous production binary remains available for rollback.
 
 ## What the product did
 
@@ -58,5 +58,8 @@ The final accepted behavior scores are therefore `0.98` aligned, `0.96` routine,
 - collaboration episode: `product-rc-009-collab-001`
 - candidate binary SHA-256: `68934108bab4893b06caa009ae9ab09fc305210e2cf39273be07791aa384bc46`
 - skill SHA-256: `bcf50c4e9a14d68a965bd7dafb980079439c6d164f0316d42014b64f05b1d418`
+- production commit: `6b20f444781ab53747671de12a5f71184e93a767`
+- production binary SHA-256: `55966693703568d094a52d889c55a2cf45a8d127fd9cef1020d5cd15fd1c1a6f`
+- pre-deploy backup: `clankspace-prod-pre-rc009-20260803T074631Z.db` (`82f91f393f41…`)
 
 The private operations view is served tailnet-only at `https://wubulon.tailfac9f9.ts.net:3477/`; raw workflow drilldown is at port `3478` on the same host.

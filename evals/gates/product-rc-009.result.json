@@ -1,15 +1,27 @@
 {
   "schemaVersion": 1,
   "gateId": "product-rc-009",
-  "status": "passed",
-  "productVerdict": "promote-to-lab-base",
-  "productionWasTouched": false,
+  "status": "passed-production",
+  "productVerdict": "promoted-to-production",
+  "productionWasTouched": true,
   "privateEvalDeployment": {
     "host": "clankspace-eval.exe.xyz",
     "commit": "62c5682589c1f9050985c097af6d17c2b2f6b485",
     "binarySha256": "68934108bab4893b06caa009ae9ab09fc305210e2cf39273be07791aa384bc46",
     "health": "passed",
     "readiness": "passed"
+  },
+  "productionDeployment": {
+    "host": "clankspace-prod.exe.xyz",
+    "commit": "6b20f444781ab53747671de12a5f71184e93a767",
+    "binarySha256": "55966693703568d094a52d889c55a2cf45a8d127fd9cef1020d5cd15fd1c1a6f",
+    "health": "passed",
+    "readiness": "passed",
+    "authenticatedContext": "passed",
+    "authenticatedExport": "passed",
+    "rollbackBinary": "clank.rollback-35503c12-pre-rc009",
+    "backup": "clankspace-prod-pre-rc009-20260803T074631Z.db",
+    "backupSha256": "82f91f393f419bdf31fbcb125cf2b985c0b9a44662bb7d5f3446e7a8a43d6bd6"
   },
   "observableBehavior": {
     "allPretaskTurnsPassive": true,
