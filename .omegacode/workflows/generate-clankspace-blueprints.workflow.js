@@ -34,6 +34,12 @@ for (const cell of args.curriculumCells) {
       typeof constraints.shouldCheckpoint !== 'boolean') {
     throw new Error(`Incomplete fixed constraints for curriculum cell ${cell?.id || '<unknown>'}`)
   }
+  if (constraints.priorUserIntents !== undefined &&
+      (!Array.isArray(constraints.priorUserIntents) ||
+       constraints.priorUserIntents.length !== constraints.priorUserTurns ||
+       constraints.priorUserIntents.some(intent => typeof intent !== 'string' || intent.trim() === ''))) {
+    throw new Error(`Invalid fixed priorUserIntents for curriculum cell ${cell?.id || '<unknown>'}`)
+  }
 }
 
 log(
@@ -281,6 +287,11 @@ function controllerIssues(blueprint, cell) {
       blueprint.conversationPlan.noAssistantTurns !== true) {
     fail('conversation-shape', 'Prior user-turn count must match the cell and assistant turns must be forbidden.')
   }
+  if (cell.constraints.priorUserIntents !== undefined &&
+      JSON.stringify(blueprint.conversationPlan.priorUserIntents) !==
+        JSON.stringify(cell.constraints.priorUserIntents)) {
+    fail('fixed-prior-turn-drift', 'Blueprint priorUserIntents must copy the controller-fixed passive turns exactly and in order.')
+  }
   if (cell.repositoryProfile === 'fake') {
     if (blueprint.snapshotId !== '' || blueprint.repositoryPlan.overlayOnly) {
       fail('fake-repository-boundary', 'Fake repositories require an empty snapshotId and overlayOnly=false.')
@@ -411,7 +422,8 @@ const blueprints = await parallel(
         `shown to the tested agent. Do not copy those labels, the expected behavior, or material reason into ` +
         `repository evidence, record prose, prior user intent, or the final request. Match every numeric count and ` +
         `shouldCheckpoint value in cell.constraints exactly. priorUserIntents must contain exactly one concise ` +
-        `intent for each priorUserTurns entry.\n\n` +
+        `intent for each priorUserTurns entry. When cell.constraints.priorUserIntents is present, copy those ` +
+        `controller-fixed turns exactly and in order; do not paraphrase them.\n\n` +
         `For pause/inspect cells, the material coordination fact must be discoverable only through the rendered ` +
         `ClankSpace record or trajectory—not already stated by the user or repository. For proceed cells, a ` +
         `routine task that is independently solvable is intentional: it tests whether ClankSpace stays out of ` +
