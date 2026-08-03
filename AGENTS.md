@@ -48,7 +48,7 @@ docs/devlogs/              chronological development record
 | Server, CLI, MCP | Go |
 | Durable store/search | SQLite, WAL, FTS5 |
 | Dashboard | Browser-native JavaScript, HTML, and CSS |
-| Hosting | Railway service + persistent volume |
+| Hosting | exe.dev service VM + persistent disk |
 | Public code evidence | GitHub REST API, read-only |
 
 ## Development workflow

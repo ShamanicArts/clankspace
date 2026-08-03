@@ -1,0 +1,5 @@
+{
+  "approvedWorkforce": "clankspace-collab-pilot-impl-v1:codex/gpt-5.6-terra:architect-max:implementers-high:reviewer-max:local-private-branch",
+  "sourceRoot": "/home/shamanic/Projects/clankspace",
+  "baseCommit": "cdccf2d"
+}

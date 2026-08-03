@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+base_codex_bin="${CLANKSPACE_EVAL_CODEX_BIN:-/usr/local/bin/codex}"
+disabled_features=(
+  --disable apps
+  --disable browser_use
+  --disable browser_use_external
+  --disable browser_use_full_cdp_access
+  --disable computer_use
+  --disable goals
+  --disable image_generation
+  --disable in_app_browser
+  --disable multi_agent
+  --disable plugins
+  --disable skill_search
+  --disable workspace_dependencies
+)
+
+if [[ "${1:-}" == "app-server" ]]; then
+  shift
+  exec "$base_codex_bin" app-server "${disabled_features[@]}" "$@"
+fi
+
+if [[ "${1:-}" == "exec" ]]; then
+  shift
+  if [[ "${1:-}" == "resume" ]]; then
+    shift
+    exec "$base_codex_bin" exec resume "${disabled_features[@]}" "$@"
+  fi
+  exec "$base_codex_bin" exec "${disabled_features[@]}" "$@"
+fi
+
+exec "$base_codex_bin" "$@"

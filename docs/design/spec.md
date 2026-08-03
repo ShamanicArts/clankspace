@@ -228,8 +228,8 @@ Railway mounts `/data`; database lives at `/data/clankspace.db`. Railway volume 
 2. Record concise rationale connecting voice, permissions, interruptions, mobile, and startup work.
 3. Register Shamanic’s agent run with a request to reverse the permission layer.
 4. Request a brief.
-5. Receive a coordination warning naming the related trajectory, rationale, actor/run context, freshness, and evidence.
-6. The warning offers continue, inspect, or realign; it does not block or command.
+5. Receive a possible-overlap candidate naming the related trajectory, rationale, actor/run context, freshness, and evidence.
+6. The candidate explicitly says path/term matching is not a conflict determination. The agent compares the objectives and pauses only because these two directions are materially incompatible.
 7. Record the redirected intent and make it available to Shuv’s next run.
 8. Reconstruct the accrued context from the append-log dashboard without transcript storage.
 

@@ -54,6 +54,11 @@ Expose the agent-maintained project log with adjacent runtime provenance, light 
 
 Connect the private repository to Railway, mount `/data`, configure `clank.shamanicarts.dev`, create the workspace and invitations, enable volume backups, and complete a portable restore drill.
 
+## Research backlog
+
+- [Researched](research_results/2026-08-02-apache-wave-patterns.md): extract Apache Wave's snapshot-plus-delta history, versioned receipts, participant access, and robot-capability patterns without inheriting OT, federation, or the Wave UI.
+- Evaluate API-token-router guardrails from that research: method-scoped short-lived run tokens should enforce project, actor, tool, and write boundaries outside model prompts while records remain bounded CLI/MCP output.
+
 ## Design decisions log
 
 ### D1 — Name

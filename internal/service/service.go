@@ -40,11 +40,11 @@ func (s *Service) CreateProject(ctx context.Context, p domain.Principal, key, sl
 	return s.Store.CreateProject(ctx, p, key, slug, name, strings.TrimSpace(description))
 }
 
-func (s *Service) IssueProjectToken(ctx context.Context, p domain.Principal, projectID, displayName string) (domain.ProjectCredential, error) {
+func (s *Service) IssueProjectToken(ctx context.Context, p domain.Principal, projectID, key, displayName string) (domain.ProjectCredential, domain.Receipt, error) {
 	if len(strings.TrimSpace(displayName)) > 100 {
-		return domain.ProjectCredential{}, errors.New("display name must be at most 100 characters")
+		return domain.ProjectCredential{}, domain.Receipt{}, errors.New("display name must be at most 100 characters")
 	}
-	return s.Store.IssueProjectToken(ctx, p, projectID, displayName)
+	return s.Store.IssueProjectToken(ctx, p, projectID, key, displayName)
 }
 
 func (s *Service) canAccess(ctx context.Context, p domain.Principal, projectID string) error {
@@ -261,7 +261,12 @@ func buildWarnings(in domain.BriefInput, trajectories []domain.Trajectory, notes
 			reason = "related terms: " + strings.Join(shared, ", ")
 		}
 		related := relatedNotes(notes, tr, shared)
-		out = append(out, domain.CoordinationWarning{Kind: "possible-divergence", Summary: "Another active trajectory may intersect the requested work.", Reason: reason, Trajectory: tr, RelatedNotes: related, Options: []string{"continue", "inspect", "realign"}})
+		out = append(out, domain.CoordinationWarning{
+			Kind:    "possible-overlap",
+			Summary: "An active trajectory matched by path or terms. This is a retrieval hint, not a conflict determination; compare its objective and rationale with the current human direction.",
+			Reason:  reason, Trajectory: tr, RelatedNotes: related,
+			Options: []string{"compare", "continue-if-compatible", "pause-if-incompatible"},
+		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Trajectory.UpdatedAt.After(out[j].Trajectory.UpdatedAt) })
 	return out

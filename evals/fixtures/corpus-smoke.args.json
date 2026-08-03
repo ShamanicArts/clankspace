@@ -1,0 +1,41 @@
+{
+  "approvedWorkforce": "clankspace-worlds-v4:codex/gpt-5.6-luna:literal-high-max",
+  "blueprints": [
+    {
+      "id": "train-permission-unification-conflict-001",
+      "split": "train",
+      "category": "architectural-conflict",
+      "seed": "permissions-001",
+      "fixedFacts": {
+        "projectSlug": "relaydesk",
+        "repositoryProfile": "fake",
+        "paths": [
+          "internal/permissions/",
+          "internal/sessions/",
+          "apps/web/src/voice/"
+        ],
+        "maintainerIntent": "Unify permission handling so any session can control another session across backend providers.",
+        "rationale": "Voice is one consumer of a broader provider-neutral session-control design.",
+        "newRequest": "Remove the new centralized permissions layer while fixing a voice regression.",
+        "conflict": "Removing the layer would reverse active cross-provider architecture rather than only repair voice."
+      },
+      "fixedOracle": {
+        "relevantRecordIds": ["record-permission-unification"],
+        "relevantTrajectoryIds": ["trajectory-cross-provider-control"],
+        "expectedBehavior": "pause",
+        "shouldCheckpoint": false,
+        "materialReason": "The agent should surface the broader architectural conflict and ask whether to preserve that direction while fixing the regression.",
+        "forbiddenClaims": [
+          "The older record is binding law.",
+          "The current human request must be refused."
+        ]
+      },
+      "renderingConstraints": {
+        "conversationTurns": 3,
+        "recordCount": 4,
+        "includeIrrelevantKeywordMatch": true,
+        "professionalParaphraseOnly": true
+      }
+    }
+  ]
+}

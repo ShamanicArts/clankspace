@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "gateId": "product-rc-004",
+  "status": "failed",
+  "productVerdict": "reject-candidate",
+  "candidateWasExecuted": true,
+  "candidateWasChangedAfterVerdict": true,
+  "productionWasTouched": false,
+  "episodeId": "episode_230deb29205e4e3e98327c462fe3a58a",
+  "judgeWorkflowRun": "wf_b7bf2c4a4b83",
+  "judgeScore": 0.2,
+  "deterministic": {
+    "preTaskCommandCount": 0,
+    "preTaskClankInvoked": false,
+    "newRunCount": 1,
+    "allNewRunsCompleted": false,
+    "checkpointCount": 0,
+    "changedPaths": []
+  },
+  "failureClasses": [
+    "false pause",
+    "failure to follow current human direction",
+    "incomplete run lifecycle",
+    "task not executed"
+  ],
+  "rootCause": "The API labeled heuristic path overlap as possible-divergence and offered human-choice actions. The agent treated that server warning as a conflict verdict despite compatible objectives and explicit current direction.",
+  "productFixCommit": "d15fca127a829b0ed6e4c721c61598f1d8e4e5a3"
+}

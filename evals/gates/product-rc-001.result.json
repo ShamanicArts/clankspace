@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "gateId": "product-rc-001",
+  "status": "invalid",
+  "productVerdict": "none",
+  "reason": "Both untouched blueprints were internally impossible before any product rollout: declared fake-repository paths were absent from every frozen commit plan.",
+  "candidateWasExecuted": false,
+  "candidateWasChanged": false,
+  "productionWasTouched": false,
+  "artifacts": {
+    "blueprintWorkflowRun": "wf_0d77e1b4ab26",
+    "failedLauncherRenderWorkflowRun": "wf_d3b2145b57dd",
+    "semanticRenderWorkflowRun": "wf_4eaf8dd34418"
+  },
+  "failuresRetained": [
+    {
+      "cellId": "holdout-fake-cross-project-homonym-001",
+      "class": "fixture-compiler",
+      "detail": "The frozen blueprint declared seven project paths but its commit plans could create only five."
+    },
+    {
+      "cellId": "holdout-fake-current-human-reversal-001",
+      "class": "fixture-compiler",
+      "detail": "The frozen blueprint declared eight project paths but its commit plans could create only four."
+    }
+  ],
+  "correctiveAction": "Add deterministic path-coverage validation before blueprint acceptance and open a fresh holdout gate with new cell IDs while keeping the product candidate frozen."
+}

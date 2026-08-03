@@ -182,49 +182,51 @@ func (s *Store) CanAccessProject(ctx context.Context, p domain.Principal, projec
 	return n > 0, err
 }
 
-func (s *Store) IssueProjectToken(ctx context.Context, owner domain.Principal, projectID, displayName string) (domain.ProjectCredential, error) {
+func (s *Store) IssueProjectToken(ctx context.Context, owner domain.Principal, projectID, key, displayName string) (domain.ProjectCredential, domain.Receipt, error) {
 	if owner.Kind != "human" {
-		return domain.ProjectCredential{}, errors.New("only a human workspace owner may issue project credentials")
+		return domain.ProjectCredential{}, domain.Receipt{}, errors.New("only a human workspace owner may issue project credentials")
 	}
 	project, err := s.GetProject(ctx, owner.WorkspaceID, projectID)
 	if err != nil {
-		return domain.ProjectCredential{}, err
+		return domain.ProjectCredential{}, domain.Receipt{}, err
 	}
 	displayName = strings.TrimSpace(displayName)
 	if displayName == "" {
 		displayName = project.Name + " agents"
 	}
-	random := make([]byte, 32)
-	if _, err = rand.Read(random); err != nil {
-		return domain.ProjectCredential{}, err
-	}
-	token := "clank_" + base64.RawURLEncoding.EncodeToString(random)
-	s.writeMu.Lock()
-	defer s.writeMu.Unlock()
-	tx, err := s.db.BeginTx(ctx, nil)
+	request := struct {
+		DisplayName string `json:"displayName"`
+	}{DisplayName: displayName}
+	body, receipt, err := s.mutate(ctx, owner.WorkspaceID, project.ID, owner.ID, owner.ID, "", key, request, func(tx *sql.Tx) (string, string, any, error) {
+		random := make([]byte, 32)
+		if _, err = rand.Read(random); err != nil {
+			return "", "", nil, err
+		}
+		token := "clank_" + base64.RawURLEncoding.EncodeToString(random)
+		t := now()
+		p := domain.Principal{ID: newID("principal"), WorkspaceID: owner.WorkspaceID, DisplayName: displayName, Kind: "project", CreatedAt: t}
+		if _, err = tx.ExecContext(ctx, `INSERT INTO principals(id,workspace_id,display_name,kind,created_at) VALUES(?,?,?,?,?)`, p.ID, p.WorkspaceID, p.DisplayName, p.Kind, ts(t)); err != nil {
+			return "", "", nil, err
+		}
+		if _, err = tx.ExecContext(ctx, `INSERT INTO project_principals(project_id,principal_id,role,created_at) VALUES(?,?,?,?)`, project.ID, p.ID, "agent", ts(t)); err != nil {
+			return "", "", nil, err
+		}
+		prefix := token
+		if len(prefix) > 12 {
+			prefix = prefix[:12]
+		}
+		if _, err = tx.ExecContext(ctx, `INSERT INTO api_tokens(id,principal_id,token_hash,token_prefix,scopes_json,created_at) VALUES(?,?,?,?,?,?)`, newID("token"), p.ID, hashToken(token), prefix, `["project:agent"]`, ts(t)); err != nil {
+			return "", "", nil, err
+		}
+		credential := domain.ProjectCredential{Principal: p, Token: token, Notice: "Copy this project agent token now. It is stored only as a hash and cannot be shown again."}
+		return p.ID, "project.token.issued", credential, nil
+	})
 	if err != nil {
-		return domain.ProjectCredential{}, err
+		return domain.ProjectCredential{}, receipt, err
 	}
-	defer tx.Rollback()
-	t := now()
-	p := domain.Principal{ID: newID("principal"), WorkspaceID: owner.WorkspaceID, DisplayName: displayName, Kind: "project", CreatedAt: t}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO principals(id,workspace_id,display_name,kind,created_at) VALUES(?,?,?,?,?)`, p.ID, p.WorkspaceID, p.DisplayName, p.Kind, ts(t)); err != nil {
-		return domain.ProjectCredential{}, err
-	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO project_principals(project_id,principal_id,role,created_at) VALUES(?,?,?,?)`, project.ID, p.ID, "agent", ts(t)); err != nil {
-		return domain.ProjectCredential{}, err
-	}
-	prefix := token
-	if len(prefix) > 12 {
-		prefix = prefix[:12]
-	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO api_tokens(id,principal_id,token_hash,token_prefix,scopes_json,created_at) VALUES(?,?,?,?,?,?)`, newID("token"), p.ID, hashToken(token), prefix, `["project:agent"]`, ts(t)); err != nil {
-		return domain.ProjectCredential{}, err
-	}
-	if err = tx.Commit(); err != nil {
-		return domain.ProjectCredential{}, err
-	}
-	return domain.ProjectCredential{Principal: p, Token: token, Notice: "Copy this project agent token now. It is stored only as a hash and cannot be shown again."}, nil
+	var credential domain.ProjectCredential
+	err = json.Unmarshal(body, &credential)
+	return credential, receipt, err
 }
 
 func (s *Store) GetProject(ctx context.Context, workspaceID, projectID string) (domain.Project, error) {
@@ -416,6 +418,33 @@ func (s *Store) GetRun(ctx context.Context, runID string) (domain.Run, error) {
 		return r, ErrNotFound
 	}
 	return r, err
+}
+
+func (s *Store) ListRuns(ctx context.Context, projectID string, limit int) ([]domain.Run, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	rows, err := s.db.QueryContext(ctx, runSelect+` WHERE r.project_id=? ORDER BY r.started_at DESC LIMIT ?`, projectID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	runs := make([]domain.Run, 0)
+	for rows.Next() {
+		var run domain.Run
+		var profile, started, ended string
+		if err = rows.Scan(&run.ID, &run.ProjectID, &run.AgentID, &run.AgentName, &run.PrincipalID, &run.PrincipalName, &run.Harness, &run.HarnessVersion, &run.Provider, &run.Model, &run.Reasoning, &run.Role, &run.ParentRunID, &run.RootRunID, &run.RunType, &run.PermissionMode, &run.InteractionMode, &run.RepositoryID, &run.Branch, &run.Worktree, &run.BaseSHA, &run.HeadSHA, &run.Objective, &profile, &started, &ended, &run.Outcome, &run.Verification); err != nil {
+			return nil, err
+		}
+		_ = json.Unmarshal([]byte(profile), &run.InstructionProfile)
+		run.StartedAt = parseTime(started)
+		if ended != "" {
+			t := parseTime(ended)
+			run.EndedAt = &t
+		}
+		runs = append(runs, run)
+	}
+	return runs, rows.Err()
 }
 
 func (s *Store) CreateNote(ctx context.Context, principal domain.Principal, projectID, key string, in domain.CreateNoteInput) (domain.Note, domain.Receipt, error) {

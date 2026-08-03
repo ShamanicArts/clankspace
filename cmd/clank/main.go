@@ -43,6 +43,14 @@ func run(ctx context.Context, args []string) error {
 		usage()
 		return errors.New("command required")
 	}
+	if isHelp(args[0]) {
+		usage()
+		return nil
+	}
+	if args[0] == "run" && len(args) > 1 && isHelp(args[1]) {
+		runUsage()
+		return nil
+	}
 	if args[0] == "serve" {
 		return serve(ctx)
 	}
@@ -233,34 +241,47 @@ func runCommand(ctx context.Context, c *client.Client, args []string) error {
 	if len(args) == 0 {
 		return errors.New("usage: clank run start|end")
 	}
+	if isHelp(args[0]) {
+		runUsage()
+		return nil
+	}
+	if len(args) > 1 && isHelp(args[1]) {
+		runUsage()
+		return nil
+	}
 	if args[0] == "end" {
 		f := flag.NewFlagSet("run end", flag.ContinueOnError)
-		id := f.String("id", value("CLANKSPACE_RUN", ""), "run ID")
+		id := value("CLANKSPACE_RUN", "")
+		f.StringVar(&id, "id", id, "run ID")
+		f.StringVar(&id, "run", id, "run ID (alias for --id)")
 		outcome := f.String("outcome", "completed", "outcome")
 		verification := f.String("verification", "", "verification summary")
 		if err := f.Parse(args[1:]); err != nil {
 			return err
 		}
-		o, e := c.EndRun(ctx, *id, domain.EndRunInput{Outcome: *outcome, Verification: *verification})
+		o, e := c.EndRun(ctx, id, domain.EndRunInput{Outcome: *outcome, Verification: *verification})
 		if e == nil {
 			printJSON(o)
 		}
 		return e
 	}
+	if args[0] != "start" {
+		return errors.New("usage: clank run start|end")
+	}
 	f := flag.NewFlagSet("run start", flag.ContinueOnError)
 	project := f.String("project", os.Getenv("CLANKSPACE_PROJECT"), "project ID or slug")
-	agent := f.String("agent", "agent", "agent name")
-	harness := f.String("harness", "", "harness")
-	harnessVersion := f.String("harness-version", "", "harness version")
-	provider := f.String("provider", "", "provider")
-	model := f.String("model", "", "model")
-	reasoning := f.String("reasoning", "", "reasoning effort")
-	role := f.String("role", "primary", "primary|subagent|reviewer|automation|integration")
-	runType := f.String("type", "interactive", "interactive|automation")
+	agent := f.String("agent", value("CLANKSPACE_AGENT", "agent"), "agent name")
+	harness := f.String("harness", value("CLANKSPACE_HARNESS", ""), "harness")
+	harnessVersion := f.String("harness-version", value("CLANKSPACE_HARNESS_VERSION", ""), "harness version")
+	provider := f.String("provider", value("CLANKSPACE_PROVIDER", ""), "provider")
+	model := f.String("model", value("CLANKSPACE_MODEL", ""), "model")
+	reasoning := f.String("reasoning", value("CLANKSPACE_REASONING", ""), "reasoning effort")
+	role := f.String("role", value("CLANKSPACE_ROLE", "primary"), "primary|subagent|reviewer|automation|integration")
+	runType := f.String("type", value("CLANKSPACE_RUN_TYPE", "interactive"), "interactive|automation")
 	objective := f.String("objective", "", "objective")
-	branch := f.String("branch", "", "git branch")
-	worktree := f.String("worktree", "", "worktree")
-	paths := f.String("instructions", "", "instruction profile names/hashes, comma separated")
+	branch := f.String("branch", value("CLANKSPACE_BRANCH", ""), "git branch")
+	worktree := f.String("worktree", value("CLANKSPACE_WORKTREE", ""), "worktree")
+	paths := f.String("instructions", value("CLANKSPACE_INSTRUCTIONS", ""), "instruction profile names/hashes, comma separated")
 	if err := f.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -273,7 +294,11 @@ func runCommand(ctx context.Context, c *client.Client, args []string) error {
 
 func note(ctx context.Context, c *client.Client, args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: clank note add|supersede")
+		return errors.New("usage: clank note add|create|supersede")
+	}
+	if isHelp(args[0]) || (len(args) > 1 && isHelp(args[1])) {
+		noteUsage()
+		return nil
 	}
 	if args[0] == "supersede" {
 		f := flag.NewFlagSet("note supersede", flag.ContinueOnError)
@@ -289,6 +314,9 @@ func note(ctx context.Context, c *client.Client, args []string) error {
 			printJSON(o)
 		}
 		return e
+	}
+	if args[0] != "add" && args[0] != "create" {
+		return errors.New("usage: clank note add|create|supersede")
 	}
 	f := flag.NewFlagSet("note add", flag.ContinueOnError)
 	project := f.String("project", os.Getenv("CLANKSPACE_PROJECT"), "project")
@@ -311,6 +339,10 @@ func note(ctx context.Context, c *client.Client, args []string) error {
 }
 
 func trajectory(ctx context.Context, c *client.Client, args []string) error {
+	if len(args) > 0 && (isHelp(args[0]) || (len(args) > 1 && isHelp(args[1]))) {
+		trajectoryUsage()
+		return nil
+	}
 	if len(args) == 0 || args[0] != "start" {
 		return errors.New("usage: clank trajectory start")
 	}
@@ -399,6 +431,57 @@ func value(k, d string) string {
 	}
 	return d
 }
+func isHelp(value string) bool { return value == "help" || value == "--help" || value == "-h" }
 func usage() {
-	fmt.Fprintln(os.Stderr, "clank serve | context | auth | project | run | note | trajectory | brief | why | repo | mcp")
+	fmt.Fprintln(os.Stdout, `clank context
+clank run --help
+clank brief --run <id> --objective <text> --paths <comma-separated>
+clank why <topic-or-path> --run <id>
+clank trajectory start --run <id> --objective <text> --rationale <text> --paths <comma-separated>
+clank note add|create|supersede
+clank run end --id <id> --outcome <completed|aborted> --verification <text>
+clank auth | project | repo | mcp | serve | version`)
+}
+
+func runUsage() {
+	fmt.Fprintln(os.Stdout, `clank run start [options]
+  --project <slug>             defaults to the resolved project
+  --agent <name>               agent identity
+  --harness <name>             codex, shuv2code, or the actual harness
+  --harness-version <version>  when known
+  --provider <name>            model provider
+  --model <model>              exact model ID
+  --reasoning <tier>           none|low|medium|high|xhigh|max|unknown
+  --role <role>                primary|subagent|reviewer|automation|integration
+  --type <type>                interactive|automation
+  --objective <text>           current material task
+  --branch <branch>            current branch
+  --worktree <path>            current worktree
+  --instructions <profiles>    comma-separated instruction names or hashes
+
+The command returns a JSON run object. Pass its top-level id to brief, trajectory, note, and run end.
+
+clank run end --id <run-id> --outcome <completed|aborted> --verification <text>
+  --run is accepted as an alias for --id`)
+}
+
+func noteUsage() {
+	fmt.Fprintln(os.Stdout, `clank note add [options]
+  --run <run-id>
+  --kind <intent|decision|understanding|observation|checkpoint>
+  --title <concise title>
+  --summary <project implication>
+  --rationale <reasoning summary>
+  --led-by <human|agent|joint|external>
+  --basis <direction basis>
+  --paths <comma-separated paths>
+
+"create" is accepted as an alias for "add".
+clank note supersede --id <note-id> --revision <n> --reason <text>`)
+}
+
+func trajectoryUsage() {
+	fmt.Fprintln(os.Stdout, `clank trajectory start --run <run-id> --objective <text> --rationale <text> --paths <comma-separated> [--branch <branch>]
+
+Ending the associated run automatically closes its active trajectories.`)
 }
