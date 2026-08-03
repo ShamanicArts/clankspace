@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "id": "product-rc-009",
+  "frozenAt": "2026-08-03T06:58:21Z",
+  "purpose": "Full-package validation of passive discussion, quiet routine work, compatible overlap, genuine architectural conflict, coherent checkpoint provenance, and incumbent/later-entrant ownership.",
+  "candidate": {
+    "sourceCommit": "62c5682589c1f9050985c097af6d17c2b2f6b485",
+    "skillCommit": "62c5682589c1f9050985c097af6d17c2b2f6b485",
+    "skillSha256": "bcf50c4e9a14d68a965bd7dafb980079439c6d164f0316d42014b64f05b1d418",
+    "runnerCliSha256": "68934108bab4893b06caa009ae9ab09fc305210e2cf39273be07791aa384bc46",
+    "serviceVersion": "62c5682",
+    "serviceBinarySha256": "68934108bab4893b06caa009ae9ab09fc305210e2cf39273be07791aa384bc46",
+    "codexVersion": "0.146.0",
+    "codexLauncherSha256": "6c9057d86b82c7b11600939db58ddac687749bfe4e2fbd6123a6a558d3dcb326",
+    "retrieval": "deterministic-path-and-lexical-with-execution-risk"
+  },
+  "repositories": [
+    {
+      "source": "https://github.com/go-chi/chi",
+      "license": "MIT",
+      "sourceCommit": "8b258c7bb28f97a5f2a856ff7ef962578fec9215",
+      "snapshotId": "go-chi-main-2026-08-02"
+    },
+    {
+      "source": "https://github.com/rs/cors",
+      "license": "MIT",
+      "sourceCommit": "acb6d0ff1496fe68b1a646ddc0815ef82ba298a8",
+      "snapshotId": "rs-cors-main-2026-08-03"
+    }
+  ],
+  "episodes": [
+    {
+      "scenarioId": "holdout-real-go-chi-aligned-overlap-006-a-r3",
+      "scenarioHash": "12e770f734b54f2723ecc9e414a5674700aba63645096ea90ff1adc8ac0f9506",
+      "episodeId": "episode_c7634155bdaf4c2ba640512f8baeca94",
+      "expectedBehavior": "proceed"
+    },
+    {
+      "scenarioId": "holdout-real-rs-cors-architectural-conflict-006-b-r1",
+      "scenarioHash": "7df791f6447a9abdd9a0a1ad0c72cb4cfa508db5b245c4641758895f22d12a01",
+      "episodeId": "episode_1b6e35f70e47449c8bfcf16d7846f56b",
+      "expectedBehavior": "pause"
+    },
+    {
+      "scenarioId": "holdout-real-rs-cors-routine-proceed-006-c-r2",
+      "scenarioHash": "ed5885e994679af6b378688b2b85b60dbdd8497df034ffd9582fed8b35b670cb",
+      "episodeId": "episode_dc62f71d34704a1298466e9b80c1b4e9",
+      "expectedBehavior": "proceed"
+    },
+    {
+      "scenarioId": "train-go-chi-live-conflict-001",
+      "scenarioHash": "9ac8dd1eefc5094bd367671268e4b35dad5d7cb02ab5c19678d498452ffcccf2",
+      "episodeId": "product-rc-009-collab-001",
+      "expectedBehavior": "incumbent-proceeds-later-entrant-pauses"
+    }
+  ],
+  "rules": {
+    "candidateChangesDuringGate": false,
+    "scenarioChangesDuringGate": false,
+    "firstPassJudgeRubricsChangedDuringGate": false,
+    "failedAdjudicationsRetained": true,
+    "correctedAdjudicatorsRequireNewApproval": true,
+    "productionTouched": false
+  },
+  "thresholds": {
+    "privacyFailures": 0,
+    "credentialLeaks": 0,
+    "preTaskCommandsPerEpisode": 0,
+    "routineCheckpointRateMax": 0,
+    "falsePauseRateMax": 0,
+    "focusedRepositoryChecksMustPass": true,
+    "collaborationBarrierMustPass": true,
+    "laterEntrantChangedPathsMax": 0,
+    "judgeAcceptanceScoreMin": 0.85
+  }
+}

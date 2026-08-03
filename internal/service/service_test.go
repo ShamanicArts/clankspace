@@ -67,7 +67,10 @@ func TestOriginalCoordinationScenario(t *testing.T) {
 	if warning.Trajectory == nil || warning.Trajectory.ID != trajectory.ID {
 		t.Fatalf("warning did not identify the intersecting trajectory: %#v", warning)
 	}
-	if strings.Join(warning.Options, ",") != "compare,continue-if-compatible,pause-if-incompatible" {
+	if warning.ExecutionRisk != "live-interactive-overlap" || !strings.Contains(warning.Summary, "live collision candidate") {
+		t.Fatalf("warning omitted live execution provenance: %#v", warning)
+	}
+	if strings.Join(warning.Options, ",") != "compare,continue-if-same-objective,pause-if-distinct-concurrent-objective" {
 		t.Fatalf("unexpected options: %#v", warning.Options)
 	}
 	if len(warning.RelatedNotes) == 0 || warning.RelatedNotes[0].Run == nil {
@@ -104,6 +107,10 @@ func TestIdempotencyAndSecretBoundary(t *testing.T) {
 	in = domain.CreateNoteInput{Kind: "observation", Title: "Credential", Summary: "api_key=definitely-not-for-storage", LedBy: "agent", DirectionBasis: "autonomous_agent_judgment"}
 	if _, _, err = svc.CreateNote(ctx, p, project.ID, "secret", in); err == nil {
 		t.Fatal("credential-like content was accepted")
+	}
+	in = domain.CreateNoteInput{Kind: "checkpoint", Title: "Contradictory provenance", Summary: "The team selected this direction.", LedBy: "joint", DirectionBasis: "autonomous_agent_judgment"}
+	if _, _, err = svc.CreateNote(ctx, p, project.ID, "bad-provenance", in); err == nil || !strings.Contains(err.Error(), "incompatible") {
+		t.Fatalf("incoherent lead/basis pairing was accepted: %v", err)
 	}
 }
 
