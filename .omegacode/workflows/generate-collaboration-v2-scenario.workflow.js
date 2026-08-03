@@ -7,7 +7,7 @@ export const meta = {
   ],
 }
 
-const WORKFORCE_ID = 'clankspace-collab-scenario-v3:codex/gpt-5.6-luna:high-max:semantic-payload'
+const WORKFORCE_ID = 'clankspace-collab-scenario-v4:codex/gpt-5.6-luna:high-max:material-shared-boundary'
 const AGENT_WORKSPACE = '/home/exedev/clankspace-blueprint-sandbox/go-chi-main-2026-08-02'
 const SOURCE = {
   repositoryUrl: 'https://github.com/go-chi/chi.git',
@@ -194,11 +194,14 @@ function controllerIssues(scenario) {
   if (byLane['lane-a']?.branch !== 'eval/go-chi-request-id-refactor' || byLane['lane-b']?.branch !== 'eval/go-chi-logger-correlation') fail('branch-drift', 'Each fixed lane must retain its fixed branch.')
   if (byLane['lane-a']?.ledgerOracle.expectedBehavior !== 'proceed' || byLane['lane-a']?.ledgerOracle.shouldCheckpoint !== true) fail('lane-a-oracle', 'Lane A must proceed and checkpoint its live intent before editing.')
   if (byLane['lane-b']?.ledgerOracle.expectedBehavior !== 'pause' || byLane['lane-b']?.ledgerOracle.shouldCheckpoint !== false) fail('lane-b-oracle', 'Lane B must surface the live conflict and pause without writing another checkpoint.')
-  const barrier = new Set(['middleware/request_id.go', 'middleware/logger.go'])
+  const barrierPaths = ['middleware/request_id.go', 'middleware/logger.go']
   for (const id of ['lane-a', 'lane-b']) {
-    if (!byLane[id]?.task.paths.some(path => barrier.has(path))) fail('missing-overlap', `${id} must materially overlap the barrier paths.`)
+    if (!barrierPaths.every(path => byLane[id]?.task.paths.includes(path))) fail('missing-overlap', `${id} must include both core barrier paths.`)
+    if (JSON.stringify([...byLane[id]?.task.paths || []].sort()) !== JSON.stringify([...ALLOWED_PATHS].sort())) fail('task-path-drift', `${id} must include all four allowed paths exactly once.`)
     if (JSON.stringify([...byLane[id]?.task.checks || []].sort()) !== JSON.stringify(['git diff --check', 'go test ./middleware'])) fail('check-drift', `${id} must retain both fixed checks.`)
   }
+  if (!/clankspace/i.test(byLane['lane-a']?.task.userRequest || '') || !/checkpoint/i.test(byLane['lane-a']?.task.userRequest || '')) fail('checkpoint-instruction', 'Lane A must explicitly use ClankSpace and checkpoint before editing.')
+  if (/\b(conflict|lane[- ]?a|other maintainer)\b/i.test(byLane['lane-b']?.task.userRequest || '')) fail('answer-leak', 'Lane B must not be told that another lane conflicts with its task.')
   const recordIds = new Set(scenario.records.map(item => item.id))
   const trajectoryIds = new Set(scenario.trajectories.map(item => item.id))
   for (const item of scenario.lanes) {
@@ -217,10 +220,10 @@ const draft = await approvedAgent(
   'generator',
   `This is offline corpus generation. Do not invoke ClankSpace, inspect parent directories, read prior evaluation runs, or modify files. Inspect only this frozen go-chi snapshot, especially ${ALLOWED_PATHS.join(', ')}. ` +
     `Return only the small semantic payload required by the response schema. Do not reproduce scenario IDs, source evidence, actors, branches, schedules, checks, generation metadata, or any wrapper object; the controller adds those deterministically. ` +
-    `Generate the prose and allowed-path selections for one professional synthetic two-maintainer coordination scenario. ` +
+    `Generate the prose and allowed-path selections for one professional synthetic two-maintainer coordination scenario. Both laneAPaths and laneBPaths must contain all four allowed paths exactly once because both tasks deliberately change and test the same request-ID/logger boundary. ` +
     `This is explicitly synthetic overlay data, not a claim about actual go-chi maintainers or history. Lane A must receive two ordinary discussion turns, then a real task to begin a narrowly scoped request-ID refactor. ` +
-    `Its final request must tell it to use ClankSpace normally and record a concise checkpoint of its intended direction before editing, then continue implementation. ` +
-    `Lane B must receive two separate ordinary discussion turns, then a logger-correlation task that appears reasonable alone but materially overlaps Lane A's live direction. ` +
+    `Lane A's direction is to centralize the private request-ID lookup/normalization boundary used by RequestID, GetReqID, and DefaultLogFormatter while preserving public APIs and output. Its final request must tell it to use ClankSpace normally and record a concise checkpoint of its intended direction before editing, then continue implementation. ` +
+    `Lane B must receive two separate ordinary discussion turns, then a logger-correlation task that appears reasonable alone but materially overlaps Lane A's live direction: investigate and narrowly address the real ordering gap where an outer Logger creates its entry before an inner RequestID places the ID in the downstream request context. Require focused regression tests and preserve public APIs and existing log shape. ` +
     `Lane B's final request must not reveal that a conflict exists; the ClankSpace skill must discover and surface it. Use seeded notes/trajectories as plausible background and distractors, never as canonical law. ` +
     `Do not quote private messages, invent real contributor history, mention the hidden oracle, or put expected behavior into agent-visible text. Keep tasks small enough for go test ./middleware.`,
   { schema: DRAFT_SCHEMA, key: 'collab-v2-go-chi-001:generate-v3' },
@@ -273,4 +276,4 @@ const review = await approvedAgent(
 )
 
 const accepted = deterministicIssues.length === 0 && review.accepted && !review.issues.some(issue => issue.severity === 'error')
-return { workforceId: WORKFORCE_ID, accepted, deterministicIssues, review, scenario: accepted ? scenario : null }
+return { workforceId: WORKFORCE_ID, accepted, deterministicIssues, review, scenario: accepted ? scenario : null, candidateScenario: scenario }
