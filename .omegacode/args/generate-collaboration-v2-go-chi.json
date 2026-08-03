@@ -1,6 +1,6 @@
 {
-  "approvedWorkforce": "clankspace-collab-scenario-v1:codex/gpt-5.6-luna:high-max:go-chi-frozen-snapshot",
-  "agentWorkspace": "/home/exedev/clankspace-evals/snapshots/collaboration/go-chi-main-2026-08-02",
+  "approvedWorkforce": "clankspace-collab-scenario-v2:codex/gpt-5.6-luna:high-max:neutral-go-chi-snapshot",
+  "agentWorkspace": "/home/exedev/clankspace-blueprint-sandbox/go-chi-main-2026-08-02",
   "sourceCommit": "8b258c7bb28f97a5f2a856ff7ef962578fec9215",
   "snapshotHead": "a007c65e6fb2b3b34f18f216a31fd22a8fb3c446",
   "bundleHash": "e2bbbef382b7bb08e10e74ce36844daac0fa1cd4b6ab3b7b076daf9002c3fb05"
