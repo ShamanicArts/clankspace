@@ -270,15 +270,40 @@ func buildWarnings(in domain.BriefInput, trajectories []domain.Trajectory, notes
 			reason = "related terms: " + strings.Join(shared, ", ")
 		}
 		related := relatedNotes(notes, tr, shared)
+		risk := executionRisk(pathReason, tr)
+		summary := "An active trajectory matched by path or terms. This is not a conflict determination; compare semantic direction and separately assess whether a distinct concurrent objective would collide."
+		options := []string{"compare", "continue-if-compatible-or-same-objective", "pause-if-incompatible-or-distinct-collision-prone"}
+		if risk == "live-interactive-overlap" {
+			summary = "A currently open interactive run has an active path-overlapping trajectory. This is a live collision candidate, not a conflict determination; compare objectives before either run edits the shared boundary."
+			options = []string{"compare", "continue-if-same-objective", "pause-if-distinct-concurrent-objective"}
+		}
 		out = append(out, domain.CoordinationWarning{
-			Kind:    "possible-overlap",
-			Summary: "An active trajectory matched by path or terms. This is not a conflict determination; compare semantic direction and separately assess whether a distinct concurrent objective would collide.",
-			Reason:  reason, Trajectory: tr, RelatedNotes: related,
-			Options: []string{"compare", "continue-if-compatible-or-same-objective", "pause-if-incompatible-or-distinct-collision-prone"},
+			Kind:          "possible-overlap",
+			Summary:       summary,
+			Reason:        reason,
+			ExecutionRisk: risk,
+			Trajectory:    tr,
+			RelatedNotes:  related,
+			Options:       options,
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Trajectory.UpdatedAt.After(out[j].Trajectory.UpdatedAt) })
 	return out
+}
+
+func executionRisk(pathReason string, tr *domain.Trajectory) string {
+	if pathReason == "" {
+		return "related-terms"
+	}
+	if tr.Run != nil && tr.Run.EndedAt == nil {
+		switch tr.Run.RunType {
+		case "interactive":
+			return "live-interactive-overlap"
+		case "automation":
+			return "active-automation-overlap"
+		}
+	}
+	return "path-scope-overlap"
 }
 
 func terms(s string) map[string]bool {

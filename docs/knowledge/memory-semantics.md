@@ -14,6 +14,8 @@ ClankSpace stores contemporaneous claims about project intent, decisions, ration
 
 Agents evaluate retrieved work on two axes. Direction may be aligned, adjacent, ambiguous, or incompatible; execution may independently be safe or collision-prone. Shared files or different principals do not alone prove a collision. When two runs have distinct live implementation objectives over the same boundary, the later entrant pauses while an incumbent that already published its trajectory continues unless new evidence creates a genuine contradiction. Exact or near-identical aligned context stays advisory and does not force an interruption.
 
+Warnings expose deterministic execution provenance separately as `related-terms`, `active-automation-overlap`, `path-scope-overlap`, or `live-interactive-overlap`. Only the last value proves that another interactive run is currently open over matching paths; it still does not prove semantic incompatibility.
+
 ## Precedence
 
 1. Current explicit human and system instructions.

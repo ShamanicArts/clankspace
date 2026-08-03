@@ -252,6 +252,9 @@ func TestSeedScenarioCreatesIsolatedProjectAndAliasMap(t *testing.T) {
 	if len(brief.Trajectories) != 1 || len(brief.Warnings) != 1 {
 		t.Fatalf("active trajectory was not preserved: trajectories=%d warnings=%d", len(brief.Trajectories), len(brief.Warnings))
 	}
+	if brief.Warnings[0].ExecutionRisk != "active-automation-overlap" {
+		t.Fatalf("seeded automation trajectory received wrong execution risk: %#v", brief.Warnings[0])
+	}
 	prepared.RepositoryHead = "deadbeef"
 	if err = harness.TrackPrepared(t.Context(), prepared, harness.SeedOptions{
 		URL: server.URL, AdminToken: "admin-token", ControlProject: "synthetic-lab", ScenarioHash: hash,
