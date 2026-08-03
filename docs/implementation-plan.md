@@ -128,6 +128,6 @@ Measure time, token, tool-call, interruption, false-pause, and useful-conflict d
 
 ### D7 — Hosting
 
-**Decision:** Run permanent production as one Railway service with one persistent SQLite volume behind `clank.shamanicarts.dev`. Use exe.dev for disposable evaluation services, model runners, traces, judges, and Operations. The existing `clankspace-prod` VM is only the validated migration source.
+**Decision:** Run permanent production as one Railway service with one persistent SQLite volume behind `clank.shamanicarts.dev`. Treat exe.dev as a general-purpose agent-compute plane; ClankSpace uses an isolated allocation for disposable evaluation services, model runners, traces, judges, and Operations without claiming the platform for itself. The existing `clankspace-prod` VM is only the validated migration source.
 
-**Rationale:** exe.dev is excellent for agent-driven experiments and replaceable test infrastructure, but shared collaboration state needs a boring, durable application host with a persistent volume, stable domain, managed TLS, and scheduled backups. Railway already matches the repository's container shape while the stable domain keeps the client contract provider-neutral.
+**Rationale:** exe.dev is excellent for many kinds of agent-driven experiments, automations, and replaceable compute, but shared collaboration state needs a boring, durable application host with a persistent volume, stable domain, managed TLS, and scheduled backups. Railway already matches the repository's container shape while the stable domain keeps the client contract provider-neutral.

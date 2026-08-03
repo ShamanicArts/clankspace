@@ -9,7 +9,7 @@ updated: 2026-08-03
 
 # Railway permanent production
 
-Railway is the permanent target for the trusted ClankSpace service. exe.dev remains the evaluation and runner control plane; its current `clankspace-prod` VM is only the validated migration source. The stable client contract is `https://clank.shamanicarts.dev`, not a provider hostname.
+Railway is the permanent target for the trusted ClankSpace service. exe.dev remains the separate, general-purpose agent-compute plane; ClankSpace eval and runner services are only one workload there, and its current `clankspace-prod` VM is only the validated migration source. The stable client contract is `https://clank.shamanicarts.dev`, not a provider hostname.
 
 ## Shape
 

@@ -66,9 +66,9 @@ The first product must surface:
 
 ### G. Portable service with separated production and evaluation
 
-**Pick:** Permanent production is one Railway service and one persistent SQLite volume behind `clank.shamanicarts.dev`. exe.dev hosts disposable evaluation services, model runners, traces, judges, and Operations. The current `clankspace-prod` VM is a temporary validated migration source.
+**Pick:** Permanent production is one Railway service and one persistent SQLite volume behind `clank.shamanicarts.dev`. exe.dev is a reusable agent-compute plane on which ClankSpace hosts isolated disposable evaluation services, model runners, traces, judges, and Operations alongside future unrelated agent services. The current `clankspace-prod` VM is a temporary validated migration source.
 
-**Why separate them:** exe.dev is well suited to agent-driven experiments and replaceable runners. Shared collaboration state needs a boring persistent application host, stable provider-independent domain, managed TLS, scheduled backups, and a deliberate recovery path. Hosting remains operational rather than architectural: clients resolve a URL/project pair and the server stays portable to any single-instance host.
+**Why separate them:** exe.dev is well suited to reusable agent-driven experiments, automations, and replaceable workers. Shared collaboration state needs a boring persistent application host, stable provider-independent domain, managed TLS, scheduled backups, and a deliberate recovery path. Hosting remains operational rather than architectural: clients resolve a URL/project pair and the server stays portable to any single-instance host.
 
 ## 4. Domain hierarchy
 
