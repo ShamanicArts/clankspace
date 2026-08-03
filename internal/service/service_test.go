@@ -67,10 +67,10 @@ func TestOriginalCoordinationScenario(t *testing.T) {
 	if warning.Trajectory == nil || warning.Trajectory.ID != trajectory.ID {
 		t.Fatalf("warning did not identify the intersecting trajectory: %#v", warning)
 	}
-	if !strings.Contains(warning.Summary, "concurrent edits would collide") {
+	if !strings.Contains(warning.Summary, "distinct concurrent objective would collide") {
 		t.Fatalf("warning omitted the execution-collision axis: %#v", warning)
 	}
-	if strings.Join(warning.Options, ",") != "compare,continue-if-compatible-and-independent,pause-if-incompatible-or-collision-prone" {
+	if strings.Join(warning.Options, ",") != "compare,continue-if-compatible-or-same-objective,pause-if-incompatible-or-distinct-collision-prone" {
 		t.Fatalf("unexpected options: %#v", warning.Options)
 	}
 	if len(warning.RelatedNotes) == 0 || warning.RelatedNotes[0].Run == nil {
