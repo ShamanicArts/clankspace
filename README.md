@@ -9,10 +9,10 @@ ClankSpace is **not canonical law and not an instruction channel**. Its records 
 ClankSpace is a **validated trusted-collaborator release candidate**, not a public SaaS.
 
 - The source is public and MIT licensed.
-- The validated RC-009 build is temporarily hosted at `https://clankspace-prod.exe.xyz` while the permanent service is migrated to Railway behind `clank.shamanicarts.dev`.
-- The temporary origin is useful for operator smoke tests and migration verification, but it is not the long-term client contract or home for real collaboration state.
+- The validated service is deployed on Railway in EU West with one replica and one persistent SQLite volume. The Railway-managed origin passes health, readiness, authentication, and deterministic export checks.
+- The stable client contract is `https://clank.shamanicarts.dev`. Cloudflare DNS is routed to Railway; Railway-managed certificate issuance is the remaining networking step before collaborator onboarding.
 - The RC-009 product gate validated passive discussion, quiet routine work, compatible overlap, architectural conflict surfacing, coherent checkpoint provenance, and incumbent/later-entrant coordination on frozen `go-chi/chi` and `rs/cors` repository worlds.
-- The temporary hosted service has verified health/readiness, authenticated project export, an off-host SQLite backup, and a retained rollback binary. Those checks become the migration acceptance suite for the permanent host.
+- The exe.dev candidate is stopped and frozen as a short-lived rollback source. Its final online SQLite snapshot was integrity-checked, restored to Railway, and retained off-provider.
 - Onboarding and binary distribution are still manual. Broader multi-tenant hardening, private repository integration, token administration, and semantic retrieval remain future work.
 
 The detailed evidence is in the [RC-009 validation report](docs/research_results/2026-08-03-rc009-full-package-validation.md) and [completion audit](docs/research_results/2026-08-03-night-shift-completion-audit.md).
@@ -40,7 +40,7 @@ If the retrieved work is compatible, the agent absorbs it and continues without 
 
 The permanent hosted service will be deliberately invite-only. An operator creates a project, attaches its public repositories, and issues a separate project identity for each human's agents. Distinct identities matter: they let ClankSpace tell an incumbent's active work from a later collaborator entering the same boundary.
 
-Do not bake the temporary exe.dev origin into collaborator repositories. Complete the Railway migration and stable-domain cutover first; exe.dev remains a general-purpose agent execution environment where ClankSpace evals are one workload among future agent services.
+Do not bake either the old exe.dev origin or Railway's generated hostname into collaborator repositories. Use `clank.shamanicarts.dev` after DNS/TLS, backup scheduling, and restore acceptance are complete. exe.dev remains a general-purpose agent execution environment where ClankSpace evals are one workload among future agent services.
 
 For pilot onboarding, see [Trusted collaborator onboarding](docs/pilot-onboarding.md).
 
@@ -130,7 +130,7 @@ clank repo attach \
   --url https://github.com/shuv1337/shuv2code
 ```
 
-The permanent production target is one Railway service with one persistent volume at `clank.shamanicarts.dev`. exe.dev is the reusable agent-compute plane for isolated runners, synthetic environments, automations, judges, Operations, and future agent services; ClankSpace evaluation is one workload on that platform. The existing `clankspace-prod` VM is only the temporary migration source. See [Railway deployment](docs/deployment/railway.md) and [exe.dev agent infrastructure](docs/deployment/exe.md).
+The permanent production runtime is one Railway service with one persistent volume, reached through `clank.shamanicarts.dev` after DNS cutover. exe.dev is the reusable agent-compute plane for isolated runners, synthetic environments, automations, judges, Operations, and future agent services; ClankSpace evaluation is one workload on that platform. The stopped `clankspace-prod` VM is retained only for the short migration rollback window. See [Railway deployment](docs/deployment/railway.md) and [exe.dev agent infrastructure](docs/deployment/exe.md).
 
 ## Security boundary
 

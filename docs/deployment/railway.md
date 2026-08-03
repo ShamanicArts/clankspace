@@ -11,6 +11,10 @@ updated: 2026-08-03
 
 Railway is the permanent target for the trusted ClankSpace service. exe.dev remains the separate, general-purpose agent-compute plane; ClankSpace eval and runner services are only one workload there, and its current `clankspace-prod` VM is only the validated migration source. The stable client contract is `https://clank.shamanicarts.dev`, not a provider hostname.
 
+## Live deployment status
+
+The human-owned Railway project is deployed in EU West with one service, one replica, and one persistent `/data` volume. The fresh, integrity-checked exe.dev snapshot is restored; the Railway-managed origin passes health, readiness, authentication, and deterministic export checks. The exe.dev source is stopped and frozen for rollback. Cloudflare publishes the DNS-only CNAME and Railway ownership TXT records; managed certificate issuance is pending. Valid stable-domain TLS, scheduled backups, and a disposable restore rehearsal remain before collaborator onboarding.
+
 ## Shape
 
 Deploy one container and attach one persistent volume at `/data`. Never run two replicas against the same SQLite volume. The container respects Railway's `PORT`; `/readyz` verifies database reachability.

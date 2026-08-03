@@ -10,7 +10,7 @@ updated: 2026-08-03
 
 ## Overview
 
-The smallest trustworthy ambient coordination layer is implemented and validated. A hosted candidate has passed deployment, backup, restore, and rollback checks on exe.dev. The active milestone is moving that exact service to durable production infrastructure before onboarding Shuv and other real collaborators. Research remains in service of normal product use.
+The smallest trustworthy ambient coordination layer is implemented and validated. The candidate has been migrated to a durable Railway service with its database intact. The active milestone is completing stable DNS and recovery acceptance before onboarding Shuv and other real collaborators. Research remains in service of normal product use.
 
 ## Architecture principles
 
@@ -61,14 +61,17 @@ That exercise validated the application and the migration mechanics. It did not 
 
 ## Phase 4: permanent Railway production migration — active
 
-- [ ] Create the human-owned Railway project and single service from this repository.
-- [ ] Attach one persistent volume at `/data`; keep the service at one replica for SQLite.
-- [ ] Take a fresh online backup of the exe.dev candidate, verify it, and copy it off-provider.
-- [ ] Restore the snapshot into Railway and verify record counts plus authenticated export.
-- [ ] Configure secrets, health checks, and `clank.shamanicarts.dev` with managed TLS.
+- [x] Create the human-owned Railway project and single service from this repository.
+- [x] Attach one persistent volume at `/data`; keep the service at one replica for SQLite.
+- [x] Take a fresh online backup of the exe.dev candidate, verify it, and copy it off-provider.
+- [x] Restore the snapshot into Railway and verify record counts plus authenticated export.
+- [x] Configure secrets and health checks; register `clank.shamanicarts.dev` with Railway.
+- [x] Add the Cloudflare CNAME and Railway ownership TXT records.
+- [ ] Complete Railway-managed TLS and repeat acceptance through the stable domain.
 - [ ] Enable scheduled Railway volume backups and retain provider-neutral online SQLite backups.
-- [ ] Run local, managed-origin, and stable-domain smoke checks plus a restore rehearsal.
-- [ ] Retain the exe.dev candidate only for a short rollback window, then retire it; keep exe.dev for evals and runners.
+- [ ] Complete the stable-domain smoke checks and a disposable restore rehearsal; local and managed-origin checks pass.
+- [x] Stop and freeze the exe.dev candidate for the rollback window; keep exe.dev for evals and runners.
+- [ ] Retire the frozen exe.dev candidate after the rollback window.
 
 ## Phase 5: trusted collaborator onboarding and packaging — next
 
