@@ -1,7 +1,7 @@
 ---
 type: state
 status: active
-summary: exe.dev production is live behind the stable domain; disposable eval infrastructure is archived and removed.
+summary: Lean exe.dev production and daily off-provider backups are live; disposable eval infrastructure is archived and removed.
 note_created: 2026-08-02
 updated: 2026-08-03
 ---
@@ -14,7 +14,7 @@ Operate the trusted pilot from the smallest useful topology: one exe.dev product
 
 ## Active phase
 
-Production runs from public `main` on `clankspace-prod.exe.xyz`, published through `clank.shamanicarts.dev`. The final Railway database was downloaded quiescently, passed `PRAGMA integrity_check`, and was restored with the matching production bootstrap credential. Strict-HTTPS health/readiness, CLI context, and deterministic authenticated export pass; the project contains the expected four notes. Railway has no active deployment. The runner and evaluation VM evidence was checksum-verified locally before both disposable VMs were deleted.
+Production runs from public `main` on `clankspace-prod.exe.xyz`, published through `clank.shamanicarts.dev`. The final Railway database was downloaded quiescently, passed `PRAGMA integrity_check`, and was restored with the matching production bootstrap credential. Strict-HTTPS health/readiness, CLI context, and deterministic authenticated export pass; the project contains the expected four notes. A persistent daily local timer performs SQLite's online backup remotely, pulls the completed snapshot off-provider, verifies integrity, and writes a checksum manifest; its first live run passed. Railway has no active deployment. The runner and evaluation VM evidence was checksum-verified locally before both disposable VMs were deleted.
 
 RC-009 exercised three frozen single-agent worlds and one event-gated two-maintainer world on MIT repository snapshots:
 
@@ -47,11 +47,11 @@ The operations journal and raw workflow evidence are preserved in the local runn
 
 ## Production hosting status
 
-RC-009 established that the product and portable deployment artifact are viable. A complete round-trip migration through Railway proved the provider boundary; production now runs on exe.dev while the trusted pilot is small. Cloudflare points the stable hostname to exe.dev and Railway's old ownership record/domain claim has been removed. The remaining operational gate is scheduled off-provider backup plus a periodic disposable restore rehearsal. The next product uncertainty is real collaborator behavior.
+RC-009 established that the product and portable deployment artifact are viable. A complete round-trip migration through Railway proved the provider boundary; production now runs on exe.dev while the trusted pilot is small. Cloudflare points the stable hostname to exe.dev and Railway's old ownership record/domain claim has been removed. Daily off-provider backup is active and the round trip exercised a full restore. The next product uncertainty is real collaborator behavior.
 
 ## Decisions pending after RC-009
 
-- The off-provider backup schedule and restore-drill cadence for the exe.dev pilot.
+- The periodic restore-drill cadence for the exe.dev pilot.
 - When real usage justifies moving back to Railway or another managed persistent-volume host.
 - Do not issue the exe.dev origin as a supported collaborator pointer; use `clank.shamanicarts.dev`.
 - Which binary targets and installer surface to support for `v0.1.0-pilot`.

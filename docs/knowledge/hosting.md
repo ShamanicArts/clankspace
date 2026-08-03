@@ -41,6 +41,7 @@ The service runs as the unprivileged `clankspace` user. systemd owns startup and
 ## Recovery
 
 - Schedule SQLite online backups while the service remains live, run `PRAGMA integrity_check`, and copy completed snapshots off-provider.
+- The current operator-side persistent timer performs that flow daily and records a SHA-256 manifest; its initial live run passed.
 - Export projects deterministically for project-level portability.
 - Before any cutover, verify health, readiness, authentication, project counts, and an authenticated export on the target host.
 - Rehearse a disposable restore before onboarding collaborators and periodically thereafter.

@@ -81,7 +81,8 @@ That exercise validated the application, isolation boundaries, and migration mec
 - [ ] Provision the real `shuv2code` project with distinct Shuv and Shamanic project identities.
 - [ ] Open the repository integration PR containing the pointer, skill, and lean agent instruction.
 - [ ] Run one real cross-maintainer canary and inspect the resulting append log with both humans.
-- [ ] Schedule the proven online backup and external health checks.
+- [x] Schedule and live-test the daily off-provider SQLite backup.
+- [ ] Schedule external health checks.
 
 ## Phase 6: matched controls and retrieval iteration — planned
 
