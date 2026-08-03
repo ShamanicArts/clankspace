@@ -263,9 +263,9 @@ func buildWarnings(in domain.BriefInput, trajectories []domain.Trajectory, notes
 		related := relatedNotes(notes, tr, shared)
 		out = append(out, domain.CoordinationWarning{
 			Kind:    "possible-overlap",
-			Summary: "An active trajectory matched by path or terms. This is a retrieval hint, not a conflict determination; compare its objective and rationale with the current human direction.",
+			Summary: "An active trajectory matched by path or terms. This is not a conflict determination; compare semantic direction and separately assess whether concurrent edits would collide.",
 			Reason:  reason, Trajectory: tr, RelatedNotes: related,
-			Options: []string{"compare", "continue-if-compatible", "pause-if-incompatible"},
+			Options: []string{"compare", "continue-if-compatible-and-independent", "pause-if-incompatible-or-collision-prone"},
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Trajectory.UpdatedAt.After(out[j].Trajectory.UpdatedAt) })
