@@ -211,11 +211,13 @@ func collaborationLanePlan(world collaborationWorld, options CollaborationRollou
 
 func collaborationCodexArgs(bin string, lane PreparedLane, worktree, threadID, prompt, responsePath string) []string {
 	effort := fmt.Sprintf("model_reasoning_effort=%q", lane.Reasoning)
-	common := []string{bin, "exec", "--ignore-user-config", "--model", lane.Model, "--config", effort, "--config", `sandbox_mode="workspace-write"`, "--config", "sandbox_workspace_write.network_access=true", "--sandbox", "workspace-write", "--json", "--color", "never", "--output-last-message", responsePath}
 	if threadID == "" {
-		return append(common, "--cd", worktree, prompt)
+		return []string{bin, "exec", "--ignore-user-config", "--model", lane.Model, "--config", effort, "--config", `sandbox_mode="workspace-write"`, "--config", "sandbox_workspace_write.network_access=true", "--sandbox", "workspace-write", "--json", "--color", "never", "--output-last-message", responsePath, "--cd", worktree, prompt}
 	}
-	return []string{bin, "exec", "resume", "--ignore-user-config", "--model", lane.Model, "--config", effort, "--config", `sandbox_mode="workspace-write"`, "--config", "sandbox_workspace_write.network_access=true", "--json", "--color", "never", "--output-last-message", responsePath, threadID, prompt}
+	// `codex exec resume` has a narrower flag surface than a fresh `exec` and
+	// rejects `--color` and `--sandbox`. Preserve the effective sandbox through
+	// config overrides, matching the established single-lane rollout path.
+	return []string{bin, "exec", "resume", "--ignore-user-config", "--model", lane.Model, "--config", effort, "--config", `sandbox_mode="workspace-write"`, "--config", "sandbox_workspace_write.network_access=true", "--json", "--output-last-message", responsePath, threadID, prompt}
 }
 
 // ReadCollaborationPrepared loads the report-safe v2 preparation artifact.
