@@ -40,7 +40,7 @@ The service uses one process and one SQLite writer. Never run multiple replicas 
 
 ## Recovery
 
-- Enable scheduled Railway volume backups for fast platform recovery.
+- On Railway Pro, enable scheduled volume backups for fast platform recovery. On Trial/Hobby, an external online-backup schedule is mandatory before collaborator onboarding because native volume backups/PITR are unavailable.
 - Schedule SQLite online backups while the service remains live, run `PRAGMA integrity_check`, and copy completed snapshots off-provider.
 - Export projects deterministically for project-level portability.
 - Before cutover, verify health, readiness, authentication, project counts, and an authenticated export on Railway.

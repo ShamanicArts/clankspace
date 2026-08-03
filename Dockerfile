@@ -6,10 +6,14 @@ COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/clank ./cmd/clank
 
 FROM alpine:3.23
-RUN addgroup -S clank && adduser -S -G clank clank && mkdir /data && chown clank:clank /data
+RUN apk add --no-cache su-exec \
+    && addgroup -S clank \
+    && adduser -S -G clank clank \
+    && mkdir /data \
+    && chown clank:clank /data
 COPY --from=build /out/clank /usr/local/bin/clank
-USER clank
+COPY deploy/railway/entrypoint.sh /usr/local/bin/clank-entrypoint
 ENV CLANKSPACE_DATA_DIR=/data
 EXPOSE 8080
-ENTRYPOINT ["clank"]
-CMD ["serve"]
+ENTRYPOINT ["clank-entrypoint"]
+CMD ["clank", "serve"]
