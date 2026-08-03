@@ -58,13 +58,16 @@ func TestOriginalCoordinationScenario(t *testing.T) {
 		t.Fatalf("brief must explicitly be advisory: %q", brief.Notice)
 	}
 	if len(brief.Warnings) != 1 {
-		t.Fatalf("wanted one possible divergence warning, got %#v", brief.Warnings)
+		t.Fatalf("wanted one possible overlap warning, got %#v", brief.Warnings)
 	}
 	warning := brief.Warnings[0]
+	if warning.Kind != "possible-overlap" || !strings.Contains(warning.Summary, "not a conflict determination") {
+		t.Fatalf("warning presented a heuristic match as a conflict: %#v", warning)
+	}
 	if warning.Trajectory == nil || warning.Trajectory.ID != trajectory.ID {
 		t.Fatalf("warning did not identify the intersecting trajectory: %#v", warning)
 	}
-	if strings.Join(warning.Options, ",") != "continue,inspect,realign" {
+	if strings.Join(warning.Options, ",") != "compare,continue-if-compatible,pause-if-incompatible" {
 		t.Fatalf("unexpected options: %#v", warning.Options)
 	}
 	if len(warning.RelatedNotes) == 0 || warning.RelatedNotes[0].Run == nil {

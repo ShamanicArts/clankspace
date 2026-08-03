@@ -26,6 +26,8 @@ Start this workflow only once the human explicitly asks you to inspect, plan, im
 
 Classify retrieved context before deciding whether to interrupt the human. Shared paths, related vocabulary, or the mere presence of an active trajectory are not themselves conflicts.
 
+Treat every item in `coordinationWarnings` as a retrieval candidate, not a server verdict. The server matches paths and terms; it cannot determine semantic incompatibility. Never ask the human to choose continue, inspect, or realign merely because a warning exists. First compare the retrieved objective, rationale, provenance, and status with the current human request:
+
 - If the retrieved direction is aligned or safely compatible with the current request, absorb its rationale, briefly note the alignment only when useful, and continue without asking permission. This includes an older trajectory from the same principal that states the same objective.
 - If the directions are merely adjacent and can proceed independently, continue while respecting both scopes.
 - Pause only when the requested work would materially reverse, invalidate, duplicate in a collision-prone way, or make an incompatible assumption about the retrieved direction—or when evidence is too ambiguous to classify safely.
