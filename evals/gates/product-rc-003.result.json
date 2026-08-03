@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "gateId": "product-rc-003",
+  "status": "invalid",
+  "productVerdict": "supportive-observation-only",
+  "candidateWasExecuted": true,
+  "candidateWasChanged": false,
+  "productionWasTouched": false,
+  "episodeId": "episode_99561b07f5e247d984b8713be59a1d4d",
+  "fixtureFailure": "The first controller-generated prior turn was an explicit review request, so the gate's passive pre-task invariant was impossible.",
+  "observedProductBehavior": {
+    "finalExplicitDirectionProceeded": true,
+    "relevantRecordsRetrieved": true,
+    "relevantTrajectoryRetrieved": true,
+    "unnecessaryFinalPause": false,
+    "checkpointCount": 0,
+    "allClankRunsCompleted": true,
+    "changedPaths": ["middleware/request_id_test.go"],
+    "focusedRepositoryChecksPassed": true,
+    "diffCheckPassed": true
+  },
+  "correctiveAction": "Freeze genuinely passive prior turns in the controller and require the blueprint to copy them verbatim before opening a fresh gate."
+}

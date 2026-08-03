@@ -89,7 +89,7 @@ go test ./...
 go build ./cmd/clank
 ```
 
-The acceptance test encodes the original collaboration problem: one agent is standardizing permissions for provider-neutral cross-session control while another is asked to remove the permission behavior. The second agent receives a possible-divergence warning inside its agent workflow with attributed rationale and the choices `continue`, `inspect`, or `realign`, never an instruction to obey the older record. The dashboard simply exposes the context that made that exchange possible.
+The acceptance test encodes the original collaboration problem: one agent is standardizing permissions for provider-neutral cross-session control while another is asked to remove the permission behavior. The second agent receives a possible-overlap candidate with attributed rationale. ClankSpace says the match is not itself a conflict; the agent compares the incompatible objectives and only then asks whether to continue, inspect, or realign. The dashboard simply exposes the context that made that exchange possible.
 
 ## License
 
