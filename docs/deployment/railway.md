@@ -1,19 +1,19 @@
 ---
 type: knowledge
-summary: Permanent ClankSpace production target and exe.dev-to-Railway migration runbook.
+summary: Validated future migration target and provider-portability runbook.
 keywords: [railway, deployment, volume, sqlite, backup, dns, migration]
 related: [../knowledge/hosting.md, exe.md]
 note_created: 2026-08-02
 updated: 2026-08-03
 ---
 
-# Railway permanent production
+# Railway migration target
 
-Railway is the permanent target for the trusted ClankSpace service. exe.dev remains the separate, general-purpose agent-compute plane; ClankSpace eval and runner services are only one workload there, and its current `clankspace-prod` VM is only the validated migration source. The stable client contract is `https://clank.shamanicarts.dev`, not a provider hostname.
+Railway is a validated future target when ClankSpace needs stronger managed recovery or operational guarantees. Current production runs on exe.dev. The stable client contract is `https://clank.shamanicarts.dev`, never a provider hostname.
 
-## Live deployment status
+## Validated deployment status
 
-The human-owned Railway project is deployed in EU West with one service, one replica, and one persistent `/data` volume. The fresh, integrity-checked exe.dev snapshot is restored; strict-HTTPS health, readiness, browser, CLI, authentication, and deterministic export checks pass through `clank.shamanicarts.dev`. Cloudflare publishes the DNS-only CNAME and Railway ownership TXT records; Railway ownership verification and its managed certificate are active. The exe.dev source is stopped and frozen for rollback. Scheduled backups and a disposable restore rehearsal remain before collaborator onboarding.
+The human-owned Railway project, service, and `/data` volume completed deployment, restore, TLS, browser, CLI, authentication, and deterministic export acceptance. Its quiescent database was then exported and restored back to exe.dev. Railway now has no active deployment or custom-domain claim; its project and volume are retained temporarily as a dormant migration fallback.
 
 ## Shape
 

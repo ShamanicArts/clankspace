@@ -10,7 +10,7 @@ updated: 2026-08-03
 
 The permanent ClankSpace service will be an invite-only pilot at `https://clank.shamanicarts.dev`. There is no public signup. A workspace owner provisions the project and project identities; collaborators install the client, store one token locally, and work normally through their agents.
 
-Do not onboard a real collaborator or commit a hosted pointer until the Railway migration, stable-domain cutover, backup schedule, and restore check are complete. The existing exe.dev service is a validated migration source and evaluation fixture, not the production address collaborators should depend on.
+The provider-neutral pointer is `https://clank.shamanicarts.dev`; never commit the exe.dev origin. Production runs on exe.dev today, while Railway remains a validated migration target. Complete the recurring backup schedule and use distinct collaborator credentials before the first real canary.
 
 ## Identity model
 

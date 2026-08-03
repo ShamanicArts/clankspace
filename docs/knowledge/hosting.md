@@ -2,7 +2,7 @@
 type: knowledge
 keywords: [railway, exe.dev, hosting, domain, sqlite, backup, rollback, clank.shamanicarts.dev]
 related: [docs/design/spec.md, docs/deployment/railway.md, docs/deployment/exe.md]
-summary: Permanent Railway production, ClankSpace's allocation on the reusable exe.dev agent plane, and migration/recovery.
+summary: Current exe.dev pilot, disposable evaluation infrastructure, and the validated Railway migration path.
 last_verified: 2026-08-03
 note_created: 2026-08-02
 updated: 2026-08-03
@@ -12,42 +12,39 @@ updated: 2026-08-03
 
 ## Hosting boundary
 
-ClankSpace separates durable collaboration state from reusable agent compute. exe.dev is a broader execution platform for current and future agent services; the rows below describe only ClankSpace's isolated allocation on it.
+ClankSpace separates durable collaboration state from disposable evaluation compute. The stable domain and SQLite backup are the portable contract; provider VMs are replaceable.
 
 | Environment | Purpose | Data boundary |
 |---|---|---|
-| Railway at `clank.shamanicarts.dev` | Live permanent trusted-project service | Real collaboration state only; one persistent volume |
-| exe.dev `clankspace-eval` | ClankSpace's resettable candidate and synthetic-project service | Evaluation data only; isolated from other agent services |
-| exe.dev `luna-runner` | ClankSpace corpus generation, model rollouts, traces, judges, and Operations | Evaluation credentials only; no production credential |
-| exe.dev `clankspace-prod` | Stopped migration rollback source | Frozen through the Railway rollback window, then retired |
+| exe.dev `clankspace-prod` via `clank.shamanicarts.dev` | Live trusted-project pilot | Real collaboration state only; one SQLite writer |
+| Railway project and volume | Dormant migration fallback; no active deployment | Retained temporarily after the verified round trip |
+| Local runner/eval archives | Research evidence and reproducibility material | Checksummed; credentials excluded |
+| Reprovisioned eval/runner VMs | Active campaigns only | Synthetic data and fresh evaluation credentials only |
 
-The existing exe.dev origin proved that the build could be hosted, backed up, restored, and rolled back. It is stopped and must not receive new writes or collaborator traffic.
+The current exe.dev origin serves the Railway-restored database. Cloudflare publishes a DNS-only CNAME for `clank.shamanicarts.dev`, and exe.dev owns its managed certificate. Strict-HTTPS health/readiness, CLI context, and authenticated export pass. Bearer authentication remains mandatory and there is no public signup.
 
-The Railway-managed origin is healthy and serves the restored project data. Cloudflare publishes a DNS-only CNAME for `clank.shamanicarts.dev` plus Railway's ownership TXT record. Railway recognizes traffic routing and ownership as verified, and its managed certificate is valid. Strict-HTTPS health, readiness, browser, CLI, and authenticated export checks pass. Collaborator onboarding still waits for backup scheduling and restore acceptance. Bearer authentication remains mandatory for every project operation and there is no public signup.
+## Current runtime
 
-## Permanent runtime
-
-Railway runs the included container with one persistent volume:
+exe.dev runs the static binary under systemd:
 
 ```text
-one Railway service
-one replica
-/data/clankspace.db
+one VM
+one clank process
+/var/lib/clankspace/clankspace.db
 CLANKSPACE_BASE_URL=https://clank.shamanicarts.dev
 ```
 
 The service uses one process and one SQLite writer. Never run multiple replicas against the same database volume.
 
-The live project is human-owned, runs one replica in Railway's EU West region, and mounts its colocated volume at `/data`. The container prepares only the mount and SQLite files as root, then executes the service as the unprivileged `clank` user.
+The service runs as the unprivileged `clankspace` user. systemd owns startup and restart behavior; exe.dev terminates TLS and proxies the stable custom domain to port 8000.
 
 ## Recovery
 
-- On Railway Pro, enable scheduled volume backups for fast platform recovery. On Trial/Hobby, an external online-backup schedule is mandatory before collaborator onboarding because native volume backups/PITR are unavailable.
 - Schedule SQLite online backups while the service remains live, run `PRAGMA integrity_check`, and copy completed snapshots off-provider.
 - Export projects deterministically for project-level portability.
-- Before cutover, verify health, readiness, authentication, project counts, and an authenticated export on Railway.
+- Before any cutover, verify health, readiness, authentication, project counts, and an authenticated export on the target host.
 - Rehearse a disposable restore before onboarding collaborators and periodically thereafter.
-- Keep the exe.dev candidate and its prior binary only for the defined rollback window, then retire that VM.
+- Retain the prior binary and pre-migration snapshot for bounded rollback.
 
 Never copy the live database plus WAL files piecemeal or place the live data directory in a sync drive.
 
@@ -55,12 +52,12 @@ Never copy the live database plus WAL files piecemeal or place the live data dir
 
 ClankSpace remains one Go binary and one SQLite database. The stable domain prevents a future host move from changing repository pointers, project semantics, or the CLI/MCP protocol.
 
-## Migration sequence
+## Host migration sequence
 
-1. Take a fresh online backup on exe.dev, verify integrity and checksum, and keep an off-provider copy.
-2. Provision the Railway service, persistent `/data` volume, secrets, and one-replica policy.
-3. Restore the snapshot and compare project/record counts plus authenticated export.
-4. Verify `/healthz`, `/readyz`, the dashboard, CLI, and MCP against the managed Railway origin.
-5. Add `clank.shamanicarts.dev`, complete DNS/TLS, and repeat external checks through the stable domain.
-6. Enable scheduled platform and off-provider backups, rehearse restore, then onboard collaborators.
-7. After the rollback window, retire exe.dev `clankspace-prod`; retain or replace the isolated ClankSpace eval/runner allocation without constraining other agent services on the platform.
+1. Freeze writes and create a fresh SQLite online backup.
+2. Verify `PRAGMA integrity_check`, record a checksum, and retain an off-provider copy.
+3. Provision one target service, persistent local filesystem, and matching production bootstrap credential.
+4. Restore the snapshot and compare project/record counts plus authenticated export.
+5. Verify health, readiness, dashboard, CLI, and MCP against the provider origin.
+6. Repoint `clank.shamanicarts.dev`, claim managed TLS on the target, and repeat external checks.
+7. Remove the old runtime only after the target passes; retain a bounded rollback snapshot rather than two writers.

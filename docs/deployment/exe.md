@@ -1,6 +1,6 @@
 ---
 type: knowledge
-summary: ClankSpace workloads on the reusable exe.dev agent-compute plane plus the temporary Railway migration source.
+summary: Current small production deployment plus disposable, on-demand evaluation infrastructure on exe.dev.
 keywords: [exe.dev, agents, compute, deployment, sqlite, systemd, evaluation, runner, migration]
 related: [../knowledge/hosting.md, railway.md]
 note_created: 2026-08-02
@@ -11,23 +11,23 @@ updated: 2026-08-03
 
 ## Current status
 
-exe.dev is a reusable, general-purpose agent execution plane. ClankSpace currently uses it for disposable evaluation services, synthetic corpora, clean model sessions, traces, judges, scoring, and Operations; future projects may run their own isolated agent services, automations, browser/CLI workers, and evaluation workloads on the same platform.
+exe.dev is a reusable, general-purpose execution plane. ClankSpace currently uses one VM for its small trusted production pilot. Evaluation services, synthetic corpora, clean model sessions, traces, judges, scoring, and Operations use separately provisioned disposable VMs only while a campaign is active.
 
-ClankSpace does not own the platform or define its future topology. Its workloads must remain namespaced, replaceable, and isolated from other services by VM or equivalent runtime boundary, credentials, storage, ports, and lifecycle. exe.dev is not the permanent home for trusted ClankSpace collaboration state.
+ClankSpace does not own the platform or define its future topology. Its workloads remain namespaced and isolated from other services by VM, credentials, storage, ports, and lifecycle. The stable domain and verified SQLite backups keep production portable to Railway or another host later.
 
-The validated RC-009 build remains temporarily reachable at `https://clankspace-prod.exe.xyz`. It passes local/external health and readiness plus authenticated project export, and its online backup, off-host copy, restore drill, and prior-binary rollback are verified. Treat it as the Railway migration source and short-lived rollback candidate. Do not commit this origin into collaborator repositories or provision real collaborator projects there.
+The validated build is live at `https://clank.shamanicarts.dev`; `https://clankspace-prod.exe.xyz` is only the provider origin. The current database completed a round trip through Railway and was restored from a verified off-provider snapshot. Do not commit the provider origin into collaborator repositories.
 
 ## VM boundaries
 
 | VM | Purpose | Data boundary |
 |---|---|---|
-| `clankspace-prod` | Temporary validated Railway migration source | Freeze for migration; retire after the cutover rollback window |
-| `clankspace-eval` | Resettable service for generated corpora and agent rollouts | Synthetic and explicitly copied evaluation fixtures only |
-| `luna-runner` | Corpus generation, clean agent sessions, traces, and scoring | No permanent-production bootstrap or project credentials |
+| `clankspace-prod` | Current trusted pilot service | Real collaboration state; stable domain; off-provider backup required |
+| `clankspace-eval` | Not provisioned by default | Recreate as a resettable synthetic-only service for an active campaign |
+| `luna-runner` | Not provisioned by default | Recreate for corpus generation, clean sessions, traces, and scoring |
 
-The temporary candidate and evaluation service use separate bootstrap tokens, databases, process users, and HTTPS origins. Raw model transcripts belong on the runner or in evaluation artifacts, never in a ClankSpace append log.
+When provisioned, production, evaluation, and runner workloads use separate credentials, databases, process users, and HTTPS origins. Raw model transcripts belong in exported runner artifacts, never in a ClankSpace append log.
 
-The runner stores immutable corpora under `/home/exedev/clankspace-evals/data/corpora`, sanitized real-repository snapshots under `snapshots/`, and mutable mode-0600 runtime credentials in the separate `data/secrets` subtree. Credential files remain outside agent-visible repositories, corpus artifacts, evidence bundles, and checksum manifests. The runner has the evaluation bootstrap token only; no permanent-production token is installed. Tailnet-only Operations and raw workflow views are served from the runner through local SSH forwarding.
+Before a runner is destroyed, immutable corpora, sanitized repository snapshots, workflow journals, and evidence bundles are exported to a mode-0700 local archive and checksum-verified. Mutable runtime credentials are not archived; they are revoked or allowed to die with the disposable VM. A reprovisioned runner receives fresh evaluation-only credentials and never a production token.
 
 ## Service shape
 
@@ -70,4 +70,4 @@ For each service:
 
 Never copy the live SQLite database or individual WAL files while the service is running. Use SQLite's online `.backup` path, verify the resulting database, and copy only that completed snapshot off-host.
 
-After Railway passes stable-domain and restore acceptance, retain `clankspace-prod` only for the agreed rollback window, then destroy that VM and its application credentials. Keep `clankspace-eval` and `luna-runner` as the ClankSpace workload allocation on the broader agent platform; they may evolve or be replaced without changing the product service.
+Keep only `clankspace-prod` while the pilot is active. Export and delete evaluation/runner VMs after each campaign. Recreate them from repository automation and fresh credentials when the next product question warrants model spend.

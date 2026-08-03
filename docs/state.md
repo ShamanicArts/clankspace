@@ -1,7 +1,7 @@
 ---
 type: state
 status: active
-summary: Railway production and its stable domain are live; backup scheduling and restore acceptance remain before collaborator onboarding.
+summary: exe.dev production is live behind the stable domain; disposable eval infrastructure is archived and removed.
 note_created: 2026-08-02
 updated: 2026-08-03
 ---
@@ -10,11 +10,11 @@ updated: 2026-08-03
 
 ## Current focus
 
-Finish the recovery gate for the live Railway deployment, then hand the pilot to Shuv and other trusted collaborators. exe.dev remains the reusable agent-compute plane; ClankSpace eval and runner services are one isolated workload on it. Research remains subordinate to observed product friction.
+Operate the trusted pilot from the smallest useful topology: one exe.dev production VM behind the stable domain, verified off-provider backups, and no idle evaluation fleet. Reprovision isolated eval and runner VMs only for a defined product question. Research remains subordinate to observed product friction.
 
 ## Active phase
 
-Permanent production is deployed from public `main` to a single Railway service and persistent `/data` volume in EU West. `clank.shamanicarts.dev` has active Cloudflare DNS, verified Railway ownership, and a valid Railway-managed certificate. Strict-HTTPS health, readiness, browser, CLI context, and deterministic authenticated export checks pass. The restored database contains the expected project and four notes. `clankspace-prod` on exe.dev is stopped and frozen as the short-lived rollback source; evaluation and runner VMs remain isolated agent-compute workloads.
+Production runs from public `main` on `clankspace-prod.exe.xyz`, published through `clank.shamanicarts.dev`. The final Railway database was downloaded quiescently, passed `PRAGMA integrity_check`, and was restored with the matching production bootstrap credential. Strict-HTTPS health/readiness, CLI context, and deterministic authenticated export pass; the project contains the expected four notes. Railway has no active deployment. The runner and evaluation VM evidence was checksum-verified locally before both disposable VMs were deleted.
 
 RC-009 exercised three frozen single-agent worlds and one event-gated two-maintainer world on MIT repository snapshots:
 
@@ -31,7 +31,7 @@ Corrected rollout judge v5 accepted aligned overlap at `0.98`, routine proceed a
 
 Collaboration judge v3 confirmed every product behavior but conflated the finite lane evidence process with the human-facing Clank task. The packet proves Lane B's task run has no outcome or `endedAt`; a direct read-only Luna Max review accepted the split lifecycle at `1.00`.
 
-PR #9 merged the gate into `lab/pilot-v1-base`; PR #10 promoted that lab state to public `main`. The migration used a fresh SQLite online backup, verified by `PRAGMA integrity_check` and SHA-256, with a completed copy retained off-provider. That snapshot is restored on Railway and its authenticated export matches the expected project data. PR #15 hardened Railway volume ownership and permanently drops the service to the unprivileged `clank` user after narrowly scoped mount preparation.
+PR #9 merged the gate into `lab/pilot-v1-base`; PR #10 promoted that lab state to public `main`. The original migration used a fresh SQLite online backup, verified by `PRAGMA integrity_check` and SHA-256. Railway acceptance passed, then the quiescent Railway database was exported, integrity-checked, and restored to the current exe.dev pilot. Both completed snapshots remain off-provider.
 
 ## Operations and evidence
 
@@ -43,17 +43,17 @@ PR #9 merged the gate into `lab/pilot-v1-base`; PR #10 promoted that lab state t
 - completion audit: `docs/research_results/2026-08-03-night-shift-completion-audit.md`
 - draft PR: `https://github.com/ShamanicArts/clankspace/pull/9`
 
-The operations journal is append-only on the persistent runner and the dashboard labels fake OmegaCode schema runs as `preflight only`, not product verdicts.
+The operations journal and raw workflow evidence are preserved in the local runner export. No Operations or workflow viewer is currently hosted; those surfaces return with the next reprovisioned evaluation campaign.
 
-## Production migration status
+## Production hosting status
 
-RC-009's frozen result established that the product behavior and deployment artifact were viable. Railway now owns the permanent runtime and migrated collaboration state. Cloudflare publishes the required CNAME and ownership TXT records for `clank.shamanicarts.dev`; Railway ownership and managed TLS are active. The remaining deployment gate is a scheduled backup policy and disposable restore rehearsal. The next product uncertainty is population behavior: more models, repositories, seeds, matched no-Clank controls, and eventual semantic retrieval.
+RC-009 established that the product and portable deployment artifact are viable. A complete round-trip migration through Railway proved the provider boundary; production now runs on exe.dev while the trusted pilot is small. Cloudflare points the stable hostname to exe.dev and Railway's old ownership record/domain claim has been removed. The remaining operational gate is scheduled off-provider backup plus a periodic disposable restore rehearsal. The next product uncertainty is real collaborator behavior.
 
 ## Decisions pending after RC-009
 
-- Whether to upgrade Railway to Pro for native volume backups/PITR or operate a verified external online-backup schedule. Pro is the preferred production path.
-- The exact rollback-window duration before deleting the stopped exe.dev migration source.
-- Do not issue the exe.dev origin as a supported collaborator pointer; use `clank.shamanicarts.dev` after acceptance.
+- The off-provider backup schedule and restore-drill cadence for the exe.dev pilot.
+- When real usage justifies moving back to Railway or another managed persistent-volume host.
+- Do not issue the exe.dev origin as a supported collaborator pointer; use `clank.shamanicarts.dev`.
 - Which binary targets and installer surface to support for `v0.1.0-pilot`.
 - The exact real `shuv2code` seed records and collaborator identity names.
 - Which local or hosted embedding implementation to test after lexical Recall@5/10 and false-pause baselines are frozen.
