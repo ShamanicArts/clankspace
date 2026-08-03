@@ -61,6 +61,12 @@ func (s *Service) canAccess(ctx context.Context, p domain.Principal, projectID s
 var validKinds = map[string]bool{"intent": true, "decision": true, "understanding": true, "observation": true, "checkpoint": true}
 var validLead = map[string]bool{"human": true, "agent": true, "joint": true, "external": true}
 var validBasis = map[string]bool{"explicit_human_direction": true, "interpreted_human_intent": true, "joint_reasoning": true, "autonomous_agent_judgment": true, "external_evidence": true}
+var validLeadBasis = map[string]map[string]bool{
+	"human":    {"explicit_human_direction": true},
+	"agent":    {"interpreted_human_intent": true, "autonomous_agent_judgment": true},
+	"joint":    {"explicit_human_direction": true, "interpreted_human_intent": true, "joint_reasoning": true},
+	"external": {"external_evidence": true},
+}
 
 func normalizeNote(in domain.CreateNoteInput) (domain.CreateNoteInput, error) {
 	in.Kind = strings.TrimSpace(in.Kind)
@@ -90,6 +96,9 @@ func normalizeNote(in domain.CreateNoteInput) (domain.CreateNoteInput, error) {
 	}
 	if !validBasis[in.DirectionBasis] {
 		return in, errors.New("invalid directionBasis")
+	}
+	if !validLeadBasis[in.LedBy][in.DirectionBasis] {
+		return in, fmt.Errorf("directionBasis %q is incompatible with ledBy %q", in.DirectionBasis, in.LedBy)
 	}
 	if in.Confidence == "" {
 		in.Confidence = "reasoned"

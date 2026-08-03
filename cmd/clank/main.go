@@ -326,7 +326,7 @@ func note(ctx context.Context, c *client.Client, args []string) error {
 	summary := f.String("summary", "", "concise project implication")
 	rationale := f.String("rationale", "", "reasoning summary, not chain-of-thought")
 	ledBy := f.String("led-by", "agent", "human|agent|joint|external")
-	basis := f.String("basis", "autonomous_agent_judgment", "direction basis")
+	basis := f.String("basis", "autonomous_agent_judgment", "explicit_human_direction|interpreted_human_intent|joint_reasoning|autonomous_agent_judgment|external_evidence")
 	paths := f.String("paths", "", "comma-separated paths")
 	if err := f.Parse(args[1:]); err != nil {
 		return err
@@ -473,8 +473,14 @@ func noteUsage() {
   --summary <project implication>
   --rationale <reasoning summary>
   --led-by <human|agent|joint|external>
-  --basis <direction basis>
+  --basis <basis>              explicit_human_direction|interpreted_human_intent|joint_reasoning|autonomous_agent_judgment|external_evidence
   --paths <comma-separated paths>
+
+Common provenance pairs:
+  human + explicit_human_direction
+  joint + joint_reasoning
+  agent + interpreted_human_intent|autonomous_agent_judgment
+  external + external_evidence
 
 "create" is accepted as an alias for "add".
 clank note supersede --id <note-id> --revision <n> --reason <text>`)

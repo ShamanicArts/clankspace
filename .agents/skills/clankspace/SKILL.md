@@ -59,6 +59,8 @@ Default to **no checkpoint**. Completing the requested feature, passing expected
 
 A direct human request to record a checkpoint overrides that default. Record the smallest professional statement of direction and rationale, then continue unless the alignment check found a material conflict. Do not turn an aligned advisory record into another approval loop.
 
+Attribute the checkpoint honestly. When the human explicitly supplies the direction or asks you to checkpoint that stated direction, use `--led-by human --basis explicit_human_direction`. When the conclusion was reached together, use `--led-by joint --basis joint_reasoning`. For your own interpretation of human intent, use `--led-by agent --basis interpreted_human_intent`; for an autonomous agent choice, use `--led-by agent --basis autonomous_agent_judgment`; and for outside evidence, use `--led-by external --basis external_evidence`. Never pair joint leadership with autonomous agent judgment. Use these exact values rather than guessing and retrying mutations.
+
 Append only when another competent collaborator might change, pause, or reinterpret work after learning the information:
 
 - non-obvious human or agent intent and its rationale;

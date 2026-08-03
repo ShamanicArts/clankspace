@@ -30,3 +30,7 @@ Notes may be `current`, `superseded`, `stale`, `contested`, or `withdrawn`. “C
 ## Retrieval language
 
 Say “related context,” “recorded rationale,” and “coordination warning.” Avoid “policy requires,” “binding decision,” and “must obey” unless referring to a real repository or security policy outside ClankSpace.
+
+## Provenance pairings
+
+Leadership and direction basis form one claim, not independent labels. Human-led records use `explicit_human_direction`; joint records use `joint_reasoning` unless they directly preserve explicit human direction; agent-led records use `interpreted_human_intent` or `autonomous_agent_judgment`; external records use `external_evidence`. The service rejects contradictory pairs rather than preserving misleading attribution.

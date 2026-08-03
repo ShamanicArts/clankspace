@@ -108,6 +108,10 @@ func TestIdempotencyAndSecretBoundary(t *testing.T) {
 	if _, _, err = svc.CreateNote(ctx, p, project.ID, "secret", in); err == nil {
 		t.Fatal("credential-like content was accepted")
 	}
+	in = domain.CreateNoteInput{Kind: "checkpoint", Title: "Contradictory provenance", Summary: "The team selected this direction.", LedBy: "joint", DirectionBasis: "autonomous_agent_judgment"}
+	if _, _, err = svc.CreateNote(ctx, p, project.ID, "bad-provenance", in); err == nil || !strings.Contains(err.Error(), "incompatible") {
+		t.Fatalf("incoherent lead/basis pairing was accepted: %v", err)
+	}
 }
 
 func TestProjectAgentIdentityIsScoped(t *testing.T) {
