@@ -14,6 +14,7 @@ ClankSpace is a **validated trusted-collaborator release candidate**, not a publ
 - The RC-009 product gate validated passive discussion, quiet routine work, compatible overlap, architectural conflict surfacing, coherent checkpoint provenance, and incumbent/later-entrant coordination on frozen `go-chi/chi` and `rs/cors` repository worlds.
 - Disposable evaluation and Luna runner VMs were exported, checksum-verified locally, and deleted. They are reprovisioned only when a new evaluation campaign needs them.
 - The Railway service has no active deployment. Its project and volume are retained temporarily as a migration fallback, not as a second production writer.
+- A persistent daily off-provider job creates an online SQLite backup, pulls it locally, verifies integrity, and records a SHA-256 manifest.
 - Onboarding and binary distribution are still manual. Broader multi-tenant hardening, private repository integration, token administration, and semantic retrieval remain future work.
 
 The detailed evidence is in the [RC-009 validation report](docs/research_results/2026-08-03-rc009-full-package-validation.md) and [completion audit](docs/research_results/2026-08-03-night-shift-completion-audit.md).
