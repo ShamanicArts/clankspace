@@ -40,7 +40,7 @@ If the retrieved work is compatible, the agent absorbs it and continues without 
 
 The permanent hosted service will be deliberately invite-only. An operator creates a project, attaches its public repositories, and issues a separate project identity for each human's agents. Distinct identities matter: they let ClankSpace tell an incumbent's active work from a later collaborator entering the same boundary.
 
-Do not bake the temporary exe.dev origin into collaborator repositories. Complete the Railway migration and stable-domain cutover first; exe.dev remains the evaluation runner and disposable test environment.
+Do not bake the temporary exe.dev origin into collaborator repositories. Complete the Railway migration and stable-domain cutover first; exe.dev remains a general-purpose agent execution environment where ClankSpace evals are one workload among future agent services.
 
 For pilot onboarding, see [Trusted collaborator onboarding](docs/pilot-onboarding.md).
 
@@ -130,7 +130,7 @@ clank repo attach \
   --url https://github.com/shuv1337/shuv2code
 ```
 
-The permanent production target is one Railway service with one persistent volume at `clank.shamanicarts.dev`. exe.dev remains the evaluation control plane for synthetic services, model runners, traces, judges, and Operations; the existing `clankspace-prod` VM is only the temporary migration source. See [Railway deployment](docs/deployment/railway.md) and [exe.dev evaluation infrastructure](docs/deployment/exe.md).
+The permanent production target is one Railway service with one persistent volume at `clank.shamanicarts.dev`. exe.dev is the reusable agent-compute plane for isolated runners, synthetic environments, automations, judges, Operations, and future agent services; ClankSpace evaluation is one workload on that platform. The existing `clankspace-prod` VM is only the temporary migration source. See [Railway deployment](docs/deployment/railway.md) and [exe.dev agent infrastructure](docs/deployment/exe.md).
 
 ## Security boundary
 

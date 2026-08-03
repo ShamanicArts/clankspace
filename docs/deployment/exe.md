@@ -1,17 +1,19 @@
 ---
 type: knowledge
-summary: Isolated ClankSpace evaluation and runner infrastructure plus the temporary Railway migration source.
-keywords: [exe.dev, deployment, sqlite, systemd, evaluation, runner, migration]
+summary: ClankSpace workloads on the reusable exe.dev agent-compute plane plus the temporary Railway migration source.
+keywords: [exe.dev, agents, compute, deployment, sqlite, systemd, evaluation, runner, migration]
 related: [../knowledge/hosting.md, railway.md]
 note_created: 2026-08-02
 updated: 2026-08-03
 ---
 
-# exe.dev evaluation infrastructure
+# exe.dev agent infrastructure
 
 ## Current status
 
-exe.dev is the evaluation control plane: disposable ClankSpace services, synthetic corpora, clean model sessions, traces, judges, scoring, and Operations. It is intentionally replaceable and is not the permanent home for trusted collaboration state.
+exe.dev is a reusable, general-purpose agent execution plane. ClankSpace currently uses it for disposable evaluation services, synthetic corpora, clean model sessions, traces, judges, scoring, and Operations; future projects may run their own isolated agent services, automations, browser/CLI workers, and evaluation workloads on the same platform.
+
+ClankSpace does not own the platform or define its future topology. Its workloads must remain namespaced, replaceable, and isolated from other services by VM or equivalent runtime boundary, credentials, storage, ports, and lifecycle. exe.dev is not the permanent home for trusted ClankSpace collaboration state.
 
 The validated RC-009 build remains temporarily reachable at `https://clankspace-prod.exe.xyz`. It passes local/external health and readiness plus authenticated project export, and its online backup, off-host copy, restore drill, and prior-binary rollback are verified. Treat it as the Railway migration source and short-lived rollback candidate. Do not commit this origin into collaborator repositories or provision real collaborator projects there.
 
@@ -68,4 +70,4 @@ For each service:
 
 Never copy the live SQLite database or individual WAL files while the service is running. Use SQLite's online `.backup` path, verify the resulting database, and copy only that completed snapshot off-host.
 
-After Railway passes stable-domain and restore acceptance, retain `clankspace-prod` only for the agreed rollback window, then destroy that VM and its application credentials. Keep `clankspace-eval` and `luna-runner` as the research infrastructure.
+After Railway passes stable-domain and restore acceptance, retain `clankspace-prod` only for the agreed rollback window, then destroy that VM and its application credentials. Keep `clankspace-eval` and `luna-runner` as the ClankSpace workload allocation on the broader agent platform; they may evolve or be replaced without changing the product service.

@@ -10,7 +10,7 @@ updated: 2026-08-03
 
 ## Current focus
 
-Move the validated candidate to permanent Railway infrastructure behind `clank.shamanicarts.dev`, verify migration and recovery, then hand the pilot to Shuv and other trusted collaborators. exe.dev remains the eval lab and runner fleet. Research remains subordinate to observed product friction.
+Move the validated candidate to permanent Railway infrastructure behind `clank.shamanicarts.dev`, verify migration and recovery, then hand the pilot to Shuv and other trusted collaborators. exe.dev remains the reusable agent-compute plane; ClankSpace eval and runner services are one isolated workload on it. Research remains subordinate to observed product friction.
 
 ## Active phase
 

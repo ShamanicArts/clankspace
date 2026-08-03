@@ -2,7 +2,7 @@
 type: knowledge
 keywords: [railway, exe.dev, hosting, domain, sqlite, backup, rollback, clank.shamanicarts.dev]
 related: [docs/design/spec.md, docs/deployment/railway.md, docs/deployment/exe.md]
-summary: Permanent Railway production target, exe.dev evaluation boundary, and migration/recovery plan.
+summary: Permanent Railway production, ClankSpace's allocation on the reusable exe.dev agent plane, and migration/recovery.
 last_verified: 2026-08-03
 note_created: 2026-08-02
 updated: 2026-08-03
@@ -12,13 +12,13 @@ updated: 2026-08-03
 
 ## Hosting boundary
 
-ClankSpace separates durable collaboration state from disposable research infrastructure:
+ClankSpace separates durable collaboration state from reusable agent compute. exe.dev is a broader execution platform for current and future agent services; the rows below describe only ClankSpace's isolated allocation on it.
 
 | Environment | Purpose | Data boundary |
 |---|---|---|
 | Railway at `clank.shamanicarts.dev` | Permanent trusted-project service | Real collaboration state only; one persistent volume |
-| exe.dev `clankspace-eval` | Resettable candidate and synthetic-project service | Evaluation data only |
-| exe.dev `luna-runner` | Corpus generation, model rollouts, traces, judges, and Operations | Evaluation credentials only; no production credential |
+| exe.dev `clankspace-eval` | ClankSpace's resettable candidate and synthetic-project service | Evaluation data only; isolated from other agent services |
+| exe.dev `luna-runner` | ClankSpace corpus generation, model rollouts, traces, judges, and Operations | Evaluation credentials only; no production credential |
 | exe.dev `clankspace-prod` | Temporary validated migration source | Retained only through Railway cutover and rollback window |
 
 The existing exe.dev origin proves that the build can be hosted, backed up, restored, and rolled back. It is not the address to commit into collaborator repositories and should not receive real project onboarding.
@@ -61,4 +61,4 @@ ClankSpace remains one Go binary and one SQLite database. The stable domain prev
 4. Verify `/healthz`, `/readyz`, the dashboard, CLI, and MCP against the managed Railway origin.
 5. Add `clank.shamanicarts.dev`, complete DNS/TLS, and repeat external checks through the stable domain.
 6. Enable scheduled platform and off-provider backups, rehearse restore, then onboard collaborators.
-7. After the rollback window, retire exe.dev `clankspace-prod`; retain `clankspace-eval` and `luna-runner` for research.
+7. After the rollback window, retire exe.dev `clankspace-prod`; retain or replace the isolated ClankSpace eval/runner allocation without constraining other agent services on the platform.

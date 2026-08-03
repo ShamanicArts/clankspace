@@ -141,4 +141,4 @@ Success is not “the agent always pauses.” Success is that ClankSpace remains
 - deterministic lexical/path retrieval; semantic embeddings are not yet enabled;
 - JSON export exists, but continuous local sync/outbox support does not.
 
-For the permanent service, migration, backups, and recovery, see [Railway deployment](deployment/railway.md). For the isolated evaluation and runner infrastructure, see [exe.dev evaluation infrastructure](deployment/exe.md). For current product evidence, see the [RC-009 report](research_results/2026-08-03-rc009-full-package-validation.md).
+For the permanent service, migration, backups, and recovery, see [Railway deployment](deployment/railway.md). For ClankSpace's isolated allocation on the reusable agent-compute platform, see [exe.dev agent infrastructure](deployment/exe.md). For current product evidence, see the [RC-009 report](research_results/2026-08-03-rc009-full-package-validation.md).
