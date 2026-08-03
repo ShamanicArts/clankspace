@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "gateId": "product-rc-002",
+  "status": "invalid",
+  "productVerdict": "none",
+  "candidateWasExecuted": false,
+  "candidateWasChanged": false,
+  "productionWasTouched": false,
+  "artifacts": {
+    "blueprintWorkflowRun": "wf_d5fc933b57ed",
+    "renderWorkflowRuns": ["wf_c58963f311f1", "wf_22803837ffc5"]
+  },
+  "failuresRetained": [
+    {
+      "cellId": "holdout-fake-project-boundary-homonym-002",
+      "class": "blueprint-contradiction",
+      "detail": "The frozen repository evidence prohibited documenting the endpoint that the final task required."
+    },
+    {
+      "cellId": "holdout-fake-current-directive-overrides-memory-002",
+      "class": "fixture-renderer",
+      "detail": "The accepted blueprint twice exhausted the structured-output render path without returning a scenario; its synthetic repository also omitted a pinned runnable toolchain."
+    }
+  ],
+  "correctiveAction": "Use a pinned, sanitized MIT repository snapshot so repository behavior and verification are real, and test cross-project isolation with distinct ClankSpace projects rather than same-project distractors."
+}
