@@ -1,7 +1,7 @@
 ---
 type: state
 status: active
-summary: RC-009 passed deterministic and independent semantic validation and is deployed on public main with backup and rollback verified.
+summary: The validated trusted pilot is live; current work is stable-domain routing, binary packaging, and real collaborator onboarding.
 note_created: 2026-08-02
 updated: 2026-08-03
 ---
@@ -10,11 +10,11 @@ updated: 2026-08-03
 
 ## Current focus
 
-Observe the now-production RC-009 behavior in real collaborator use while designing the next matched-control and retrieval experiments. Product work remains primary; research should only continue where it can improve the CLI/API/skill package.
+Make the validated pilot straightforward to hand to Shuv and other trusted collaborators: route the stable domain, publish installable binaries, provision distinct project identities, add the repository pointer and skill, and run the first real cross-maintainer canary. Research remains subordinate to observed product friction.
 
 ## Active phase
 
-Production, evaluation, and the runner are isolated on separate exe.dev VMs. Production now runs public-main commit `6b20f444` with binary SHA-256 `559666937035`; evaluation retains the frozen candidate `62c5682` with binary SHA-256 `68934108bab4`. Both deployments pass external health and readiness checks.
+Production, evaluation, and the runner are isolated on separate exe.dev VMs. Production runs validated runtime commit `6b20f444` with binary SHA-256 `559666937035`; public `main` is ahead only by deployment-evidence documentation. Evaluation retains frozen candidate `62c5682` with binary SHA-256 `68934108bab4`. Both deployments pass external health and readiness checks.
 
 RC-009 exercised three frozen single-agent worlds and one event-gated two-maintainer world on MIT repository snapshots:
 
@@ -51,6 +51,9 @@ RC-009 is `passed-production` / `promoted-to-production`. No product-gate or dep
 
 ## Decisions pending after RC-009
 
+- The existing exe.dev origin is the current supported pilot pointer. Route `clank.shamanicarts.dev` later and migrate repository pointers in one normal config change.
+- Which binary targets and installer surface to support for `v0.1.0-pilot`.
+- The exact real `shuv2code` seed records and collaborator identity names.
 - Which local or hosted embedding implementation to test after lexical Recall@5/10 and false-pause baselines are frozen.
 - The train/dev cohort size required before a semantic-retrieval holdout.
 - Private-repository integration and public multi-tenant hardening boundaries.

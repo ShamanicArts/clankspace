@@ -1,9 +1,9 @@
 ---
 type: spec
 status: approved
-summary: Implementation specification for multi-project advisory coordination memory operated by attributed agents.
+summary: Implemented specification for the live trusted ClankSpace pilot and its remaining hardening boundary.
 note_created: 2026-08-02
-updated: 2026-08-02
+updated: 2026-08-03
 ---
 
 # ClankSpace Design Specification
@@ -13,6 +13,8 @@ updated: 2026-08-02
 ClankSpace is a lightweight hosted glue space where agents maintain professional, project-scoped notes about accrued intent, contemporaneous rationale, and concurrent trajectories. It gives collaborators a chance to align before fast autonomous work collides.
 
 It is not a canonical decision authority. A note records what an actor understood or chose at a moment in time and why. Current human direction and real repository state remain authoritative.
+
+The core specification is implemented and deployed as a trusted-collaborator pilot. RC-009 validated the intended passive, proceed, conflict-pause, provenance, and incumbent/later-entrant behavior. Packaging, stable-domain routing, real collaborator onboarding, wider population measurement, and multi-tenant hardening remain outside the completed core.
 
 ## 2. Initial problem
 
@@ -62,11 +64,11 @@ The first product must surface:
 
 **Why not OAuth first:** It adds identity and security work before the core coordination loop is proven.
 
-### G. Railway target
+### G. Portable hosted pilot
 
-**Pick:** One Railway service, one persistent volume, `clank.shamanicarts.dev`.
+**Pick:** One Go service and one persistent SQLite volume on any suitable host. The active pilot uses an exe.dev production VM, with separate evaluation and runner VMs. `clank.shamanicarts.dev` remains the intended stable client endpoint.
 
-**Why not exe.dev:** No agents execute on the host, so its agent-workstation strengths are unnecessary.
+**Why not couple the product to exe.dev:** Hosting is operational, not architectural. Clients resolve a URL/project pair; the server remains portable to Railway, a VPS, or another single-instance host.
 
 ## 4. Domain hierarchy
 
@@ -220,7 +222,7 @@ Parse `github.com/{owner}/{repo}` URLs, fetch repository metadata and open PRs, 
 
 Server database is canonical. Deterministic per-project JSON exports are portable and rebuildable. A local cache/outbox and Markdown/JSONL variants remain later optimizations. Never replicate the live SQLite/WAL files across hosts.
 
-Railway mounts `/data`; database lives at `/data/clankspace.db`. Railway volume backups provide quick recovery; portable snapshots provide provider exit.
+The active exe.dev service stores the database under `/var/lib/clankspace` and runs as a restricted systemd user. SQLite online backups are integrity-checked and copied off-host; deterministic project exports provide provider-neutral portability. Railway may instead mount `/data` and use the same binary, but it is not the current production host.
 
 ## 15. Acceptance test
 
@@ -258,5 +260,8 @@ Railway mounts `/data`; database lives at `/data/clankspace.db`. Railway volume 
 - [x] Implement CLI and MCP.
 - [x] Implement dashboard and GitHub evidence.
 - [x] Verify local API, CLI, MCP, GitHub, export, and scoped-identity flow.
-- [x] Publish private repository.
-- [ ] Connect Railway and DNS when credentials are available.
+- [x] Publish the repository under the MIT license.
+- [x] Deploy isolated production/evaluation services with verified backup, restore, and rollback.
+- [x] Validate the core interaction on real-repository worlds and an event-gated two-maintainer episode.
+- [ ] Route `clank.shamanicarts.dev` to production.
+- [ ] Publish prebuilt pilot release binaries and onboard the first external collaborator project.

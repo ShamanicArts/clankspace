@@ -1,16 +1,16 @@
 ---
 type: strategy
 status: active
-summary: Delivery roadmap for a real ClankSpace pilot and production deployment.
+summary: Delivery roadmap from the live trusted pilot to easier distribution, real collaborator use, and hardened hosting.
 note_created: 2026-08-02
-updated: 2026-08-02
+updated: 2026-08-03
 ---
 
 # ClankSpace Implementation Plan
 
 ## Overview
 
-Build the smallest trustworthy ambient coordination layer that lets two humans and their many agents move quickly without requiring constant direct synchronization. The first product must recreate the original failure mode: one agent should surface another maintainer’s concurrent trajectory and rationale before making a conflicting change.
+The smallest trustworthy ambient coordination layer is implemented, validated, and running as a trusted-collaborator production pilot. The roadmap now shifts from proving the original collision to making the client easy to distribute, onboarding Shuv and other real collaborators, measuring value during normal work, and hardening only the boundaries demanded by that use.
 
 ## Architecture principles
 
@@ -28,8 +28,10 @@ Build the smallest trustworthy ambient coordination layer that lets two humans a
 | 0 | Project setup | **Complete** | This document |
 | 1 | Core coordination loop | **Complete** | [phase-1-core-loop.md](phases/phase-1-core-loop.md) |
 | 2 | Human log and public GitHub evidence | **Complete** | [phase-2-board-github.md](phases/phase-2-board-github.md) |
-| 3 | Railway production pilot | Planned | Create after local acceptance |
-| 4 | Private repositories and hardened remote MCP | Deferred | Prove public pilot first |
+| 3 | Hosted production pilot on exe.dev | **Complete** | [exe.md](deployment/exe.md) |
+| 4 | Trusted collaborator onboarding and packaging | **Active** | [pilot-onboarding.md](pilot-onboarding.md) |
+| 5 | Matched controls and retrieval iteration | Planned | [training-loop.md](evals/training-loop.md) |
+| 6 | Private repositories and public multi-tenant hardening | Deferred | Prove the trusted pilot first |
 
 ## Phase 0: Project setup — complete
 
@@ -50,9 +52,25 @@ Success means the original Shuv/Shamanic scenario is represented in fixtures and
 
 Expose the agent-maintained project log with adjacent runtime provenance, light human governance, repository attachment, and public PR evidence. Conflict inspection remains in the agent workflow.
 
-## Phase 3: Railway production pilot — planned
+## Phase 3: hosted production pilot — complete
 
-Connect the private repository to Railway, mount `/data`, configure `clank.shamanicarts.dev`, create the workspace and invitations, enable volume backups, and complete a portable restore drill.
+Production, evaluation, and model-runner workloads are isolated on separate exe.dev VMs. RC-009 was promoted through the lab branch and public `main`; production health/readiness, authenticated reads, online backup, off-host copy, restore drill, and binary rollback are verified.
+
+Railway remains a portable alternative rather than the active topology. The stable `clank.shamanicarts.dev` route is reserved but not yet connected to the production origin.
+
+## Phase 4: trusted collaborator onboarding and packaging — active
+
+- [ ] Publish checksummed Linux, macOS, and Windows binaries as `v0.1.0-pilot`.
+- [ ] Add a one-line installer or package-manager path.
+- [ ] Route `clank.shamanicarts.dev` to the production service.
+- [ ] Provision the real `shuv2code` project with distinct Shuv and Shamanic project identities.
+- [ ] Open the repository integration PR containing the pointer, skill, and lean agent instruction.
+- [ ] Run one real cross-maintainer canary and inspect the resulting append log with both humans.
+- [ ] Schedule the proven online backup and external health checks.
+
+## Phase 5: matched controls and retrieval iteration — planned
+
+Measure time, token, tool-call, interruption, false-pause, and useful-conflict deltas against matched no-Clank runs. Expand repository/model/seed coverage before introducing embeddings. Add semantic retrieval only when deterministic lexical baselines and failure cases are frozen.
 
 ## Research backlog
 
@@ -99,6 +117,6 @@ Connect the private repository to Railway, mount `/data`, configure `clank.shama
 
 ### D7 — Hosting
 
-**Decision:** Target Railway Hobby with a persistent volume and `clank.shamanicarts.dev`.
+**Decision:** Run the first trusted production pilot on a persistent exe.dev VM, with separate evaluation and runner VMs. Keep Railway/Docker portability and reserve `clank.shamanicarts.dev` as the stable client endpoint.
 
-**Rationale:** No agents run on the host; managed long-running application hosting is a better fit than an agent-oriented VM.
+**Rationale:** exe.dev was immediately available, supports the current operational workflow, and now has verified systemd restart, backup, restore, and rollback behavior. The product remains one portable Go binary and SQLite database, so moving to Railway or another managed host later does not change the client contract.

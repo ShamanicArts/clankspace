@@ -64,8 +64,8 @@ This audit checks the repository, GitHub promotion path, runner, production, eva
 
 - PR #9 merged the accepted gate into `lab/pilot-v1-base` at `626faeee`; its CodeRabbit check passed.
 - PR #10 merged the exact lab state to public `main` at `6b20f444`.
-- GitHub treated PR #10's CodeRabbit status as advisory, so an auto-merge request executed immediately while that review was still pending. Production deployment waited through focused clean-tree verification; the cumulative product changes had already passed their constituent PR checks and the still-pending advisory review had posted no finding at audit time.
-- A post-deployment evidence PR records the final production commit, binary, backup, rollback, and smoke checks.
+- GitHub treated PR #10's CodeRabbit status as advisory, so an auto-merge request executed immediately while that review was still pending. Production deployment waited through focused clean-tree verification; CodeRabbit subsequently completed successfully with no finding.
+- PR #11 passed CodeRabbit and merged the final production commit, binary, backup, rollback, and smoke-check evidence.
 
 ## 8. Claims boundary — explicit
 
