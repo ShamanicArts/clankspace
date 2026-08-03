@@ -1,8 +1,8 @@
 # ClankSpace product-first overlap iteration
 
-Date: 2026-08-03  
-Branch: `exp/pilot-v1/go-chi-conflict`  
-Private deployment: `clankspace-eval.exe.xyz`  
+Date: 2026-08-03
+Branch: `exp/pilot-v1/go-chi-conflict`
+Private deployment: `clankspace-eval.exe.xyz`
 Production touched: **no**
 
 ## Outcome
