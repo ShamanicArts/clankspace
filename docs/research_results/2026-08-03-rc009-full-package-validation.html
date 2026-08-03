@@ -372,7 +372,7 @@
         <div class="eyebrow">ClankSpace · overnight product validation</div>
         <h1>The product did the right thing. RC-009 passed.</h1>
         <p class="lede">RC-009 is the first candidate to stay out of the way during discussion, proceed on compatible work, pause on a real architectural conflict, and coordinate two maintainers without both of them yielding or editing the same boundary.</p>
-        <div class="hero-state pass"><span class="dot"></span>promotion cleared · lab → main → backed-up deploy</div>
+        <div class="hero-state pass"><span class="dot"></span>live on production · backup + rollback verified</div>
         <div class="plain"><strong>In plain English:</strong> ClankSpace helped when it mattered and disappeared when it did not. Independent Luna review now accepts the routine, aligned, conflict, and concurrent-maintainer behavior.</div>
       </section>
 
@@ -537,7 +537,8 @@
           <div class="evidence-item"><strong>Legacy collaboration judge</strong><code>wf_6e576c4adced</code></div>
           <div class="evidence-item"><strong>Corrected rollout judges</strong><code>wf_6f003d3720bd · wf_c61006aeb0dc</code></div>
           <div class="evidence-item"><strong>Corrected collaboration review</strong><code>wf_6a8c3bdb197a · direct Luna Max 1.00</code></div>
-          <div class="evidence-item"><strong>Production</strong><code>35503c12 · unchanged during RC-009</code></div>
+          <div class="evidence-item"><strong>Production</strong><code>6b20f444 · 559666937035… · healthy + ready</code></div>
+          <div class="evidence-item"><strong>Backup + rollback</strong><code>82f91f393f41… · 35503c12 binary retained</code></div>
           <div class="evidence-item"><strong>Evaluation</strong><code>62c5682 · health passed · readiness passed</code></div>
         </div>
         <details>
@@ -556,10 +557,10 @@
       </section>
 
       <section id="next" class="reveal" style="--i:8">
-        <div class="sec-head"><div class="num">07</div><h2>The next move is promotion</h2></div>
+        <div class="sec-head"><div class="num">07</div><h2>The next move is real use</h2></div>
         <div class="final-callout">
-          <h3>Merge the validated product, then deploy with a fresh backup.</h3>
-          <p>RC-009 has cleared the product gate. The remaining sequence is mechanical and observable: merge PR #9 into the private lab branch, promote lab to public <code>main</code>, take a fresh online production backup, retain the rollback binary, deploy the exact merged build, and verify authenticated reads plus health and readiness.</p>
+          <h3>Drop Clank into collaborator projects and watch for genuine friction.</h3>
+          <p>RC-009 is live on production after PR #9 → lab and PR #10 → main. The exact merged build passed local and external health/readiness plus authenticated context and export. The next experiments should measure real product value: matched no-Clank controls, more repositories and models, and semantic retrieval only after lexical baselines are frozen.</p>
         </div>
         <div class="grid grid-2" style="margin-top:14px">
           <details open>

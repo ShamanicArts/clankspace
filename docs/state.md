@@ -1,7 +1,7 @@
 ---
 type: state
 status: active
-summary: RC-009 passed deterministic and independent semantic validation; promotion through lab, main, and production is in progress.
+summary: RC-009 passed deterministic and independent semantic validation and is deployed on public main with backup and rollback verified.
 note_created: 2026-08-02
 updated: 2026-08-03
 ---
@@ -10,11 +10,11 @@ updated: 2026-08-03
 
 ## Current focus
 
-Promote the validated RC-009 product from the evaluation branch through `lab/pilot-v1-base` and public `main`, then deploy the exact merged build with a fresh production backup and rollback binary.
+Observe the now-production RC-009 behavior in real collaborator use while designing the next matched-control and retrieval experiments. Product work remains primary; research should only continue where it can improve the CLI/API/skill package.
 
 ## Active phase
 
-Production, evaluation, and the runner are isolated on separate exe.dev VMs. Production remains on public-main commit `35503c12` with binary SHA-256 `589c3d81dcfc`; evaluation runs candidate `62c5682` with binary SHA-256 `68934108bab4`. Both deployments pass external health and readiness checks.
+Production, evaluation, and the runner are isolated on separate exe.dev VMs. Production now runs public-main commit `6b20f444` with binary SHA-256 `559666937035`; evaluation retains the frozen candidate `62c5682` with binary SHA-256 `68934108bab4`. Both deployments pass external health and readiness checks.
 
 RC-009 exercised three frozen single-agent worlds and one event-gated two-maintainer world on MIT repository snapshots:
 
@@ -29,7 +29,9 @@ First-pass rollout judge v4 and collaboration judge v2 preserved useful semantic
 
 Corrected rollout judge v5 accepted aligned overlap at `0.98`, routine proceed at `0.96`, and a fresh architectural-conflict replay at `0.97`. The replay was required because the first v5 pass exposed a repository-specific deterministic scorer; commit `43eb79d` repaired it without changing the product or skill.
 
-Collaboration judge v3 confirmed every product behavior but conflated the finite lane evidence process with the human-facing Clank task. The packet proves Lane B's task run has no outcome or `endedAt`; a direct read-only Luna Max review accepted the split lifecycle at `1.00`. RC-009 is `passed` / `promote-to-lab-base`. Draft PR `#9` remains open only for the mechanical promotion sequence; production is still untouched at this point.
+Collaboration judge v3 confirmed every product behavior but conflated the finite lane evidence process with the human-facing Clank task. The packet proves Lane B's task run has no outcome or `endedAt`; a direct read-only Luna Max review accepted the split lifecycle at `1.00`.
+
+PR #9 merged the gate into `lab/pilot-v1-base`; PR #10 promoted that lab state to public `main`. Exact merged-main build `6b20f444` is live on production. A fresh SQLite online backup exists on-host and off-host with SHA-256 `82f91f393f41`; the prior `35503c12` binary is retained as `clank.rollback-35503c12-pre-rc009`. Local and external health/readiness, authenticated context, and authenticated export pass.
 
 ## Operations and evidence
 
@@ -43,9 +45,9 @@ Collaboration judge v3 confirmed every product behavior but conflated the finite
 
 The operations journal is append-only on the persistent runner and the dashboard labels fake OmegaCode schema runs as `preflight only`, not product verdicts.
 
-## Promotion status
+## Production status
 
-No product-gate blocker remains. The outstanding steps are PR #9 → lab, lab → main, fresh backup, exact-build production deployment, authenticated smoke verification, and a final evidence audit.
+RC-009 is `passed-production` / `promoted-to-production`. No product-gate or deployment blocker remains. The next uncertainty is population behavior: more models, repositories, seeds, matched no-Clank controls, and eventual semantic retrieval.
 
 ## Decisions pending after RC-009
 
