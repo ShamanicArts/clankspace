@@ -29,7 +29,7 @@ The smallest trustworthy ambient coordination layer is implemented and validated
 | 1 | Core coordination loop | **Complete** | [phase-1-core-loop.md](phases/phase-1-core-loop.md) |
 | 2 | Human log and public GitHub evidence | **Complete** | [phase-2-board-github.md](phases/phase-2-board-github.md) |
 | 3 | Hosted candidate validation on exe.dev | **Complete** | [exe.md](deployment/exe.md) |
-| 4 | Permanent Railway production migration | **Active** | [railway.md](deployment/railway.md) |
+| 4 | Railway migration and portability proof | **Complete** | [railway.md](deployment/railway.md) |
 | 5 | Trusted collaborator onboarding and packaging | Next | [pilot-onboarding.md](pilot-onboarding.md) |
 | 6 | Matched controls and retrieval iteration | Planned | [training-loop.md](evals/training-loop.md) |
 | 7 | Private repositories and public multi-tenant hardening | Deferred | Prove the trusted pilot first |
@@ -57,9 +57,9 @@ Expose the agent-maintained project log with adjacent runtime provenance, light 
 
 Candidate, evaluation, and model-runner workloads were isolated on separate exe.dev VMs. RC-009 was promoted through the lab branch and public `main`; health/readiness, authenticated reads, online backup, off-host copy, restore drill, and binary rollback were verified against the candidate service.
 
-That exercise validated the application and the migration mechanics. It did not make exe.dev the permanent production topology.
+That exercise validated the application, isolation boundaries, and migration mechanics.
 
-## Phase 4: permanent Railway production migration — active
+## Phase 4: Railway migration and portability proof — complete
 
 - [x] Create the human-owned Railway project and single service from this repository.
 - [x] Attach one persistent volume at `/data`; keep the service at one replica for SQLite.
@@ -68,11 +68,11 @@ That exercise validated the application and the migration mechanics. It did not 
 - [x] Configure secrets and health checks; register `clank.shamanicarts.dev` with Railway.
 - [x] Add the Cloudflare CNAME and Railway ownership TXT records.
 - [x] Complete Railway-managed TLS and repeat health, readiness, browser, CLI, and authenticated export acceptance through the stable domain.
-- [ ] Enable scheduled Railway volume backups and retain provider-neutral online SQLite backups.
+- [x] Retain provider-neutral, integrity-checked SQLite backups.
 - [x] Complete local, managed-origin, and stable-domain smoke checks.
-- [ ] Complete a disposable restore rehearsal from the production backup path.
-- [x] Stop and freeze the exe.dev candidate for the rollback window; keep exe.dev for evals and runners.
-- [ ] Retire the frozen exe.dev candidate after the rollback window.
+- [x] Restore Railway's quiescent database back to exe.dev and repeat authenticated acceptance.
+- [x] Remove Railway's active deployment and custom-domain claim while retaining its dormant project/volume temporarily.
+- [x] Export and delete idle eval/runner VMs; reprovision them only for active campaigns.
 
 ## Phase 5: trusted collaborator onboarding and packaging — next
 
@@ -132,6 +132,6 @@ Measure time, token, tool-call, interruption, false-pause, and useful-conflict d
 
 ### D7 — Hosting
 
-**Decision:** Run permanent production as one Railway service with one persistent SQLite volume behind `clank.shamanicarts.dev`. Treat exe.dev as a general-purpose agent-compute plane; ClankSpace uses an isolated allocation for disposable evaluation services, model runners, traces, judges, and Operations without claiming the platform for itself. The existing `clankspace-prod` VM is only the validated migration source.
+**Decision:** Run the small trusted pilot as one exe.dev service behind `clank.shamanicarts.dev`. Keep Railway as a validated migration target rather than a second live writer. Provision isolated eval and runner VMs only for active campaigns, export useful evidence, then delete them.
 
-**Rationale:** exe.dev is excellent for many kinds of agent-driven experiments, automations, and replaceable compute, but shared collaboration state needs a boring, durable application host with a persistent volume, stable domain, managed TLS, and scheduled backups. Railway already matches the repository's container shape while the stable domain keeps the client contract provider-neutral.
+**Rationale:** The current workload is one tiny process and a sub-megabyte SQLite database. exe.dev is already paid for, operationally simple, and sufficient while usage is small. The stable domain plus verified off-provider backups preserves the path to Railway when managed recovery becomes worth the additional platform.

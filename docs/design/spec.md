@@ -14,7 +14,7 @@ ClankSpace is a lightweight hosted glue space where agents maintain professional
 
 It is not a canonical decision authority. A note records what an actor understood or chose at a moment in time and why. Current human direction and real repository state remain authoritative.
 
-The core specification is implemented and RC-009 validated the intended passive, proceed, conflict-pause, provenance, and incumbent/later-entrant behavior. The validated build is temporarily hosted on exe.dev while the permanent Railway service is established. Stable-domain routing, real collaborator onboarding, wider population measurement, and multi-tenant hardening remain outside the completed core.
+The core specification is implemented and RC-009 validated the intended passive, proceed, conflict-pause, provenance, and incumbent/later-entrant behavior. The validated build is hosted on exe.dev behind the stable domain. A completed Railway round trip proved hosting portability; real collaborator onboarding, wider population measurement, and multi-tenant hardening remain outside the completed core.
 
 ## 2. Initial problem
 
@@ -66,9 +66,9 @@ The first product must surface:
 
 ### G. Portable service with separated production and evaluation
 
-**Pick:** Permanent production is one Railway service and one persistent SQLite volume behind `clank.shamanicarts.dev`. exe.dev is a reusable agent-compute plane on which ClankSpace hosts isolated disposable evaluation services, model runners, traces, judges, and Operations alongside future unrelated agent services. The current `clankspace-prod` VM is a temporary validated migration source.
+**Pick:** Current production is one exe.dev VM and one SQLite database behind `clank.shamanicarts.dev`. Evaluation services and model runners are separately provisioned disposable VMs. Railway remains a validated future migration target.
 
-**Why separate them:** exe.dev is well suited to reusable agent-driven experiments, automations, and replaceable workers. Shared collaboration state needs a boring persistent application host, stable provider-independent domain, managed TLS, scheduled backups, and a deliberate recovery path. Hosting remains operational rather than architectural: clients resolve a URL/project pair and the server stays portable to any single-instance host.
+**Why separate them:** Production credentials and collaboration state must never enter synthetic evaluation workloads. The stable domain, one-writer SQLite shape, and verified off-provider backups make the current small exe.dev deployment recoverable without keeping an idle evaluation fleet. Hosting remains operational rather than architectural.
 
 ## 4. Domain hierarchy
 
@@ -222,7 +222,7 @@ Parse `github.com/{owner}/{repo}` URLs, fetch repository metadata and open PRs, 
 
 Server database is canonical. Deterministic per-project JSON exports are portable and rebuildable. A local cache/outbox and Markdown/JSONL variants remain later optimizations. Never replicate the live SQLite/WAL files across hosts.
 
-The permanent Railway service mounts its SQLite data directory at `/data` and runs one replica. Railway volume backups cover fast platform recovery; scheduled SQLite online backups are integrity-checked and copied off-provider, while deterministic project exports provide project-level portability. The temporary exe.dev candidate stores its database under `/var/lib/clankspace` until migration and rollback retention are complete.
+The current exe.dev service stores SQLite under `/var/lib/clankspace` and runs one writer. Scheduled SQLite online backups are integrity-checked and copied off-provider; deterministic project exports provide project-level portability. Any future Railway deployment mounts `/data`, runs one replica, and follows the same restore-and-acceptance gate.
 
 ## 15. Acceptance test
 
