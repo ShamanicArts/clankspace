@@ -1,5 +1,5 @@
 {
-  "approvedWorkforce": "clankspace-collab-scenario-v5:codex/gpt-5.6-luna:high-max:event-causal-context",
+  "approvedWorkforce": "clankspace-collab-scenario-v6:codex/gpt-5.6-luna:high-max:event-causal-context",
   "agentWorkspace": "/home/exedev/clankspace-blueprint-sandbox/go-chi-main-2026-08-02",
   "sourceCommit": "8b258c7bb28f97a5f2a856ff7ef962578fec9215",
   "snapshotHead": "a007c65e6fb2b3b34f18f216a31fd22a8fb3c446",

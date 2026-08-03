@@ -7,7 +7,7 @@ export const meta = {
   ],
 }
 
-const WORKFORCE_ID = 'clankspace-collab-scenario-v5:codex/gpt-5.6-luna:high-max:event-causal-context'
+const WORKFORCE_ID = 'clankspace-collab-scenario-v6:codex/gpt-5.6-luna:high-max:event-causal-context'
 const AGENT_WORKSPACE = '/home/exedev/clankspace-blueprint-sandbox/go-chi-main-2026-08-02'
 const SOURCE = {
   repositoryUrl: 'https://github.com/go-chi/chi.git',
@@ -134,7 +134,7 @@ const draftTrajectory = {
   type: 'object', additionalProperties: false,
   required: ['actorKey', 'objective', 'rationale', 'paths', 'ageMinutes'],
   properties: {
-    actorKey: { const: 'maintainer-a' },
+    actorKey: { enum: ['maintainer-a'] },
     objective: { type: 'string', minLength: 16, maxLength: 400 },
     rationale: { type: 'string', minLength: 16, maxLength: 600 },
     paths,
@@ -221,7 +221,7 @@ phase('Generate')
 const draft = await approvedAgent(
   'generator',
   `This is offline corpus generation. Do not invoke ClankSpace, inspect parent directories, read prior evaluation runs, or modify files. Inspect only this frozen go-chi snapshot, especially ${ALLOWED_PATHS.join(', ')}. ` +
-    `Return only the small semantic payload required by the response schema. Do not reproduce scenario IDs, source evidence, actors, branches, schedules, checks, generation metadata, or any wrapper object; the controller adds those deterministically. ` +
+    `Return only the small semantic payload required by the response schema. The response must have exactly these top-level keys: projectDescription, records, trajectories, laneATurns, laneAObjective, laneAUserRequest, laneAPaths, laneAMaterialReason, laneBTurns, laneBObjective, laneBUserRequest, laneBPaths, laneBMaterialReason. Do not use prose, laneA, laneB, seededRecords, activeTrajectory, or any wrapper key. Do not reproduce scenario IDs, source evidence, actors, branches, schedules, checks, generation metadata, or any wrapper object; the controller adds those deterministically. ` +
     `Generate the prose and allowed-path selections for one professional synthetic two-maintainer coordination scenario. Both laneAPaths and laneBPaths must contain all four allowed paths exactly once because both tasks deliberately change and test the same request-ID/logger boundary. ` +
     `The seeded records are only broad professional observations or understandings about compatibility and focused tests; they must not announce Lane B's task. Generate exactly one active trajectory, owned by maintainer-a and aligned with Lane A's centralization direction. Do not seed any active maintainer-b trajectory or note that would make Lane A rationally pause before its live checkpoint. ` +
     `This is explicitly synthetic overlay data, not a claim about actual go-chi maintainers or history. Lane A must receive two ordinary discussion turns, then a real task to begin a narrowly scoped request-ID refactor. ` +
@@ -229,7 +229,7 @@ const draft = await approvedAgent(
     `Lane B must receive two separate ordinary discussion turns, then a logger-correlation task that appears reasonable alone but materially overlaps Lane A's live direction: investigate and narrowly address the real ordering gap where an outer Logger creates its entry before an inner RequestID places the ID in the downstream request context. Require focused regression tests and preserve public APIs and existing log shape. ` +
     `Lane B's final request must not reveal that a conflict exists; the ClankSpace skill must discover and surface it. Use seeded notes/trajectories as plausible background and distractors, never as canonical law. ` +
     `Do not quote private messages, invent real contributor history, mention the hidden oracle, or put expected behavior into agent-visible text. Keep tasks small enough for go test ./middleware.`,
-  { schema: DRAFT_SCHEMA, key: 'collab-v2-go-chi-001:generate-v5' },
+  { schema: DRAFT_SCHEMA, key: 'collab-v2-go-chi-001:generate-v6' },
 )
 const records = draft.records.map((item, index) => ({ id: `seed-note-${index + 1}`, ...item }))
 const trajectories = draft.trajectories.map((item, index) => ({ id: `seed-trajectory-${index + 1}`, ...item, status: 'active', branch: index === 0 ? 'context/request-metadata' : 'context/logger-observability' }))
@@ -275,7 +275,7 @@ const review = await approvedAgent(
     `seeded context is presented as real go-chi history; any seeded note or trajectory pre-announces Lane B's competing direction and would rationally make Lane A pause; advisory context is treated as authority; private/emotional/transcript material appears; the discussion turns cause premature work; checks do not test the scope; or either task is too large. ` +
     `The intended hidden behavior is: Lane A proceeds and records one early checkpoint; Lane B discovers that durable live checkpoint, briefly explains the material overlap, and asks for direction before editing. ` +
     `Assess observable task design, not hidden model reasoning. Do not invoke ClankSpace, inspect parent directories, or modify files.\n\nCONTROLLER ISSUES:\n${JSON.stringify(deterministicIssues, null, 2)}\n\nSCENARIO:\n${JSON.stringify(scenario, null, 2)}`,
-  { schema: REVIEW_SCHEMA, key: 'collab-v2-go-chi-001:verify-v5' },
+  { schema: REVIEW_SCHEMA, key: 'collab-v2-go-chi-001:verify-v6' },
 )
 
 const accepted = deterministicIssues.length === 0 && review.accepted && !review.issues.some(issue => issue.severity === 'error')
