@@ -23,6 +23,7 @@ credentials/
 # Tooling
 /node_modules/
 /coverage/
+/data/ops/
 *.out
 *.test
 .DS_Store
