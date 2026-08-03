@@ -25,7 +25,7 @@ The service is a trusted-group pilot. The origin is publicly reachable for provi
 
 Production and evaluation use separate bootstrap tokens, databases, process users, and HTTPS origins. Raw model transcripts belong on the runner or in evaluation artifacts, never in either ClankSpace append log.
 
-The runner stores immutable corpora under `/home/exedev/clankspace-evals/data`, sanitized real-repository snapshots under `snapshots/`, and project credentials under the corpus-versioned `data/secrets/` tree. It has the evaluation bootstrap token only; no production token is installed. Tailnet-only Operations and raw workflow views are served from the runner through local SSH forwarding.
+The runner stores immutable corpora under `/home/exedev/clankspace-evals/data/corpora`, sanitized real-repository snapshots under `snapshots/`, and mutable mode-0600 runtime credentials in the separate `data/secrets` subtree. Credential files are outside agent-visible repositories, corpus artifacts, evidence bundles, and checksum manifests even when their directory names mirror a corpus version. The runner has the evaluation bootstrap token only; no production token is installed. Tailnet-only Operations and raw workflow views are served from the runner through local SSH forwarding.
 
 ## Service shape
 
@@ -63,6 +63,7 @@ For each service:
 4. Verify the HTTPS origin from outside the VM.
 5. Create a disposable project, issue a project-scoped token, use it from a clean client, and export the project.
 6. Create an online backup, run `PRAGMA integrity_check`, copy it off-host, and retain the current binary for rollback.
-7. Verify an authenticated project context and export from an external client.
+7. Restore that completed snapshot into a disposable data directory, start a separate service instance against it, and verify health, readiness, and an authenticated project export before removing the disposable instance.
+8. Verify an authenticated project context and export from an external client against the deployed service.
 
 Never copy the live SQLite database or individual WAL files while the service is running. Use SQLite's online `.backup` path, verify the resulting database, and copy only that completed snapshot off-host.

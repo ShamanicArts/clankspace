@@ -39,19 +39,20 @@ clank repo attach \
   --url https://github.com/shuv1337/shuv2code
 ```
 
-Issue separate credentials into restricted files:
+Issue separate credentials into a restricted temporary directory outside every repository:
 
 ```bash
 umask 077
+credential_dir="$(mktemp -d /tmp/clankspace-credentials.XXXXXX)"
 clank project token --project shuv2code --name "Shuv agents" \
-  > shuv-agents.clankspace-credential.json
+  > "$credential_dir/shuv-agents.clankspace-credential.json"
 clank project token --project shuv2code --name "Shamanic agents" \
-  > shamanic-agents.clankspace-credential.json
+  > "$credential_dir/shamanic-agents.clankspace-credential.json"
 ```
 
-Each response contains the newly issued token once. Deliver only the relevant token through a password manager or expiring one-time secret. Do not paste it into Discord, an issue, a pull request, a shell history entry, or repository configuration.
+Each response contains the newly issued token once. Deliver only the relevant file through a password manager or expiring one-time secret. Do not paste it into Discord, an issue, a pull request, a shell history entry, or repository configuration. After both collaborators confirm receipt, remove the explicit temporary directory and its credential files from the operator machine.
 
-The pilot does not yet expose token revocation. Treat accidental disclosure as an operator incident requiring credential replacement and administrative cleanup before further use.
+The schema supports immediate invalidation through `api_tokens.revoked_at`, and authentication rejects revoked tokens with `401`. The pilot does not yet expose that operation through the CLI or dashboard, so accidental disclosure is an operator incident: contact the workspace owner, revoke the credential through restricted database maintenance, issue a replacement, and verify the leaked token now receives `401` before resuming work.
 
 ## Repository: add the public pointer
 
@@ -133,7 +134,7 @@ Success is not “the agent always pauses.” Success is that ClankSpace remains
 - public GitHub repositories only;
 - manual source installation until release binaries exist;
 - bearer-token authentication with manual provisioning;
-- no token revocation UI or fine-grained method scopes;
+- database-level token revocation exists, but there is no supported CLI/dashboard revocation flow or fine-grained method scopes;
 - no public signup or untrusted multi-tenant use;
 - deterministic lexical/path retrieval; semantic embeddings are not yet enabled;
 - JSON export exists, but continuous local sync/outbox support does not.

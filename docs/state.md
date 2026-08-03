@@ -51,7 +51,7 @@ RC-009 is `passed-production` / `promoted-to-production`. No product-gate or dep
 
 ## Decisions pending after RC-009
 
-- Whether the first pilot release should use the existing exe.dev URL or wait for `clank.shamanicarts.dev`; the recommended repository pointer waits for the stable route, while an immediate canary may use exe.dev.
+- The existing exe.dev origin is the current supported pilot pointer. Route `clank.shamanicarts.dev` later and migrate repository pointers in one normal config change.
 - Which binary targets and installer surface to support for `v0.1.0-pilot`.
 - The exact real `shuv2code` seed records and collaborator identity names.
 - Which local or hosted embedding implementation to test after lexical Recall@5/10 and false-pause baselines are frozen.
