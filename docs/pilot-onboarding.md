@@ -8,7 +8,9 @@ updated: 2026-08-03
 
 # Trusted collaborator onboarding
 
-The hosted ClankSpace service is an invite-only pilot. There is no public signup. A workspace owner provisions the project and project identities; collaborators install the client, store one token locally, and work normally through their agents.
+The permanent ClankSpace service will be an invite-only pilot at `https://clank.shamanicarts.dev`. There is no public signup. A workspace owner provisions the project and project identities; collaborators install the client, store one token locally, and work normally through their agents.
+
+Do not onboard a real collaborator or commit a hosted pointer until the Railway migration, stable-domain cutover, backup schedule, and restore check are complete. The existing exe.dev service is a validated migration source and evaluation fixture, not the production address collaborators should depend on.
 
 ## Identity model
 
@@ -60,12 +62,12 @@ Commit `.clankspace.json` at the repository root:
 
 ```json
 {
-  "url": "https://clankspace-prod.exe.xyz",
+  "url": "https://clank.shamanicarts.dev",
   "project": "shuv2code"
 }
 ```
 
-This file contains no secret. When the stable `clank.shamanicarts.dev` route is ready, update the pointer in one normal repository change.
+This file contains no secret. The stable hostname is deliberately independent of the underlying host, so future infrastructure moves do not require every repository to learn a provider URL.
 
 Copy `.agents/skills/clankspace/SKILL.md` from this repository and add a short agent instruction such as:
 
@@ -101,7 +103,7 @@ clank auth status
 
 Expected properties include:
 
-- the hosted production URL;
+- the stable hosted URL `https://clank.shamanicarts.dev`;
 - project `shuv2code`;
 - `tokenConfigured: true`;
 - the correct repository remote and current branch;
@@ -139,4 +141,4 @@ Success is not “the agent always pauses.” Success is that ClankSpace remains
 - deterministic lexical/path retrieval; semantic embeddings are not yet enabled;
 - JSON export exists, but continuous local sync/outbox support does not.
 
-For service topology, backups, and recovery, see [exe.dev deployment](deployment/exe.md). For current product evidence, see the [RC-009 report](research_results/2026-08-03-rc009-full-package-validation.md).
+For the permanent service, migration, backups, and recovery, see [Railway deployment](deployment/railway.md). For the isolated evaluation and runner infrastructure, see [exe.dev evaluation infrastructure](deployment/exe.md). For current product evidence, see the [RC-009 report](research_results/2026-08-03-rc009-full-package-validation.md).

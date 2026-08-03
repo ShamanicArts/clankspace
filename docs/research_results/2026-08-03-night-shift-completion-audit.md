@@ -8,6 +8,8 @@ audited_at: 2026-08-03T07:54:00Z
 
 This audit checks the repository, GitHub promotion path, runner, production, evaluation, tailnet observability, immutable corpora, adjudication, backups, rollback, and authenticated production reads. It does not infer completion from a plan or model summary.
 
+> **Hosting clarification (2026-08-03):** In this dated audit, “production” names the real hosted RC-009 candidate and its product/deployment gate, not the final infrastructure decision. The exercise proved the build, isolation, backup, restore, rollback, and external-client path on exe.dev. Permanent trusted-project state will move to Railway behind `clank.shamanicarts.dev`; exe.dev remains the evaluation and runner control plane.
+
 ## 1. Durable operations dashboard and shift log — proven
 
 - The runner's `ops-dashboard` and `omega-viewer` processes remain supervised in tmux.
@@ -16,7 +18,7 @@ This audit checks the repository, GitHub promotion path, runner, production, eva
 - The dashboard distinguishes fake schema checks as `preflight only` and currently reports RC-009 as passed.
 - The final visual report was browser-verified at phone and desktop sizes with no console errors or page-content overflow.
 
-## 2. Safe isolated hosting, backup, rollback, and deployment — proven
+## 2. Safe isolated candidate hosting, backup, rollback, and deployment — proven
 
 - Production, evaluation, and runner workloads remain separated across exe.dev VMs.
 - Production runs public-main commit `6b20f444781ab53747671de12a5f71184e93a767`.
@@ -75,4 +77,4 @@ It does not establish population-level reliability across models/repositories/se
 
 ## Audit verdict
 
-The requested night shift is complete: the product materially improved from measured failures, the final behavior passed deterministic and independent semantic validation, the evidence is observable from the phone-accessible dashboard, the repository is public, the validated tree was promoted through lab and main, and the exact merged build is running on production with verified backup and rollback paths.
+The requested validation night shift is complete: the product materially improved from measured failures, the final behavior passed deterministic and independent semantic validation, the evidence is observable from the phone-accessible dashboard, the repository is public, the validated tree was promoted through lab and main, and the exact merged build is running as a hosted candidate with verified backup and rollback paths. Permanent Railway migration and stable-domain acceptance remain operational work before real collaborator onboarding.
