@@ -13,7 +13,7 @@ Railway is the permanent target for the trusted ClankSpace service. exe.dev rema
 
 ## Live deployment status
 
-The human-owned Railway project is deployed in EU West with one service, one replica, and one persistent `/data` volume. The fresh, integrity-checked exe.dev snapshot is restored; the Railway-managed origin passes health, readiness, authentication, and deterministic export checks. The exe.dev source is stopped and frozen for rollback. Cloudflare publishes the DNS-only CNAME and Railway ownership TXT records; managed certificate issuance is pending. Valid stable-domain TLS, scheduled backups, and a disposable restore rehearsal remain before collaborator onboarding.
+The human-owned Railway project is deployed in EU West with one service, one replica, and one persistent `/data` volume. The fresh, integrity-checked exe.dev snapshot is restored; strict-HTTPS health, readiness, browser, CLI, authentication, and deterministic export checks pass through `clank.shamanicarts.dev`. Cloudflare publishes the DNS-only CNAME and Railway ownership TXT records; Railway ownership verification and its managed certificate are active. The exe.dev source is stopped and frozen for rollback. Scheduled backups and a disposable restore rehearsal remain before collaborator onboarding.
 
 ## Shape
 

@@ -10,7 +10,7 @@ ClankSpace is a **validated trusted-collaborator release candidate**, not a publ
 
 - The source is public and MIT licensed.
 - The validated service is deployed on Railway in EU West with one replica and one persistent SQLite volume. The Railway-managed origin passes health, readiness, authentication, and deterministic export checks.
-- The stable client contract is `https://clank.shamanicarts.dev`. Cloudflare DNS is routed to Railway; Railway-managed certificate issuance is the remaining networking step before collaborator onboarding.
+- The stable client contract is `https://clank.shamanicarts.dev`. Cloudflare DNS, Railway ownership verification, and the Railway-managed certificate are active; strict-HTTPS health, readiness, browser, CLI, and authenticated export checks pass.
 - The RC-009 product gate validated passive discussion, quiet routine work, compatible overlap, architectural conflict surfacing, coherent checkpoint provenance, and incumbent/later-entrant coordination on frozen `go-chi/chi` and `rs/cors` repository worlds.
 - The exe.dev candidate is stopped and frozen as a short-lived rollback source. Its final online SQLite snapshot was integrity-checked, restored to Railway, and retained off-provider.
 - Onboarding and binary distribution are still manual. Broader multi-tenant hardening, private repository integration, token administration, and semantic retrieval remain future work.

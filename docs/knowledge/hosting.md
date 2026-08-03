@@ -16,14 +16,14 @@ ClankSpace separates durable collaboration state from reusable agent compute. ex
 
 | Environment | Purpose | Data boundary |
 |---|---|---|
-| Railway at `clank.shamanicarts.dev` | Live permanent trusted-project service; managed TLS pending | Real collaboration state only; one persistent volume |
+| Railway at `clank.shamanicarts.dev` | Live permanent trusted-project service | Real collaboration state only; one persistent volume |
 | exe.dev `clankspace-eval` | ClankSpace's resettable candidate and synthetic-project service | Evaluation data only; isolated from other agent services |
 | exe.dev `luna-runner` | ClankSpace corpus generation, model rollouts, traces, judges, and Operations | Evaluation credentials only; no production credential |
 | exe.dev `clankspace-prod` | Stopped migration rollback source | Frozen through the Railway rollback window, then retired |
 
 The existing exe.dev origin proved that the build could be hosted, backed up, restored, and rolled back. It is stopped and must not receive new writes or collaborator traffic.
 
-The Railway-managed origin is healthy and serves the restored project data. Cloudflare publishes a DNS-only CNAME for `clank.shamanicarts.dev` plus Railway's ownership TXT record. Railway recognizes traffic routing as propagated; certificate issuance is pending. Repository pointers should use the stable hostname only after valid TLS plus backup and restore acceptance pass. Bearer authentication remains mandatory for every project operation and there is no public signup.
+The Railway-managed origin is healthy and serves the restored project data. Cloudflare publishes a DNS-only CNAME for `clank.shamanicarts.dev` plus Railway's ownership TXT record. Railway recognizes traffic routing and ownership as verified, and its managed certificate is valid. Strict-HTTPS health, readiness, browser, CLI, and authenticated export checks pass. Collaborator onboarding still waits for backup scheduling and restore acceptance. Bearer authentication remains mandatory for every project operation and there is no public signup.
 
 ## Permanent runtime
 

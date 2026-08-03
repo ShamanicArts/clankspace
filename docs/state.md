@@ -1,7 +1,7 @@
 ---
 type: state
 status: active
-summary: Railway production and stable DNS are live; managed TLS, backup scheduling, and restore acceptance remain before collaborator onboarding.
+summary: Railway production and its stable domain are live; backup scheduling and restore acceptance remain before collaborator onboarding.
 note_created: 2026-08-02
 updated: 2026-08-03
 ---
@@ -10,11 +10,11 @@ updated: 2026-08-03
 
 ## Current focus
 
-Finish the stable-domain and recovery gate for the live Railway deployment, then hand the pilot to Shuv and other trusted collaborators. exe.dev remains the reusable agent-compute plane; ClankSpace eval and runner services are one isolated workload on it. Research remains subordinate to observed product friction.
+Finish the recovery gate for the live Railway deployment, then hand the pilot to Shuv and other trusted collaborators. exe.dev remains the reusable agent-compute plane; ClankSpace eval and runner services are one isolated workload on it. Research remains subordinate to observed product friction.
 
 ## Active phase
 
-Permanent production is deployed from public `main` to a single Railway service and persistent `/data` volume in EU West. The Railway-managed origin passes external health, readiness, authenticated context, and deterministic project export checks. The restored database contains the expected project and four notes. `clankspace-prod` on exe.dev is stopped and frozen as the short-lived rollback source; evaluation and runner VMs remain isolated agent-compute workloads.
+Permanent production is deployed from public `main` to a single Railway service and persistent `/data` volume in EU West. `clank.shamanicarts.dev` has active Cloudflare DNS, verified Railway ownership, and a valid Railway-managed certificate. Strict-HTTPS health, readiness, browser, CLI context, and deterministic authenticated export checks pass. The restored database contains the expected project and four notes. `clankspace-prod` on exe.dev is stopped and frozen as the short-lived rollback source; evaluation and runner VMs remain isolated agent-compute workloads.
 
 RC-009 exercised three frozen single-agent worlds and one event-gated two-maintainer world on MIT repository snapshots:
 
@@ -47,7 +47,7 @@ The operations journal is append-only on the persistent runner and the dashboard
 
 ## Production migration status
 
-RC-009's frozen result established that the product behavior and deployment artifact were viable. Railway now owns the permanent runtime and migrated collaboration state. Cloudflare publishes the required CNAME and ownership TXT records for `clank.shamanicarts.dev`; Railway-managed certificate issuance is pending. The remaining deployment gate is valid stable-domain TLS, a scheduled backup policy, and a disposable restore rehearsal. The next product uncertainty is population behavior: more models, repositories, seeds, matched no-Clank controls, and eventual semantic retrieval.
+RC-009's frozen result established that the product behavior and deployment artifact were viable. Railway now owns the permanent runtime and migrated collaboration state. Cloudflare publishes the required CNAME and ownership TXT records for `clank.shamanicarts.dev`; Railway ownership and managed TLS are active. The remaining deployment gate is a scheduled backup policy and disposable restore rehearsal. The next product uncertainty is population behavior: more models, repositories, seeds, matched no-Clank controls, and eventual semantic retrieval.
 
 ## Decisions pending after RC-009
 
