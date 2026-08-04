@@ -258,13 +258,19 @@ async function selectWorkspace(id) {
 }
 
 function renderProjectNav() {
+  const workspaceName = currentWorkspace?.name || 'Workspace'
+  $('#project-nav-heading').textContent = `${workspaceName} projects`
+  $('#projects').setAttribute('aria-label', `${workspaceName} projects`)
   $('#projects').innerHTML = projectList.map((project) => `<button data-project="${esc(project.id)}" class="${currentProject?.id === project.id ? 'active' : ''}">${esc(project.name)}</button>`).join('') || '<span class="rail-empty">No projects</span>'
   document.querySelectorAll('[data-project]').forEach((button) => { button.onclick = () => openProject(button.dataset.project) })
 }
 
 function renderWorkspace() {
+  document.title = `${currentWorkspace.name} · ClankSpace`
   $('#workspace-name').textContent = currentWorkspace.name
   $('#workspace-role').textContent = currentWorkspace.role + ' · workspace'
+  $('#back-workspace').textContent = `← ${currentWorkspace.name}`
+  $('#back-workspace').setAttribute('aria-label', `Back to ${currentWorkspace.name} workspace`)
   $('#workspace-project-count').textContent = `${projectList.length} ${projectList.length === 1 ? 'project' : 'projects'}`
   $('#workspace-project-list').innerHTML = projectList.length ? projectList.map((project) => `<button class="list-row" data-list-project="${esc(project.id)}"><span><strong>${esc(project.name)}</strong><small>${esc(project.description || 'No description')}</small></span><span class="row-state">Open log →</span></button>`).join('') : '<div class="empty-row"><strong>No projects yet.</strong><span>Create one, then point agents at it.</span></div>'
   document.querySelectorAll('[data-list-project]').forEach((button) => { button.onclick = () => openProject(button.dataset.listProject) })
@@ -292,6 +298,7 @@ async function openProject(id) {
   else projectData = await request(`/account/workspaces/${currentWorkspace.id}/projects/${id}`)
   currentProject = projectData.project
   renderProjectNav()
+  document.title = `${currentProject.name} · ${currentWorkspace?.name || 'Workspace'} · ClankSpace`
   $('#project-name').textContent = currentProject.name
   $('#project-slug').textContent = currentProject.slug
   $('#project-description').textContent = currentProject.description || 'No project description.'
