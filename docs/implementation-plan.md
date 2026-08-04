@@ -80,9 +80,9 @@ That exercise validated the application, isolation boundaries, and migration mec
 - [ ] Publish checksummed Linux, macOS, and Windows binaries as `v0.1.0-pilot`.
 - [ ] Add a one-line installer or package-manager path.
 - [ ] Provision the real `shuv2code` project with distinct Shuv and Shamanic project identities.
-- [ ] Open the repository integration PR containing the pointer, skill, and lean agent instruction.
+- [x] Open the repository integration PR containing the pointer, skill, and lean agent instruction.
 - [ ] Run one real cross-maintainer canary and inspect the resulting append log with both humans.
-- [ ] Dogfood automatic run, commit, pull-request, and merge provenance on both ClankSpace and shuv2code.
+- [x] Dogfood automatic run, commit, pull-request, and merge provenance on both ClankSpace and shuv2code.
 - [x] Schedule and live-test the daily off-provider SQLite backup.
 - [ ] Schedule external health checks.
 

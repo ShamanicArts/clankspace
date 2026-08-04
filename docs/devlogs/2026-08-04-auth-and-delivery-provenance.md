@@ -1,7 +1,8 @@
 ---
 type: devlog
-status: active
+status: complete
 session_start: "02:20"
+session_end: "04:21"
 phase: "5"
 subphase: "dogfood"
 approval: user-directed
@@ -42,7 +43,17 @@ Finish the password/direct-invite onboarding campaign, then fix the deeper dogfo
 - Migrated runs may backfill a missing repository during `run link` only when that repository is already attached to the same project; an existing run repository can never be replaced.
 - Focused origin/delivery inheritance and replica-convergence tests added.
 - Agent skill and active onboarding/design docs updated around automatic provenance and direct invitation links.
+- PRs #33 and #34 merged and production migrated from schema 12 to 13 with a verified on-host and off-host backup.
+- The real shuv2code project, repository, Shamanic agent identity, pointer, skill, and instruction are connected; its first run captured origin Git coordinates and later attached delivery branch, commit, and PR #76.
+- Two bounded, maintainer-grounded shuv2code records seed the original collaboration problem without importing transcripts or synthetic data.
 
 ## Verification
 
-Pending final focused tests, browser verification, production migration, and real ClankSpace/shuv2code dogfood.
+- Three independent code/spec/test audits passed after their findings were fixed.
+- Focused CLI, service, store, HTTP, GitHub, MCP, and sync tests passed; the origin-stream ordering test passed 20 repeated runs.
+- A real schema-12 database with an ended run migrated to schema 13; event and snapshot round-trips preserved origin and delivery provenance.
+- `go vet`, JavaScript syntax, and diff checks passed.
+- Controlled desktop and iPhone-sized browser passes rendered origin branch/commit, delivery branch/commit, PR state, and merge evidence.
+- Production reports build `4af2889`, schema 13, `PRAGMA integrity_check = ok`, and healthy stable-domain readiness. The pre-v13 backup checksum matches off-host.
+- The controlled browser retained stale DNS for the retired Railway app, so the shuv2code setup request was approved through the authenticated operator endpoint. The waiting CLI still performed the normal exchange and installed every artifact; the temporary fallback credential was revoked.
+- shuv2code PR #76 is open for its maintainer rather than merged unilaterally.
