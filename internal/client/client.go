@@ -37,6 +37,13 @@ type WorkspaceInviteLink struct {
 	InviteURL string                 `json:"inviteUrl"`
 }
 
+type BootstrapOwnerLink struct {
+	User       domain.User            `json:"user"`
+	Membership domain.Membership      `json:"membership"`
+	Invite     domain.WorkspaceInvite `json:"invite"`
+	InviteURL  string                 `json:"inviteUrl"`
+}
+
 func New(baseURL, token string) *Client {
 	return &Client{BaseURL: strings.TrimRight(baseURL, "/"), Token: token, HTTP: &http.Client{Timeout: 20 * time.Second}}
 }
@@ -52,6 +59,12 @@ func (c *Client) Do(ctx context.Context, method, path string, in, out any) error
 func (c *Client) RequestMagicLink(ctx context.Context, email string) error {
 	var out map[string]string
 	return c.Do(ctx, http.MethodPost, "/auth/magic-link", map[string]string{"email": email}, &out)
+}
+
+func (c *Client) CreateBootstrapOwnerLink(ctx context.Context, email, displayName string) (BootstrapOwnerLink, error) {
+	var out BootstrapOwnerLink
+	err := c.Do(ctx, http.MethodPost, "/admin/claim", map[string]string{"email": email, "displayName": displayName}, &out)
+	return out, err
 }
 
 func (c *Client) StartSetup(ctx context.Context, challenge, projectSlug, projectName, repositoryURL, agentName string) (SetupStart, error) {
