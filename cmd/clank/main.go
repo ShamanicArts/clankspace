@@ -173,9 +173,28 @@ func workspaceCommand(ctx context.Context, c *client.Client, args []string) erro
 
 func auth(ctx context.Context, resolved localconfig.Resolved, args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: clank auth login|logout|set|status")
+		return errors.New("usage: clank auth bootstrap-owner|login|logout|set|status")
 	}
 	switch args[0] {
+	case "bootstrap-owner":
+		f := flag.NewFlagSet("auth bootstrap-owner", flag.ContinueOnError)
+		email := f.String("email", "", "email address for the installation owner")
+		name := f.String("name", "", "display name for the installation owner")
+		url := f.String("url", resolved.URL, "ClankSpace server URL")
+		if err := f.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*email) == "" {
+			return errors.New("email is required")
+		}
+		if resolved.Token == "" {
+			return errors.New("installation owner token is not configured in this environment")
+		}
+		item, err := client.New(*url, resolved.Token).CreateBootstrapOwnerLink(ctx, *email, *name)
+		if err == nil {
+			printJSON(item)
+		}
+		return err
 	case "login":
 		f := flag.NewFlagSet("auth login", flag.ContinueOnError)
 		email := f.String("email", "", "invited ClankSpace email address")
@@ -231,7 +250,7 @@ func auth(ctx context.Context, resolved localconfig.Resolved, args []string) err
 		})
 		return nil
 	default:
-		return errors.New("usage: clank auth login|logout|set|status")
+		return errors.New("usage: clank auth bootstrap-owner|login|logout|set|status")
 	}
 }
 

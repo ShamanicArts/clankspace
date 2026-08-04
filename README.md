@@ -47,7 +47,7 @@ If the retrieved work is compatible, the agent absorbs it and continues without 
 
 ## Hosted pilot
 
-The hosted service is deliberately invite-only. The first operator claims the existing bootstrap workspace with an email address and password. After that, owners create one-time invitation links in the dashboard or with `clank workspace invite --email person@example.com`; they share those links through whatever channel they already use. ClankSpace sends no email. The invited person chooses a password, and the email on the link becomes their account identifier. Invited users can create their own separate workspaces as well as join shared ones.
+The hosted service is deliberately invite-only. An agent or operator holding the installation credential can create the first human-owner link with `clank auth bootstrap-owner --email person@example.com --name "Person"`; the credential stays local and only the one-time link is shown to the human. Alternatively, the operator can claim the account from the token dashboard. After that, owners create invitation links in **People & access** or with `clank workspace invite --email person@example.com`; they share those links through whatever channel they already use. ClankSpace sends no email. The invited person chooses a password, and the email on the link becomes their account identifier.
 
 Repository setup automatically creates a separate project identity for each approved agent group. The setup URL shows the repository, project, agent identity, and verification code before login; after login, the same request is presented for approval. Distinct identities let ClankSpace distinguish an incumbent's active work from a later collaborator entering the same boundary.
 

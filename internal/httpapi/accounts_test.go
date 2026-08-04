@@ -234,3 +234,46 @@ func TestPasswordLoginAndDashboardInviteLinkFlow(t *testing.T) {
 	}
 	response.Body.Close()
 }
+
+func TestBootstrapOwnerCanReceiveDirectAccountLink(t *testing.T) {
+	ctx := t.Context()
+	db, err := store.OpenWithSecret(filepath.Join(t.TempDir(), "clankspace.db"), "bootstrap-link-secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err = db.EnsureBootstrap(ctx, "bootstrap-token", "Shared", "Owner"); err != nil {
+		t.Fatal(err)
+	}
+	serverConfig := &httpapi.Server{Store: db, Core: service.New(db), GitHub: githubsync.New(""), Log: slog.Default(), BaseURL: "http://clank.test", AuthMode: "bootstrap"}
+	server := httptest.NewServer(serverConfig.Handler())
+	defer server.Close()
+	serverConfig.BaseURL = server.URL
+
+	requestBody, _ := json.Marshal(map[string]string{"email": "shamanic@example.test", "displayName": "Shamanic"})
+	request, _ := http.NewRequest(http.MethodPost, server.URL+"/api/v1/admin/claim", bytes.NewReader(requestBody))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", "Bearer bootstrap-token")
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var claimed map[string]any
+	_ = json.NewDecoder(response.Body).Decode(&claimed)
+	response.Body.Close()
+	if response.StatusCode != http.StatusCreated || !strings.Contains(claimed["inviteUrl"].(string), "?invite=") {
+		t.Fatalf("bootstrap link = %d %#v", response.StatusCode, claimed)
+	}
+	if messages, claimErr := db.ClaimOutbox(ctx, 10); claimErr != nil || len(messages) != 0 {
+		t.Fatalf("bootstrap link queued email: %#v, %v", messages, claimErr)
+	}
+	inviteURL, _ := url.Parse(claimed["inviteUrl"].(string))
+	accepted, err := db.ConsumeInviteWithPassword(ctx, inviteURL.Query().Get("invite"), "Shamanic", "chosen password")
+	if err != nil || accepted.User.Email != "shamanic@example.test" {
+		t.Fatalf("accept bootstrap owner link = %#v, %v", accepted, err)
+	}
+	workspaces, err := db.ListWorkspacesForUser(ctx, accepted.User.ID)
+	if err != nil || len(workspaces) != 1 || workspaces[0].Role != "owner" {
+		t.Fatalf("owner workspaces = %#v, %v", workspaces, err)
+	}
+}

@@ -55,6 +55,14 @@ clank workspace invite --email you@example.com --role member
 
 The owner shares the returned link directly. Opening it shows the workspace and fixed email address, then asks for a display name and password. Browser sessions and agent credentials remain deliberately separate.
 
+For a new installation with no human account, an operator or agent that already has the installation credential can create the first owner link without revealing that credential:
+
+```sh
+clank auth bootstrap-owner --email owner@example.com --name "Owner"
+```
+
+Only the returned `inviteUrl` is given to the human. Accepting it sets their password and retains the bootstrap principal's workspace ownership.
+
 ## Replica commands
 
 - `clank replica join --remote <url> --code <code>` joins a workspace whose authority remains on the remote instance.

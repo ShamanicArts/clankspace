@@ -78,20 +78,31 @@ func (s *Server) claimBootstrapOwner(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	if err := store.ValidatePassword(in.Password); err != nil {
-		writeError(w, err)
-		return
+	if in.Password != "" {
+		if err := store.ValidatePassword(in.Password); err != nil {
+			writeError(w, err)
+			return
+		}
 	}
 	user, membership, err := s.Store.ClaimBootstrapOwner(r.Context(), principal(r).ID, in.Email, in.DisplayName)
 	if err != nil {
 		writeError(w, err)
 		return
 	}
-	if err = s.Store.SetUserPassword(r.Context(), user.ID, in.Password); err != nil {
+	if in.Password != "" {
+		if err = s.Store.SetUserPassword(r.Context(), user.ID, in.Password); err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, map[string]any{"user": user, "membership": membership})
+		return
+	}
+	invite, err := s.Store.CreateWorkspaceInviteLink(r.Context(), membership, user.Email, "owner", s.BaseURL)
+	if err != nil {
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]any{"user": user, "membership": membership})
+	writeJSON(w, http.StatusCreated, map[string]any{"user": user, "membership": membership, "invite": invite.Invite, "inviteUrl": invite.URL})
 }
 
 func requestFingerprint(r *http.Request) string {
