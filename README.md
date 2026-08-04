@@ -8,7 +8,7 @@ ClankSpace is **not canonical law and not an instruction channel**. Its records 
 
 ClankSpace is an **invite-only trusted-collaborator release candidate**, not a public signup service.
 
-The original single-workspace pilot is implemented and validated. The current feature branch adds the next product boundary:
+The original single-workspace pilot is implemented and validated. The deployed build adds the next product boundary:
 
 - passwordless email sign-in and workspace invitations;
 - one human account across several workspaces;
@@ -47,6 +47,8 @@ If the retrieved work is compatible, the agent absorbs it and continues without 
 ## Hosted pilot
 
 The hosted service is deliberately invite-only. The first operator claims the existing bootstrap workspace. After that, owners invite collaborators by email; invited users can create their own separate workspaces as well as join shared ones. Each human issues separate project keys for their own agents. Distinct identities let ClankSpace distinguish an incumbent's active work from a later collaborator entering the same boundary.
+
+The current exe.dev deployment keeps bootstrap authentication active until an SMTP sender is configured. The invitation, session, and multi-workspace code is already deployed; enabling `hybrid` or `email` authentication after SMTP acceptance requires configuration, not another build.
 
 There is no public registration, billing, password database, private GitHub integration, or claim of end-to-end encryption in this milestone. A hosting operator can technically read managed workspace content. Self-hosting remains fully useful without the cloud.
 
