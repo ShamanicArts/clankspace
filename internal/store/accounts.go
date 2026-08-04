@@ -450,6 +450,9 @@ func (s *Store) allowAuthRequest(ctx context.Context, key string, maximum int) (
 		return false, err
 	}
 	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `DELETE FROM auth_rate_limits WHERE datetime(window_started_at)<datetime(?)`, ts(cutoff)); err != nil {
+		return false, err
+	}
 	var started string
 	var count int
 	err = tx.QueryRowContext(ctx, `SELECT window_started_at,request_count FROM auth_rate_limits WHERE key_hash=?`, keyHash).Scan(&started, &count)
@@ -473,12 +476,21 @@ func (s *Store) ConsumeAuthToken(ctx context.Context, token, displayName string)
 	return s.consumeAuthToken(ctx, token, displayName, "", "", false)
 }
 
-func (s *Store) ConsumeInviteWithPassword(ctx context.Context, token, displayName, password string) (SessionResult, error) {
+func (s *Store) ConsumeInviteWithPassword(ctx context.Context, token, displayName, password, fingerprint string) (SessionResult, error) {
 	if err := validatePassword(password); err != nil {
 		return SessionResult{}, err
 	}
-	if _, err := s.WorkspaceInvitePreview(ctx, token); err != nil {
+	preview, err := s.WorkspaceInvitePreview(ctx, token)
+	if err != nil {
 		return SessionResult{}, err
+	}
+	allowed, err := s.allowAuthRequest(ctx, "invite-email:"+preview.Email, 10)
+	if err != nil || !allowed {
+		return SessionResult{}, ErrNotFound
+	}
+	allowed, err = s.allowAuthRequest(ctx, "invite-source:"+fingerprint, 30)
+	if err != nil || !allowed {
+		return SessionResult{}, ErrNotFound
 	}
 	passwordHash, err := hashPassword(password)
 	if err != nil {

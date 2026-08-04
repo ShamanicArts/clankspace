@@ -222,7 +222,7 @@ func (s *Store) ListReplicas(ctx context.Context, workspaceID string) ([]domain.
 
 func isReplicableEvent(eventType string) bool {
 	switch eventType {
-	case "project.created", "run.started", "run.ended", "note.recorded", "note.superseded", "trajectory.started", "repository.attached":
+	case "project.created", "run.started", "run.ended", "run.delivery_linked", "note.recorded", "note.superseded", "trajectory.started", "repository.attached":
 		return true
 	default:
 		return false
@@ -231,10 +231,18 @@ func isReplicableEvent(eventType string) bool {
 
 func portableEventPayload(eventType string, response []byte) ([]byte, string) {
 	projectID := ""
-	if eventType == "run.started" || eventType == "run.ended" {
+	if eventType == "run.started" || eventType == "run.ended" || eventType == "run.delivery_linked" {
 		var run domain.Run
 		if json.Unmarshal(response, &run) == nil {
 			run.Worktree = ""
+			if eventType == "run.ended" {
+				run.DeliveryBranch = ""
+				run.PullRequestURL = ""
+				run.PullRequestNumber = 0
+				run.PullRequestState = ""
+				run.MergeCommitSHA = ""
+				run.MergedAt = nil
+			}
 			projectID = run.ProjectID
 			if body, err := json.Marshal(run); err == nil {
 				return body, projectID
@@ -314,7 +322,7 @@ func (s *Store) appendDomainEventTx(ctx context.Context, tx *sql.Tx, eventID, wo
 	if projectID != "" && eventType != "project.created" {
 		causalEventIDs = appendUnique(causalEventIDs, eventCauseTx(ctx, tx, workspaceID, "project.created", projectID))
 	}
-	if eventType == "run.ended" {
+	if eventType == "run.ended" || eventType == "run.delivery_linked" {
 		causalEventIDs = appendUnique(causalEventIDs, eventCauseTx(ctx, tx, workspaceID, "run.started", entityID))
 	} else if runID != "" {
 		causalEventIDs = appendUnique(causalEventIDs, eventCauseTx(ctx, tx, workspaceID, "run.started", runID))
@@ -734,10 +742,19 @@ func (s *Store) EventsAfter(ctx context.Context, workspaceID string, have []doma
 	// Causal edges make authority-created projects and cross-origin targets arrive
 	// before events that reference them.
 	remaining := make(map[string]domain.DomainEvent, len(pending))
-	previousUnseen := map[string]string{}
 	chainDependency := map[string]string{}
 	for _, event := range pending {
 		remaining[event.EventID] = event
+	}
+	chainOrder := append([]domain.DomainEvent(nil), pending...)
+	sort.SliceStable(chainOrder, func(i, j int) bool {
+		if chainOrder[i].OriginReplicaID == chainOrder[j].OriginReplicaID {
+			return chainOrder[i].OriginSequence < chainOrder[j].OriginSequence
+		}
+		return chainOrder[i].OriginReplicaID < chainOrder[j].OriginReplicaID
+	})
+	previousUnseen := map[string]string{}
+	for _, event := range chainOrder {
 		if previous := previousUnseen[event.OriginReplicaID]; previous != "" {
 			chainDependency[event.EventID] = previous
 		}
@@ -900,7 +917,7 @@ func validateEventEnvelopeTx(ctx context.Context, tx *sql.Tx, event domain.Domai
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return err
 		}
-	case "run.started", "run.ended":
+	case "run.started", "run.ended", "run.delivery_linked":
 		var item domain.Run
 		if err := json.Unmarshal(event.Payload, &item); err != nil {
 			return err
@@ -908,8 +925,17 @@ func validateEventEnvelopeTx(ctx context.Context, tx *sql.Tx, event domain.Domai
 		if item.ID != event.EntityID || item.ProjectID != event.ProjectID || item.PrincipalID != event.Actor.PrincipalID {
 			return errors.New("run event payload does not match its envelope")
 		}
-		if event.Type == "run.ended" {
+		if item.RepositoryID != "" {
+			var repositoryCount int
+			if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM project_repositories WHERE project_id=? AND repository_id=?`, item.ProjectID, item.RepositoryID).Scan(&repositoryCount); err != nil || repositoryCount != 1 {
+				return errors.New("run event repository is not attached to its project")
+			}
+		}
+		if event.Type == "run.ended" || event.Type == "run.delivery_linked" {
 			if err := runInProjectTx(ctx, tx, item.ID, event.ProjectID); err != nil {
+				return err
+			}
+			if err := validateRunDeliveryTx(ctx, tx, item.ID, item.PrincipalID, domain.LinkRunDeliveryInput{DeliveryBranch: item.DeliveryBranch, HeadSHA: item.HeadSHA, PullRequestURL: item.PullRequestURL, PullRequestNumber: item.PullRequestNumber, PullRequestState: item.PullRequestState, MergeCommitSHA: item.MergeCommitSHA, MergedAt: item.MergedAt}); err != nil {
 				return err
 			}
 		}
@@ -1120,7 +1146,7 @@ func (s *Store) projectDomainEventTx(ctx context.Context, tx *sql.Tx, event doma
 		}
 		_, err := tx.ExecContext(ctx, `INSERT INTO projects(id,workspace_id,slug,name,description,created_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET slug=excluded.slug,name=excluded.name,description=excluded.description`, item.ID, event.WorkspaceID, item.Slug, item.Name, item.Description, ts(item.CreatedAt))
 		return err
-	case "run.started", "run.ended":
+	case "run.started", "run.ended", "run.delivery_linked":
 		var item domain.Run
 		if err := json.Unmarshal(event.Payload, &item); err != nil {
 			return err
@@ -1129,7 +1155,7 @@ func (s *Store) projectDomainEventTx(ctx context.Context, tx *sql.Tx, event doma
 			return err
 		}
 		profile, _ := json.Marshal(item.InstructionProfile)
-		_, err := tx.ExecContext(ctx, `INSERT INTO runs(id,project_id,agent_id,principal_id,harness,harness_version,provider,model,reasoning,role,parent_run_id,root_run_id,run_type,permission_mode,interaction_mode,repository_id,branch,worktree,base_sha,head_sha,objective,instruction_profile_json,started_at,ended_at,outcome,verification) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET ended_at=excluded.ended_at,outcome=excluded.outcome,verification=excluded.verification`, item.ID, item.ProjectID, item.AgentID, actor.PrincipalID, item.Harness, item.HarnessVersion, item.Provider, item.Model, item.Reasoning, item.Role, nullable(item.ParentRunID), nullable(item.RootRunID), item.RunType, item.PermissionMode, item.InteractionMode, nullable(item.RepositoryID), item.Branch, "", item.BaseSHA, item.HeadSHA, item.Objective, string(profile), ts(item.StartedAt), nullableTime(item.EndedAt), item.Outcome, item.Verification)
+		_, err := tx.ExecContext(ctx, `INSERT INTO runs(id,project_id,agent_id,principal_id,harness,harness_version,provider,model,reasoning,role,parent_run_id,root_run_id,run_type,permission_mode,interaction_mode,repository_id,branch,worktree,base_sha,head_sha,delivery_branch,pull_request_url,pull_request_number,pull_request_state,merge_commit_sha,merged_at,objective,instruction_profile_json,started_at,ended_at,outcome,verification) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET head_sha=CASE WHEN excluded.head_sha='' THEN runs.head_sha ELSE excluded.head_sha END,delivery_branch=CASE WHEN excluded.delivery_branch='' THEN runs.delivery_branch ELSE excluded.delivery_branch END,pull_request_url=CASE WHEN excluded.pull_request_url='' THEN runs.pull_request_url ELSE excluded.pull_request_url END,pull_request_number=CASE WHEN excluded.pull_request_number=0 THEN runs.pull_request_number ELSE excluded.pull_request_number END,pull_request_state=CASE WHEN excluded.pull_request_state='' THEN runs.pull_request_state ELSE excluded.pull_request_state END,merge_commit_sha=CASE WHEN excluded.merge_commit_sha='' THEN runs.merge_commit_sha ELSE excluded.merge_commit_sha END,merged_at=COALESCE(excluded.merged_at,runs.merged_at),ended_at=COALESCE(excluded.ended_at,runs.ended_at),outcome=CASE WHEN excluded.outcome='' THEN runs.outcome ELSE excluded.outcome END,verification=CASE WHEN excluded.verification='' THEN runs.verification ELSE excluded.verification END`, item.ID, item.ProjectID, item.AgentID, actor.PrincipalID, item.Harness, item.HarnessVersion, item.Provider, item.Model, item.Reasoning, item.Role, nullable(item.ParentRunID), nullable(item.RootRunID), item.RunType, item.PermissionMode, item.InteractionMode, nullable(item.RepositoryID), item.Branch, item.Worktree, item.BaseSHA, item.HeadSHA, item.DeliveryBranch, item.PullRequestURL, item.PullRequestNumber, item.PullRequestState, item.MergeCommitSHA, nullableTime(item.MergedAt), item.Objective, string(profile), ts(item.StartedAt), nullableTime(item.EndedAt), item.Outcome, item.Verification)
 		if err == nil && event.Type == "run.ended" {
 			_, err = tx.ExecContext(ctx, `UPDATE trajectories SET status='closed',updated_at=? WHERE run_id=? AND status='active'`, ts(event.OccurredAt), item.ID)
 		}
@@ -1364,7 +1390,7 @@ func (s *Store) ImportWorkspaceSnapshot(ctx context.Context, snapshot domain.Wor
 		}
 		for _, run := range projectSnapshot.Runs {
 			profile, _ := json.Marshal(run.InstructionProfile)
-			if _, err = tx.ExecContext(ctx, `INSERT INTO runs(id,project_id,agent_id,principal_id,harness,harness_version,provider,model,reasoning,role,parent_run_id,root_run_id,run_type,permission_mode,interaction_mode,repository_id,branch,worktree,base_sha,head_sha,objective,instruction_profile_json,started_at,ended_at,outcome,verification) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET ended_at=excluded.ended_at,outcome=excluded.outcome,verification=excluded.verification`, run.ID, project.ID, run.AgentID, run.PrincipalID, run.Harness, run.HarnessVersion, run.Provider, run.Model, run.Reasoning, run.Role, nullable(run.ParentRunID), nullable(run.RootRunID), run.RunType, run.PermissionMode, run.InteractionMode, nullable(run.RepositoryID), run.Branch, "", run.BaseSHA, run.HeadSHA, run.Objective, string(profile), ts(run.StartedAt), nullableTime(run.EndedAt), run.Outcome, run.Verification); err != nil {
+			if _, err = tx.ExecContext(ctx, `INSERT INTO runs(id,project_id,agent_id,principal_id,harness,harness_version,provider,model,reasoning,role,parent_run_id,root_run_id,run_type,permission_mode,interaction_mode,repository_id,branch,worktree,base_sha,head_sha,delivery_branch,pull_request_url,pull_request_number,pull_request_state,merge_commit_sha,merged_at,objective,instruction_profile_json,started_at,ended_at,outcome,verification) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET head_sha=CASE WHEN excluded.head_sha='' THEN runs.head_sha ELSE excluded.head_sha END,delivery_branch=CASE WHEN excluded.delivery_branch='' THEN runs.delivery_branch ELSE excluded.delivery_branch END,pull_request_url=CASE WHEN excluded.pull_request_url='' THEN runs.pull_request_url ELSE excluded.pull_request_url END,pull_request_number=CASE WHEN excluded.pull_request_number=0 THEN runs.pull_request_number ELSE excluded.pull_request_number END,pull_request_state=CASE WHEN excluded.pull_request_state='' THEN runs.pull_request_state ELSE excluded.pull_request_state END,merge_commit_sha=CASE WHEN excluded.merge_commit_sha='' THEN runs.merge_commit_sha ELSE excluded.merge_commit_sha END,merged_at=COALESCE(excluded.merged_at,runs.merged_at),ended_at=COALESCE(excluded.ended_at,runs.ended_at),outcome=CASE WHEN excluded.outcome='' THEN runs.outcome ELSE excluded.outcome END,verification=CASE WHEN excluded.verification='' THEN runs.verification ELSE excluded.verification END`, run.ID, project.ID, run.AgentID, run.PrincipalID, run.Harness, run.HarnessVersion, run.Provider, run.Model, run.Reasoning, run.Role, nullable(run.ParentRunID), nullable(run.RootRunID), run.RunType, run.PermissionMode, run.InteractionMode, nullable(run.RepositoryID), run.Branch, run.Worktree, run.BaseSHA, run.HeadSHA, run.DeliveryBranch, run.PullRequestURL, run.PullRequestNumber, run.PullRequestState, run.MergeCommitSHA, nullableTime(run.MergedAt), run.Objective, string(profile), ts(run.StartedAt), nullableTime(run.EndedAt), run.Outcome, run.Verification); err != nil {
 				return err
 			}
 		}

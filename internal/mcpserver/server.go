@@ -63,12 +63,18 @@ func New(c *client.Client) *mcp.Server {
 		o, e := c.StartRun(ctx, in)
 		return nil, o, e
 	})
-	mcp.AddTool(s, &mcp.Tool{Name: "clank_run_end", Description: "Close a registered execution with its outcome and verification."}, func(ctx context.Context, _ *mcp.CallToolRequest, in struct {
-		RunID        string `json:"runId"`
-		Outcome      string `json:"outcome"`
-		Verification string `json:"verification,omitempty"`
+	mcp.AddTool(s, &mcp.Tool{Name: "clank_run_end", Description: "Close a registered execution with its outcome, verification, and delivered Git/PR provenance."}, func(ctx context.Context, _ *mcp.CallToolRequest, in struct {
+		RunID string `json:"runId"`
+		domain.EndRunInput
 	}) (*mcp.CallToolResult, domain.Run, error) {
-		o, e := c.EndRun(ctx, in.RunID, domain.EndRunInput{Outcome: in.Outcome, Verification: in.Verification})
+		o, e := c.EndRun(ctx, in.RunID, in.EndRunInput)
+		return nil, o, e
+	})
+	mcp.AddTool(s, &mcp.Tool{Name: "clank_run_link", Description: "Attach or refresh the delivered branch, commit, pull request, and merge result for a run after delivery changes."}, func(ctx context.Context, _ *mcp.CallToolRequest, in struct {
+		RunID string `json:"runId"`
+		domain.LinkRunDeliveryInput
+	}) (*mcp.CallToolResult, domain.Run, error) {
+		o, e := c.LinkRunDelivery(ctx, in.RunID, in.LinkRunDeliveryInput)
 		return nil, o, e
 	})
 	mcp.AddTool(s, &mcp.Tool{Name: "clank_trajectory_start", Description: "Publish active work direction so another agent can notice overlapping or opposing work before changing code."}, func(ctx context.Context, _ *mcp.CallToolRequest, in TrajectoryInput) (*mcp.CallToolResult, domain.Trajectory, error) {

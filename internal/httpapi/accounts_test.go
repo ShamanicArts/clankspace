@@ -268,7 +268,7 @@ func TestBootstrapOwnerCanReceiveDirectAccountLink(t *testing.T) {
 		t.Fatalf("bootstrap link queued email: %#v, %v", messages, claimErr)
 	}
 	inviteURL, _ := url.Parse(claimed["inviteUrl"].(string))
-	accepted, err := db.ConsumeInviteWithPassword(ctx, inviteURL.Query().Get("invite"), "Shamanic", "chosen password")
+	accepted, err := db.ConsumeInviteWithPassword(ctx, inviteURL.Query().Get("invite"), "Shamanic", "chosen password", "bootstrap-source")
 	if err != nil || accepted.User.Email != "shamanic@example.test" {
 		t.Fatalf("accept bootstrap owner link = %#v, %v", accepted, err)
 	}

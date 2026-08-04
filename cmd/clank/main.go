@@ -375,7 +375,7 @@ func project(ctx context.Context, c *client.Client, args []string) error {
 
 func runCommand(ctx context.Context, c *client.Client, args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: clank run start|end")
+		return errors.New("usage: clank run start|end|link")
 	}
 	if isHelp(args[0]) {
 		runUsage()
@@ -385,24 +385,65 @@ func runCommand(ctx context.Context, c *client.Client, args []string) error {
 		runUsage()
 		return nil
 	}
-	if args[0] == "end" {
-		f := flag.NewFlagSet("run end", flag.ContinueOnError)
+	if args[0] == "end" || args[0] == "link" {
+		command := args[0]
+		f := flag.NewFlagSet("run "+command, flag.ContinueOnError)
 		id := value("CLANKSPACE_RUN", "")
 		f.StringVar(&id, "id", id, "run ID")
 		f.StringVar(&id, "run", id, "run ID (alias for --id)")
 		outcome := f.String("outcome", "completed", "outcome")
 		verification := f.String("verification", "", "verification summary")
+		branch := f.String("branch", "", "delivered git branch")
+		head := f.String("head", "", "delivered commit SHA")
+		pullRequest := f.String("pr", "", "pull request URL")
+		pullRequestNumber := f.Int("pr-number", 0, "pull request number")
+		pullRequestState := f.String("pr-state", "", "pull request state")
+		mergeCommit := f.String("merge-commit", "", "merge commit SHA")
+		mergedAt := f.String("merged-at", "", "merge time in RFC3339 format")
 		if err := f.Parse(args[1:]); err != nil {
 			return err
 		}
-		o, e := c.EndRun(ctx, id, domain.EndRunInput{Outcome: *outcome, Verification: *verification})
+		cwd, _ := os.Getwd()
+		delivery := detectRunDelivery(ctx, cwd)
+		if *branch != "" {
+			delivery.DeliveryBranch = *branch
+		}
+		if *head != "" {
+			delivery.HeadSHA = *head
+		}
+		if *pullRequest != "" {
+			delivery.PullRequestURL = *pullRequest
+		}
+		if *pullRequestNumber != 0 {
+			delivery.PullRequestNumber = *pullRequestNumber
+		}
+		if *pullRequestState != "" {
+			delivery.PullRequestState = *pullRequestState
+		}
+		if *mergeCommit != "" {
+			delivery.MergeCommitSHA = *mergeCommit
+		}
+		if *mergedAt != "" {
+			parsed, parseErr := time.Parse(time.RFC3339, *mergedAt)
+			if parseErr != nil {
+				return errors.New("--merged-at must use RFC3339 format")
+			}
+			delivery.MergedAt = &parsed
+		}
+		var o domain.Run
+		var e error
+		if command == "link" {
+			o, e = c.LinkRunDelivery(ctx, id, delivery)
+		} else {
+			o, e = c.EndRun(ctx, id, domain.EndRunInput{Outcome: *outcome, Verification: *verification, DeliveryBranch: delivery.DeliveryBranch, HeadSHA: delivery.HeadSHA, PullRequestURL: delivery.PullRequestURL, PullRequestNumber: delivery.PullRequestNumber, PullRequestState: delivery.PullRequestState, MergeCommitSHA: delivery.MergeCommitSHA, MergedAt: delivery.MergedAt})
+		}
 		if e == nil {
 			printJSON(o)
 		}
 		return e
 	}
 	if args[0] != "start" {
-		return errors.New("usage: clank run start|end")
+		return errors.New("usage: clank run start|end|link")
 	}
 	f := flag.NewFlagSet("run start", flag.ContinueOnError)
 	project := f.String("project", os.Getenv("CLANKSPACE_PROJECT"), "project ID or slug")
@@ -417,11 +458,31 @@ func runCommand(ctx context.Context, c *client.Client, args []string) error {
 	objective := f.String("objective", "", "objective")
 	branch := f.String("branch", value("CLANKSPACE_BRANCH", ""), "git branch")
 	worktree := f.String("worktree", value("CLANKSPACE_WORKTREE", ""), "worktree")
+	repository := f.String("repository", "", "attached repository ID")
+	base := f.String("base", "", "starting commit SHA")
+	head := f.String("head", "", "current commit SHA")
 	paths := f.String("instructions", value("CLANKSPACE_INSTRUCTIONS", ""), "instruction profile names/hashes, comma separated")
 	if err := f.Parse(args[1:]); err != nil {
 		return err
 	}
-	o, e := c.StartRun(ctx, domain.StartRunInput{ProjectID: *project, AgentName: *agent, Harness: *harness, HarnessVersion: *harnessVersion, Provider: *provider, Model: *model, Reasoning: *reasoning, Role: *role, RunType: *runType, Objective: *objective, Branch: *branch, Worktree: *worktree, InstructionProfile: split(*paths)})
+	cwd, _ := os.Getwd()
+	currentHead := gitOutput(cwd, "rev-parse", "HEAD")
+	if *branch == "" {
+		*branch = gitOutput(cwd, "branch", "--show-current")
+	}
+	if *worktree == "" && currentHead != "" {
+		*worktree = cwd
+	}
+	if *base == "" {
+		*base = currentHead
+	}
+	if *head == "" {
+		*head = currentHead
+	}
+	if *repository == "" {
+		*repository = matchingRepositoryID(ctx, c, *project, gitOutput(cwd, "remote", "get-url", "origin"))
+	}
+	o, e := c.StartRun(ctx, domain.StartRunInput{ProjectID: *project, AgentName: *agent, Harness: *harness, HarnessVersion: *harnessVersion, Provider: *provider, Model: *model, Reasoning: *reasoning, Role: *role, RunType: *runType, Objective: *objective, RepositoryID: *repository, Branch: *branch, Worktree: *worktree, BaseSHA: *base, HeadSHA: *head, InstructionProfile: split(*paths)})
 	if e == nil {
 		printJSON(o)
 	}
@@ -770,6 +831,58 @@ func gitOutput(dir string, args ...string) string {
 	return strings.TrimSpace(string(body))
 }
 
+func matchingRepositoryID(ctx context.Context, c *client.Client, project, remote string) string {
+	local, err := githubsync.ParseRepository(remote)
+	if err != nil {
+		return ""
+	}
+	repositories, err := c.ListRepositories(ctx, project)
+	if err != nil {
+		return ""
+	}
+	for _, repository := range repositories {
+		if strings.EqualFold(repository.Host, local.Host) && strings.EqualFold(repository.Owner, local.Owner) && strings.EqualFold(repository.Name, local.Name) {
+			return repository.ID
+		}
+	}
+	return ""
+}
+
+func detectRunDelivery(ctx context.Context, dir string) domain.LinkRunDeliveryInput {
+	delivery := domain.LinkRunDeliveryInput{
+		DeliveryBranch: gitOutput(dir, "branch", "--show-current"),
+		HeadSHA:        gitOutput(dir, "rev-parse", "HEAD"),
+	}
+	command := exec.CommandContext(ctx, "gh", "pr", "view", "--json", "url,number,state,mergeCommit,mergedAt,headRefOid")
+	command.Dir = dir
+	body, err := command.Output()
+	if err != nil {
+		return delivery
+	}
+	var pull struct {
+		URL         string     `json:"url"`
+		Number      int        `json:"number"`
+		State       string     `json:"state"`
+		HeadRefOID  string     `json:"headRefOid"`
+		MergedAt    *time.Time `json:"mergedAt"`
+		MergeCommit struct {
+			OID string `json:"oid"`
+		} `json:"mergeCommit"`
+	}
+	if json.Unmarshal(body, &pull) != nil {
+		return delivery
+	}
+	delivery.PullRequestURL = pull.URL
+	delivery.PullRequestNumber = pull.Number
+	delivery.PullRequestState = strings.ToLower(pull.State)
+	delivery.MergeCommitSHA = pull.MergeCommit.OID
+	delivery.MergedAt = pull.MergedAt
+	if pull.HeadRefOID != "" {
+		delivery.HeadSHA = pull.HeadRefOID
+	}
+	return delivery
+}
+
 func setupSlug(value string) string {
 	value = strings.ToLower(strings.TrimSpace(value))
 	var out strings.Builder
@@ -906,6 +1019,7 @@ clank why <topic-or-path> --run <id>
 clank trajectory start --run <id> --objective <text> --rationale <text> --paths <comma-separated>
 clank note add|create|supersede
 clank run end --id <id> --outcome <completed|aborted> --verification <text>
+clank run link --id <id>
 clank auth | workspace | project | repo | replica | sync | mcp | serve | version`)
 }
 
@@ -923,11 +1037,21 @@ func runUsage() {
   --objective <text>           current material task
   --branch <branch>            current branch
   --worktree <path>            current worktree
+  --repository <id>           attached repository ID
+  --base <sha>                 starting commit SHA
+  --head <sha>                 current commit SHA
   --instructions <profiles>    comma-separated instruction names or hashes
 
+Branch, worktree, repository, base, and HEAD are detected from Git when omitted.
 The command returns a JSON run object. Pass its top-level id to brief, trajectory, note, and run end.
 
 clank run end --id <run-id> --outcome <completed|aborted> --verification <text>
+clank run link --id <run-id>
+  Both commands detect the delivered branch and HEAD. With an installed, authenticated
+  GitHub CLI they also detect the current pull request. Use link again after a pull request
+  is opened or merged. Explicit overrides:
+  --branch <branch> --head <sha> --pr <url> --pr-number <n> --pr-state <state>
+  --merge-commit <sha> --merged-at <RFC3339>
   --run is accepted as an alias for --id`)
 }
 

@@ -190,3 +190,101 @@ func TestMigrationCreatesVerifiedPreMigrationBackup(t *testing.T) {
 		t.Fatalf("backup data = %q, %v", workspaceName, err)
 	}
 }
+
+func TestSchema12RunMigratesWithSafeDeliveryDefaults(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "schema12.db")
+	legacy, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = legacy.Exec(schema); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = legacy.Exec(`INSERT INTO schema_migrations(version,applied_at) VALUES(1,'legacy')`); err != nil {
+		t.Fatal(err)
+	}
+	steps := []string{hostedReplicationSchema, syncTransportSchema, authRateLimitSchema, repairWorkspaceSlugs, operatorSuspensionSchema, lifecycleEdgesSchema, localUsersSchema, actorOriginsSchema, projectionBlockersSchema, setupRequestsSchema, localPasswordsSchema}
+	for index, step := range steps {
+		version := index + 2
+		if _, err = legacy.Exec(step); err != nil {
+			t.Fatalf("apply legacy migration %d: %v", version, err)
+		}
+		if _, err = legacy.Exec(`INSERT INTO schema_migrations(version,applied_at) VALUES(?,'legacy')`, version); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err = legacy.Exec(`INSERT INTO workspaces(id,name,created_at,slug,status) VALUES('ws_old','Old','2026-08-01T00:00:00Z','old','active')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = legacy.Exec(`INSERT INTO principals(id,workspace_id,display_name,kind,created_at,portable_actor_id,origin_replica_id) VALUES('principal_old','ws_old','Old agent','project','2026-08-01T00:00:00Z','actor_old','')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = legacy.Exec(`INSERT INTO projects(id,workspace_id,slug,name,created_at) VALUES('project_old','ws_old','old-project','Old project','2026-08-01T00:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = legacy.Exec(`INSERT INTO agents(id,principal_id,name,created_at) VALUES('agent_old','principal_old','Old agent','2026-08-01T00:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = legacy.Exec(`INSERT INTO runs(id,project_id,agent_id,principal_id,role,run_type,branch,base_sha,head_sha,started_at,ended_at,outcome,verification) VALUES('run_old','project_old','agent_old','principal_old','primary','interactive','legacy-branch','1111111111111111111111111111111111111111','2222222222222222222222222222222222222222','2026-08-01T00:00:00Z','2026-08-01T01:00:00Z','completed','legacy checks passed')`); err != nil {
+		t.Fatal(err)
+	}
+	if err = legacy.Close(); err != nil {
+		t.Fatal(err)
+	}
+	migrated, err := OpenWithSecret(path, "schema12-secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer migrated.Close()
+	run, err := migrated.GetRun(t.Context(), "run_old")
+	if err != nil || run.Branch != "legacy-branch" || run.PullRequestURL != "" || run.DeliveryBranch != "" {
+		t.Fatalf("migrated run = %#v, %v", run, err)
+	}
+	principal := domain.Principal{ID: "principal_old", WorkspaceID: "ws_old", DisplayName: "Old agent", Kind: "project"}
+	linked, _, err := migrated.LinkRunDelivery(t.Context(), principal, "legacy-link", run.ID, domain.LinkRunDeliveryInput{DeliveryBranch: "release", HeadSHA: "3333333333333333333333333333333333333333"})
+	if err != nil || linked.Branch != "legacy-branch" || linked.DeliveryBranch != "release" {
+		t.Fatalf("link migrated run = %#v, %v", linked, err)
+	}
+}
+
+func TestEventsAfterPreservesOriginSequenceWhenTimestampsRegress(t *testing.T) {
+	db, err := OpenWithSecret(filepath.Join(t.TempDir(), "ordering.db"), "ordering-secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	principal, err := db.EnsureBootstrap(t.Context(), "ordering-token", "Ordering", "Agent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.EnsureInstallationIdentity(t.Context(), "ordering", "https://ordering.test"); err != nil {
+		t.Fatal(err)
+	}
+	if err = db.EnsureAllWorkspaceAuthorities(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	project, _, err := db.CreateProject(t.Context(), principal, "ordering-project", "ordering", "Ordering", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = db.StartRun(t.Context(), principal, "ordering-run", domain.StartRunInput{ProjectID: project.ID, AgentName: "Agent"}); err != nil {
+		t.Fatal(err)
+	}
+	origin := db.LocalReplicaID()
+	if _, err = db.db.Exec(`UPDATE domain_events SET occurred_at=CASE origin_sequence WHEN 1 THEN '2026-08-04T02:00:00Z' WHEN 2 THEN '2026-08-04T01:00:00Z' ELSE occurred_at END WHERE origin_replica_id=?`, origin); err != nil {
+		t.Fatal(err)
+	}
+	events, _, err := db.EventsAfter(t.Context(), principal.WorkspaceID, nil, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sequences []int64
+	for _, event := range events {
+		if event.OriginReplicaID == origin {
+			sequences = append(sequences, event.OriginSequence)
+		}
+	}
+	if len(sequences) != 2 || sequences[0] != 1 || sequences[1] != 2 {
+		t.Fatalf("origin sequence order = %#v", sequences)
+	}
+}

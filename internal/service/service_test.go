@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ShamanicArts/clankspace/internal/domain"
 	"github.com/ShamanicArts/clankspace/internal/service"
@@ -111,6 +112,84 @@ func TestIdempotencyAndSecretBoundary(t *testing.T) {
 	in = domain.CreateNoteInput{Kind: "checkpoint", Title: "Contradictory provenance", Summary: "The team selected this direction.", LedBy: "joint", DirectionBasis: "autonomous_agent_judgment"}
 	if _, _, err = svc.CreateNote(ctx, p, project.ID, "bad-provenance", in); err == nil || !strings.Contains(err.Error(), "incompatible") {
 		t.Fatalf("incoherent lead/basis pairing was accepted: %v", err)
+	}
+}
+
+func TestDecisionAndCheckpointInheritOriginAndDeliveryProvenance(t *testing.T) {
+	db, svc, principal, project := setup(t)
+	ctx := context.Background()
+	repository, _, err := db.UpsertRepository(ctx, principal, project.ID, "delivery-repository", domain.Repository{URL: "https://github.com/example/repo", Host: "github.com", Owner: "example", Name: "repo", Visibility: "public"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	run, _, err := svc.StartRun(ctx, principal, "delivery-run", domain.StartRunInput{
+		ProjectID: project.ID, AgentName: "Codex", RepositoryID: repository.ID, Branch: "feature/provenance",
+		BaseSHA: "1111111111111111111111111111111111111111", HeadSHA: "1111111111111111111111111111111111111111",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, kind := range []string{"decision", "checkpoint"} {
+		if _, _, err = svc.CreateNote(ctx, principal, project.ID, "delivery-note-"+kind, domain.CreateNoteInput{RunID: run.ID, Kind: kind, Title: "Delivery provenance " + kind, Summary: "This record inherits delivery evidence from its run.", LedBy: "agent", DirectionBasis: "autonomous_agent_judgment"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, _, err = db.EndRun(ctx, principal, "delivery-end", run.ID, domain.EndRunInput{
+		Outcome: "completed", DeliveryBranch: "release/provenance", HeadSHA: "2222222222222222222222222222222222222222",
+		PullRequestURL: "https://github.com/example/repo/pull/42", PullRequestNumber: 42, PullRequestState: "open",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	merged := time.Date(2026, time.August, 4, 3, 0, 0, 0, time.UTC)
+	if _, _, err = db.LinkRunDelivery(ctx, principal, "delivery-merge", run.ID, domain.LinkRunDeliveryInput{PullRequestState: "merged", MergeCommitSHA: "3333333333333333333333333333333333333333", MergedAt: &merged}); err != nil {
+		t.Fatal(err)
+	}
+	notes, err := db.ListNotes(ctx, project.ID, 10)
+	if err != nil || len(notes) != 2 {
+		t.Fatalf("notes = %#v, %v", notes, err)
+	}
+	for _, note := range notes {
+		if note.Run == nil || note.Run.BaseSHA != "1111111111111111111111111111111111111111" || note.Run.HeadSHA != "2222222222222222222222222222222222222222" {
+			t.Fatalf("origin/delivery coordinates lost: %#v", note.Run)
+		}
+		if note.Run.Branch != "feature/provenance" || note.Run.DeliveryBranch != "release/provenance" {
+			t.Fatalf("origin branch was rewritten: %#v", note.Run)
+		}
+		if note.Run.PullRequestNumber != 42 || note.Run.PullRequestState != "merged" || note.Run.MergeCommitSHA != "3333333333333333333333333333333333333333" || note.Run.MergedAt == nil {
+			t.Fatalf("pull request lifecycle lost: %#v", note.Run)
+		}
+	}
+}
+
+func TestRunDeliveryPreservesEvidenceAndRejectsForeignRepository(t *testing.T) {
+	db, svc, principal, project := setup(t)
+	ctx := context.Background()
+	repository, _, err := db.UpsertRepository(ctx, principal, project.ID, "delivery-preserve-repository", domain.Repository{URL: "https://github.com/example/repo", Host: "github.com", Owner: "example", Name: "repo", Visibility: "public"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = svc.StartRun(ctx, principal, "foreign-repository-run", domain.StartRunInput{ProjectID: project.ID, AgentName: "Codex", RepositoryID: "repo-from-another-project"}); err == nil {
+		t.Fatal("run accepted a repository that is not attached to its project")
+	}
+	run, _, err := svc.StartRun(ctx, principal, "preserve-run", domain.StartRunInput{ProjectID: project.ID, AgentName: "Codex", RepositoryID: repository.ID, Branch: "feature/origin", BaseSHA: "1111111111111111111111111111111111111111", HeadSHA: "1111111111111111111111111111111111111111"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = db.LinkRunDelivery(ctx, principal, "preserve-link", run.ID, domain.LinkRunDeliveryInput{DeliveryBranch: "feature/delivery", HeadSHA: "2222222222222222222222222222222222222222", PullRequestURL: "https://github.com/example/repo/pull/9", PullRequestNumber: 9, PullRequestState: "open"}); err != nil {
+		t.Fatal(err)
+	}
+	ended, _, err := db.EndRun(ctx, principal, "preserve-end", run.ID, domain.EndRunInput{Outcome: "completed", Verification: "focused checks passed"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ended.Branch != "feature/origin" || ended.DeliveryBranch != "feature/delivery" || ended.PullRequestNumber != 9 || ended.PullRequestState != "open" {
+		t.Fatalf("partial end erased delivery evidence: %#v", ended)
+	}
+	if _, _, err = db.LinkRunDelivery(ctx, principal, "foreign-pr", run.ID, domain.LinkRunDeliveryInput{PullRequestURL: "https://github.com/other/repo/pull/9", PullRequestNumber: 9, PullRequestState: "open"}); err == nil {
+		t.Fatal("run accepted a pull request from another repository")
+	}
+	if _, _, err = db.LinkRunDelivery(ctx, principal, "malformed-pr", run.ID, domain.LinkRunDeliveryInput{PullRequestURL: "%", PullRequestNumber: 9, PullRequestState: "open"}); err == nil {
+		t.Fatal("run accepted a malformed pull request URL")
 	}
 }
 

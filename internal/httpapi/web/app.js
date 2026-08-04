@@ -318,9 +318,37 @@ function runtimeText(run) {
   return run ? [run.harness, run.harnessVersion, run.provider, run.model, run.reasoning, run.role, run.runType].filter(Boolean).join(' · ') : ''
 }
 
+function shortSHA(sha) { return sha ? sha.slice(0, 8) : '' }
+
+function repositoryForRun(run) {
+  return (projectData.repositories || []).find((repository) => repository.id === run?.repositoryId)
+}
+
+function runGitText(run) {
+  if (!run) return ''
+  const origin = [run.branch, shortSHA(run.baseSha)].filter(Boolean).join('@')
+  const delivered = run.headSha && run.headSha !== run.baseSha ? `delivered ${[run.deliveryBranch, shortSHA(run.headSha)].filter(Boolean).join('@')}` : ''
+  const pull = run.pullRequestNumber ? `PR #${run.pullRequestNumber} ${run.pullRequestState || ''}`.trim() : run.pullRequestState
+  return [origin, delivered, pull].filter(Boolean).join(' · ')
+}
+
+function runEvidence(run) {
+  if (!run) return ''
+  const repository = repositoryForRun(run)
+  const repositoryURL = safeURL(repository?.url)
+  const commitURL = repositoryURL && run.headSha ? `${repositoryURL}/commit/${encodeURIComponent(run.headSha)}` : ''
+  const mergeURL = repositoryURL && run.mergeCommitSha ? `${repositoryURL}/commit/${encodeURIComponent(run.mergeCommitSha)}` : ''
+  const pullURL = safeURL(run.pullRequestUrl)
+  return [
+    commitURL ? `<a href="${commitURL}" target="_blank" rel="noreferrer">Commit ${esc(shortSHA(run.headSha))} ↗</a>` : '',
+    pullURL ? `<a href="${pullURL}" target="_blank" rel="noreferrer">PR${run.pullRequestNumber ? ` #${esc(run.pullRequestNumber)}` : ''} ${esc(run.pullRequestState || '')} ↗</a>` : '',
+    mergeURL ? `<a href="${mergeURL}" target="_blank" rel="noreferrer">Merge ${esc(shortSHA(run.mergeCommitSha))} ↗</a>` : ''
+  ].filter(Boolean).join('')
+}
+
 function normalizedEntries() {
-  const notes = (projectData.notes || []).map((note) => ({ type: 'note', kind: note.kind, status: note.status, timestamp: note.updatedAt, item: note, searchable: [note.kind, note.status, note.title, note.summary, note.rationale, noteActor(note), runtimeText(note.run), note.directionBasis, note.verification, note.sourceRef, note.pullRequestUrl, ...(note.paths || [])].join(' ').toLowerCase() }))
-  const trajectories = (projectData.trajectories || []).map((trajectory) => ({ type: 'trajectory', kind: 'trajectory', status: trajectory.status, timestamp: trajectory.updatedAt, item: trajectory, searchable: ['work started', trajectory.status, trajectory.objective, trajectory.rationale, actor(trajectory.run), runtimeText(trajectory.run), trajectory.branch, ...(trajectory.paths || [])].join(' ').toLowerCase() }))
+  const notes = (projectData.notes || []).map((note) => ({ type: 'note', kind: note.kind, status: note.status, timestamp: note.updatedAt, item: note, searchable: [note.kind, note.status, note.title, note.summary, note.rationale, noteActor(note), runtimeText(note.run), runGitText(note.run), note.directionBasis, note.verification, note.sourceRef, note.pullRequestUrl, ...(note.paths || [])].join(' ').toLowerCase() }))
+  const trajectories = (projectData.trajectories || []).map((trajectory) => ({ type: 'trajectory', kind: 'trajectory', status: trajectory.status, timestamp: trajectory.updatedAt, item: trajectory, searchable: ['work started', trajectory.status, trajectory.objective, trajectory.rationale, actor(trajectory.run), runtimeText(trajectory.run), runGitText(trajectory.run), trajectory.branch, ...(trajectory.paths || [])].join(' ').toLowerCase() }))
   return [...notes, ...trajectories].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
 }
 
@@ -344,11 +372,12 @@ function logEntry(entry) {
   const title = entry.type === 'trajectory' ? item.objective : item.title
   const run = item.run
   const who = entry.type === 'trajectory' ? actor(run) : noteActor(item)
-  const meta = [who, runtimeText(run), run?.branch || item.branch].filter(Boolean).map(esc).join(' · ')
+  const meta = [who, runtimeText(run), runGitText(run) || item.branch].filter(Boolean).map(esc).join(' · ')
   const paths = (item.paths || []).map((path) => `<code>${esc(path)}</code>`).join('')
   const pullURL = safeURL(item.pullRequestUrl)
   const sourceURL = safeURL(item.sourceRef)
-  return `<article class="log-entry ${historical ? 'historical' : ''}"><time datetime="${esc(entry.timestamp)}"><strong>${esc(formatDate(entry.timestamp))}</strong><span>${esc(formatTime(entry.timestamp))}</span></time><div class="entry-body"><div class="entry-labels"><span class="entry-kind">${esc(entry.type === 'trajectory' ? 'work started' : item.kind)}</span><span class="entry-status">${esc(item.status)}</span>${entry.type === 'note' && item.status === 'current' ? `<button class="supersede" data-id="${esc(item.id)}" data-rev="${item.revision}">Supersede</button>` : ''}</div><h3>${esc(title)}</h3>${entry.type === 'note' && item.summary ? `<p class="entry-summary">${esc(item.summary)}</p>` : ''}${item.rationale ? `<p class="entry-rationale"><strong>Why:</strong> ${esc(item.rationale)}</p>` : ''}<div class="entry-provenance"><span class="actor">${meta}</span>${item.directionBasis ? `<span>${esc(item.directionBasis.replaceAll('_', ' '))}</span>` : ''}${item.verification ? `<span>${esc(item.verification)}</span>` : ''}</div>${paths || pullURL || sourceURL ? `<div class="entry-evidence"><div class="entry-paths">${paths}</div>${pullURL ? `<a href="${pullURL}" target="_blank" rel="noreferrer">Pull request ↗</a>` : ''}${sourceURL ? `<a href="${sourceURL}" target="_blank" rel="noreferrer">Source ↗</a>` : ''}</div>` : ''}</div></article>`
+  const deliveryEvidence = runEvidence(run)
+  return `<article class="log-entry ${historical ? 'historical' : ''}"><time datetime="${esc(entry.timestamp)}"><strong>${esc(formatDate(entry.timestamp))}</strong><span>${esc(formatTime(entry.timestamp))}</span></time><div class="entry-body"><div class="entry-labels"><span class="entry-kind">${esc(entry.type === 'trajectory' ? 'work started' : item.kind)}</span><span class="entry-status">${esc(item.status)}</span>${entry.type === 'note' && item.status === 'current' ? `<button class="supersede" data-id="${esc(item.id)}" data-rev="${item.revision}">Supersede</button>` : ''}</div><h3>${esc(title)}</h3>${entry.type === 'note' && item.summary ? `<p class="entry-summary">${esc(item.summary)}</p>` : ''}${item.rationale ? `<p class="entry-rationale"><strong>Why:</strong> ${esc(item.rationale)}</p>` : ''}<div class="entry-provenance"><span class="actor">${meta}</span>${item.directionBasis ? `<span>${esc(item.directionBasis.replaceAll('_', ' '))}</span>` : ''}${item.verification ? `<span>${esc(item.verification)}</span>` : ''}</div>${paths || pullURL || sourceURL || deliveryEvidence ? `<div class="entry-evidence"><div class="entry-paths">${paths}</div>${deliveryEvidence}${pullURL ? `<a href="${pullURL}" target="_blank" rel="noreferrer">Pull request ↗</a>` : ''}${sourceURL ? `<a href="${sourceURL}" target="_blank" rel="noreferrer">Source ↗</a>` : ''}</div>` : ''}</div></article>`
 }
 
 function renderRepositories() {

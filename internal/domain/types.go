@@ -139,6 +139,12 @@ type Run struct {
 	Worktree           string     `json:"worktree,omitempty"`
 	BaseSHA            string     `json:"baseSha,omitempty"`
 	HeadSHA            string     `json:"headSha,omitempty"`
+	DeliveryBranch     string     `json:"deliveryBranch,omitempty"`
+	PullRequestURL     string     `json:"pullRequestUrl,omitempty"`
+	PullRequestNumber  int        `json:"pullRequestNumber,omitempty"`
+	PullRequestState   string     `json:"pullRequestState,omitempty"`
+	MergeCommitSHA     string     `json:"mergeCommitSha,omitempty"`
+	MergedAt           *time.Time `json:"mergedAt,omitempty"`
 	Objective          string     `json:"objective,omitempty"`
 	InstructionProfile []string   `json:"instructionProfile,omitempty"`
 	StartedAt          time.Time  `json:"startedAt"`
@@ -171,8 +177,25 @@ type StartRunInput struct {
 }
 
 type EndRunInput struct {
-	Outcome      string `json:"outcome"`
-	Verification string `json:"verification,omitempty"`
+	Outcome           string     `json:"outcome"`
+	Verification      string     `json:"verification,omitempty"`
+	DeliveryBranch    string     `json:"deliveryBranch,omitempty"`
+	HeadSHA           string     `json:"headSha,omitempty"`
+	PullRequestURL    string     `json:"pullRequestUrl,omitempty"`
+	PullRequestNumber int        `json:"pullRequestNumber,omitempty"`
+	PullRequestState  string     `json:"pullRequestState,omitempty"`
+	MergeCommitSHA    string     `json:"mergeCommitSha,omitempty"`
+	MergedAt          *time.Time `json:"mergedAt,omitempty"`
+}
+
+type LinkRunDeliveryInput struct {
+	DeliveryBranch    string     `json:"deliveryBranch,omitempty"`
+	HeadSHA           string     `json:"headSha,omitempty"`
+	PullRequestURL    string     `json:"pullRequestUrl,omitempty"`
+	PullRequestNumber int        `json:"pullRequestNumber,omitempty"`
+	PullRequestState  string     `json:"pullRequestState,omitempty"`
+	MergeCommitSHA    string     `json:"mergeCommitSha,omitempty"`
+	MergedAt          *time.Time `json:"mergedAt,omitempty"`
 }
 
 type Note struct {

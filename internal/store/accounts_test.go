@@ -76,15 +76,45 @@ func TestDirectInviteAndPasswordLoginDoNotNeedEmail(t *testing.T) {
 	if err != nil || preview.Email != "friend@example.test" || preview.WorkspaceName != "Shared Studio" {
 		t.Fatalf("invite preview = %#v, %v", preview, err)
 	}
-	accepted, err := db.ConsumeInviteWithPassword(ctx, token, "Friend", "friend password")
+	accepted, err := db.ConsumeInviteWithPassword(ctx, token, "Friend", "friend password", "friend-source")
 	if err != nil || accepted.User.Email != "friend@example.test" {
 		t.Fatalf("accept invite = %#v, %v", accepted, err)
 	}
-	if _, err = db.ConsumeInviteWithPassword(ctx, token, "Friend", "friend password"); err == nil {
+	if _, err = db.ConsumeInviteWithPassword(ctx, token, "Friend", "friend password", "friend-source"); err == nil {
 		t.Fatal("one-time direct invite was accepted twice")
 	}
 	if _, err = db.AuthenticatePassword(ctx, "friend@example.test", "friend password", "friend-source"); err != nil {
 		t.Fatalf("invited user password login: %v", err)
+	}
+	_, secondMembership, err := db.CreateWorkspaceForUser(ctx, owner.ID, "second-space", "Second Space")
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondLink, err := db.CreateWorkspaceInviteLink(ctx, secondMembership, "friend@example.test", "member", "https://clank.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondToken := inviteTokenFromURL(t, secondLink.URL)
+	if _, err = db.ConsumeInviteWithPassword(ctx, secondToken, "Friend", "wrong password", "second-source"); err == nil {
+		t.Fatal("existing account accepted the wrong password")
+	}
+	if _, err = db.ConsumeInviteWithPassword(ctx, secondToken, "Friend", "friend password", "second-source"); err != nil {
+		t.Fatalf("existing account could not join with its password: %v", err)
+	}
+	_, thirdMembership, err := db.CreateWorkspaceForUser(ctx, owner.ID, "third-space", "Third Space")
+	if err != nil {
+		t.Fatal(err)
+	}
+	thirdLink, err := db.CreateWorkspaceInviteLink(ctx, thirdMembership, "friend@example.test", "member", "https://clank.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	thirdToken := inviteTokenFromURL(t, thirdLink.URL)
+	for attempt := 0; attempt < 10; attempt++ {
+		_, _ = db.ConsumeInviteWithPassword(ctx, thirdToken, "Friend", "wrong password", "rate-source")
+	}
+	if _, err = db.ConsumeInviteWithPassword(ctx, thirdToken, "Friend", "friend password", "rate-source"); err == nil {
+		t.Fatal("rate-limited invite accepted a later password attempt")
 	}
 }
 

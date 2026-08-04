@@ -244,7 +244,8 @@ func TestProjectRunsAreVisibleToScopedClients(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err = core.StartRun(t.Context(), principal, "run", domain.StartRunInput{ProjectID: project.ID, AgentName: "Luna", Model: "gpt-5.6-luna"}); err != nil {
+	run, _, err := core.StartRun(t.Context(), principal, "run", domain.StartRunInput{ProjectID: project.ID, AgentName: "Luna", Model: "gpt-5.6-luna"})
+	if err != nil {
 		t.Fatal(err)
 	}
 	h := (&httpapi.Server{Store: db, Core: core, GitHub: githubsync.New(""), Log: slog.New(slog.NewTextHandler(&strings.Builder{}, nil))}).Handler()
@@ -263,5 +264,15 @@ func TestProjectRunsAreVisibleToScopedClients(t *testing.T) {
 	}
 	if len(out.Runs) != 1 || out.Runs[0].AgentName != "Luna" {
 		t.Fatalf("unexpected runs: %#v", out.Runs)
+	}
+	body := bytes.NewBufferString(`{"deliveryBranch":"release/test","headSha":"2222222222222222222222222222222222222222"}`)
+	r = httptest.NewRequest(http.MethodPost, "/api/v1/runs/"+run.ID+"/delivery", body)
+	r.Header.Set("Authorization", "Bearer "+credential.Token)
+	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("Idempotency-Key", "delivery-link")
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"deliveryBranch":"release/test"`) {
+		t.Fatalf("delivery link = %d %s", w.Code, w.Body.String())
 	}
 }

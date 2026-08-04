@@ -3,7 +3,7 @@ type: spec
 status: approved
 summary: Implementation specification for invite-only hosted accounts, multi-workspace use, self-hosting, and signed workspace replication between cloud and peer ClankSpace instances.
 note_created: 2026-08-03
-updated: 2026-08-03
+updated: 2026-08-04
 ---
 
 # ClankSpace Hosted Accounts and Replication Specification
@@ -25,10 +25,10 @@ This specification defines the next product boundary:
 5. a migration that preserves current deployments, tokens, projects, and CLI/MCP
    behavior.
 
-The implementation is complete only when Shuv can accept an email invitation, join a
-shared workspace, create a separate workspace for another project, use project-scoped
-agents in both, and optionally keep a self-hosted replica synchronized with the hosted
-service.
+The implementation is complete and deployed. Trusted-use validation is complete only when
+Shuv can accept a direct invitation, join a shared workspace, create a separate workspace
+for another project, use project-scoped agents in both, and optionally keep a self-hosted
+replica synchronized with the hosted service.
 
 ## 2. Product position
 
@@ -215,7 +215,7 @@ friendly so opaque relay mode can be added later (§18, Q3).
 ```text
                            hosted ClankSpace
                     ┌──────────────────────────┐
- email magic link ─▶│ users / sessions         │  local control plane
+ direct invite URL ─▶│ users / sessions         │  local control plane
  human dashboard  ─▶│ memberships / invites    │
                     │ tokens / replica links   │
                     ├──────────────────────────┤
@@ -422,19 +422,19 @@ Bearer API requests do not use cookie authentication and therefore do not use CS
 `CLANKSPACE_AUTH_MODE` supports:
 
 ```text
-bootstrap  existing owner token flow; no email required
-email      invitation + magic-link browser flow
-hybrid     bootstrap recovery plus email flow
+bootstrap  installation recovery plus direct owner invite links
+email      legacy invitation/magic-link compatibility mode
+hybrid     bootstrap recovery plus password accounts and legacy email endpoints
 ```
 
-Existing installations migrate in `bootstrap` mode. A one-time owner-claim command can
-associate the bootstrap human principal with an email user before changing to `email` or
-`hybrid`. Disabling bootstrap login never revokes existing project agent tokens.
+Existing installations migrate in `bootstrap` mode. A one-time owner-claim command creates
+a direct invitation URL that associates the bootstrap human principal with an email account.
+The human chooses a local password; no email is sent. Disabling bootstrap login never revokes
+existing project agent tokens.
 
-The mailer is an internal interface. The first implementation uses SMTP configured by
-environment variables and adds no provider-specific SDK. When email is unavailable,
-bootstrap owners may generate a copyable one-time invite URL locally; the service never
-logs it.
+The legacy mailer remains an internal compatibility interface, but the pilot does not
+require or configure SMTP. Owners generate copyable one-time invite URLs; the service never
+logs them.
 
 The outbox payload is encrypted with the installation secret because it temporarily
 contains a usable one-time link. The database stores only the hash for validating that
@@ -843,17 +843,17 @@ One binary supports these profiles:
 | Profile | Human auth | Sync | Intended use |
 |---|---|---|---|
 | Standalone | bootstrap | disabled | Personal/local self-host |
-| Collaborative self-host | email or hybrid | optional | Team-owned service |
+| Collaborative self-host | password accounts or hybrid | optional | Team-owned service |
 | Local replica | bootstrap | push/pull | Offline-first workstation or private node |
-| Hosted pilot | email + operator recovery | enabled | `clank.shamanicarts.dev` small-network SaaS |
+| Hosted pilot | password accounts + operator recovery | enabled | `clank.shamanicarts.dev` small-network SaaS |
 
-Required hosted configuration includes base URL, auth mode, SMTP connection/from address,
-cookie/session secret, installation secret, database path, and public sync URL. Secrets
+Required hosted configuration includes base URL, auth mode, cookie/session secret,
+installation secret, database path, and public sync URL. Secrets
 remain environment or secret-manager values, not database or repository values.
 
 The hosted pilot remains one Go process and one SQLite writer on persistent local disk.
-Background email and sync workers share the process, use bounded queues, and stop cleanly
-before backup. Existing online backup, integrity check, off-host copy, restore rehearsal,
+Background sync work shares the process, uses bounded queues, and stops cleanly before
+backup. Existing online backup, integrity check, off-host copy, restore rehearsal,
 and stable-domain practices continue.
 
 ## 18. Deferred capabilities and non-goals
@@ -862,7 +862,7 @@ Not part of the first hosted-and-sync release:
 
 - billing, plans, quotas, or subscription management;
 - public signup;
-- passwords, social OAuth, SSO, or SCIM;
+- social OAuth, SSO, or SCIM;
 - custom workspace roles or project-private human ACLs;
 - private GitHub authentication;
 - automatic transitive federation or public replica discovery;
@@ -939,7 +939,7 @@ projections. Use deterministic fixtures for non-commutative lifecycle relationsh
 
 ### 20.4 Browser and CLI acceptance
 
-- invited new user accepts a magic link, sees the shared workspace, creates another
+- invited new user accepts a direct invitation, chooses a password, sees the shared workspace, creates another
   workspace, switches between them, and logs out;
 - owner invites, revokes, changes a member role, and revokes an agent credential;
 - project opens directly to the quiet append log on desktop and mobile widths;
@@ -967,22 +967,20 @@ The design intentionally adds no required runtime service or client SDK.
 
 | Dependency | Version | License | Use | Verdict |
 |---|---:|---|---|---|
-| Go standard library | Go 1.26.5 | BSD-style | HTTP, SMTP, cookies, Ed25519, hashing, JSON | Clean |
+| Go standard library | Go 1.26.5 | BSD-style | HTTP, cookies, Ed25519, hashing, JSON | Clean |
 | `modernc.org/sqlite` | 1.55.0 | BSD-3-Clause | Durable local store and migrations | Clean |
 | `github.com/google/uuid` | 1.6.0 | BSD-3-Clause | Stable IDs | Clean |
 | MCP Go SDK | 1.7.0 | Apache-2.0/MIT transition | Existing stdio MCP bridge | Clean; retain upstream notices |
-| SMTP server | deployment-selected | External service | Magic-link delivery | No linked code; operator contract |
 
-If an HTTP email provider SDK is proposed later, its dependency, license, data handling,
-and self-host fallback require a separate decision. The initial SMTP adapter uses the
-standard library behind the internal `Mailer` interface.
+If outbound email is proposed later, its dependency, license, data handling, and self-host
+fallback require a separate decision. It is not an onboarding dependency.
 
 ## 22. Delivery plan
 
 | Milestone | Capabilities | Exit gate | Deferred |
 |---|---|---|---|
 | M0 — migration and scopes | Ordered migrations, `AuthContext`, enforced token scopes, production fixture | Existing tests/tokens pass; negative scope tests pass | Email and sync |
-| M1 — hosted accounts | Users, memberships, invitations, SMTP outbox, magic links, cookie sessions | Shuv-style invite and multi-workspace browser flow passes | Replica UI |
+| M1 — hosted accounts | Users, memberships, direct invitations, local passwords, cookie sessions | Shuv-style invite and multi-workspace browser flow passes | Replica UI |
 | M2 — canonical sync log | Installation key, genesis snapshot, signed domain events, projector/rebuild | Snapshot + replay equals source export | Network sync |
 | M3 — cloud-linked replica | Pairing, push/pull, status, revocation, background worker, CLI | Offline local write converges with hosted mirror | Direct peer UX |
 | M4 — peer and product UX | Direct explicit peer link, replicas screen, fallback routing, export/import bundle | Two peers and cloud converge; RC-009 replay passes | E2EE and mesh |
@@ -1011,8 +1009,6 @@ is enabled for a throwaway workspace before any existing real workspace.
 
 ## 24. Open questions and pending sign-offs
 
-- **Q1 — Hosted sender identity:** Which SMTP service and verified `From` domain will
-  deliver pilot magic links? This does not change the `Mailer` interface.
 - **Q2 — Mirror re-sharing:** The specification picks no re-sharing by a non-authority
   mirror. Revisit only after a real collaboration requires hosted owners to admit peers
   to a self-host-authority workspace.
@@ -1023,41 +1019,40 @@ is enabled for a throwaway workspace before any existing real workspace.
 - **Q5 — Private projects inside a workspace:** Add project-level human membership only
   when a real workspace needs internal privacy. Agent tokens remain project-scoped now.
 
-None of Q2–Q5 blocks M0–M5 under the picks already stated. Q1 is an operations choice
-required before sending real hosted email.
+None of the deferred questions blocks the trusted pilot.
 
 ## 25. Implementation kickoff checklist
 
-- [ ] Accept or amend this specification; then link it from the approved core spec and
+- [x] Accept or amend this specification; then link it from the approved core spec and
       implementation plan without changing the core advisory product contract.
-- [ ] Capture a credential-free current production schema/data fixture and deterministic
+- [x] Capture a credential-free current production schema/data fixture and deterministic
       export for migration tests.
-- [ ] Replace the monolithic schema initializer with numbered embedded migrations and a
+- [x] Replace the monolithic schema initializer with numbered embedded migrations and a
       transactional upgrade runner.
-- [ ] Introduce `AuthContext`; enforce `admin`, `project:agent`, and new account/replica
+- [x] Introduce `AuthContext`; enforce `admin`, `project:agent`, and new account/replica
       scopes in `internal/service` and focused HTTP tests.
-- [ ] Add users, memberships, invitations, challenges, sessions, and email outbox with
+- [x] Add users, memberships, invitations, challenges, sessions, and email outbox with
       single-use/expiry/rate-limit tests.
-- [ ] Add hosted session middleware alongside backward-compatible bearer middleware.
-- [ ] Implement account home and workspace management without altering the project-log
+- [x] Add hosted session middleware alongside backward-compatible bearer middleware.
+- [x] Implement account home and workspace management without altering the project-log
       hierarchy.
-- [ ] Add installation Ed25519 key generation and protected key storage.
-- [ ] Define canonical JSON fixtures and hashes for every replicable event type.
-- [ ] Make local mutations commit canonical domain events atomically with projections and
+- [x] Add installation Ed25519 key generation and protected key storage.
+- [x] Define canonical JSON fixtures and hashes for every replicable event type.
+- [x] Make local mutations commit canonical domain events atomically with projections and
       receipts.
-- [ ] Implement genesis snapshot creation/import and projection rebuild comparison.
-- [ ] Implement pairing, pull, push, gap recovery, bounded retries, status, and revocation.
-- [ ] Add CLI replica/sync commands and backward-compatible `fallbackUrls` resolution.
-- [ ] Run focused store/service/http/CLI tests plus controlled-browser hosted flows.
-- [ ] Replay RC-009 through hosted, local-replica, and offline-reconnect paths.
-- [ ] Deploy to an isolated workspace, perform backup/restore and tamper/revocation drills,
-      then run one real Shuv/Shamanic canary before enabling existing workspaces.
+- [x] Implement genesis snapshot creation/import and projection rebuild comparison.
+- [x] Implement pairing, pull, push, gap recovery, bounded retries, status, and revocation.
+- [x] Add CLI replica/sync commands and backward-compatible `fallbackUrls` resolution.
+- [x] Run focused store/service/http/CLI tests plus controlled-browser hosted flows.
+- [x] Replay RC-009 through hosted, local-replica, and offline-reconnect paths.
+- [x] Deploy to an isolated workspace and perform backup/restore and tamper/revocation drills.
+- [ ] Run one real Shuv/Shamanic cross-maintainer canary.
 
 ## 26. Success criteria
 
 The extension is ready for trusted use when all of the following are observable:
 
-1. An invited human signs in without a password and belongs to multiple isolated
+1. An invited human chooses a password, signs in, and belongs to multiple isolated
    workspaces through one account.
 2. Humans can create workspaces, invite collaborators, inspect projects, and manage their
    agent credentials through a restrained secondary UI.
