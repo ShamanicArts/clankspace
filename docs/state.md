@@ -16,7 +16,7 @@ PR #24 replaced manual first-run workspace plumbing with `clank setup`: the agen
 
 ## Active phase
 
-PR #21 merged invitation-only email accounts, many workspaces per
+PR #21 merged invitation-only human accounts, many workspaces per
 human, workspace roles, project-scoped agent keys, a quiet human management surface, signed
 snapshot-plus-event replication, offline local writes, self-hosted authority, cloud mirrors,
 replica revocation, encrypted local secrets, migration backups, and downgrade protection.
@@ -35,11 +35,13 @@ implementation report and six recordings are preserved outside the repository un
 `~/.agent/diagrams/clankspace-e2e-final-2026-08-03/`; no live credentials are stored in the
 repository.
 
-Merged main `da2f515` is deployed on exe.dev. Production schema version 11 passed
+Merged main `6904b3a` is deployed on exe.dev. Production schema version 12 passed
 `PRAGMA integrity_check`; the original one workspace, one project, and four notes remain.
 The service has a durable installation secret, signed-sync identity, retained prior binary,
-and an integrity-checked pre-deployment snapshot both on-host and off-host. Bootstrap login
-remains active because no SMTP sender is configured yet. The interactive guide is served at
+and an integrity-checked pre-deployment snapshot both on-host and off-host. PR #26 added
+Argon2id password sign-in, direct dashboard/CLI invite links, and a setup page that presents
+the pending repository request before login and preserves it through approval. SMTP is no
+longer an onboarding dependency. The interactive guide is served at
 `https://clank.shamanicarts.dev/docs/` and leads with the one-prompt setup path. Manual token
 and local-replica controls remain available as advanced fallbacks; raw implementation evidence
 is kept out of the primary task flow.
