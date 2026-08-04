@@ -87,6 +87,11 @@ The visual report is
 product model, both deployment modes, identity, authorization, sync protocol, failure
 behavior, migration safety, complete test story, and remaining public-production boundary.
 
+The reusable parts of that report now ship with ClankSpace itself at `/docs/`: the product
+model, agent loop, operating modes, security boundary, all six recordings, a repository
+pointer builder, a token-safe human setup command, and a copyable agent onboarding prompt.
+The implementation report remains the deeper dated record; `/docs/` is the living guide.
+
 The raw terminal capture contains only expired credentials for disposable local instances.
 The shareable terminal video is redacted. No credential is committed to this repository.
 

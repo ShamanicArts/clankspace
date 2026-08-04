@@ -27,7 +27,7 @@ func TestHealthStaticAndAuthentication(t *testing.T) {
 		t.Fatal(err)
 	}
 	h := (&httpapi.Server{Store: db, Core: service.New(db), GitHub: githubsync.New(""), Log: slog.New(slog.NewTextHandler(&strings.Builder{}, nil))}).Handler()
-	for _, path := range []string{"/", "/healthz"} {
+	for _, path := range []string{"/", "/healthz", "/docs/", "/docs/docs.js"} {
 		r := httptest.NewRequest("GET", path, nil)
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, r)
@@ -42,6 +42,18 @@ func TestHealthStaticAndAuthentication(t *testing.T) {
 			if strings.Contains(body, "Before your agent changes the code") {
 				t.Fatal("dashboard must not present the agent coordination check as a human workflow")
 			}
+		}
+		if path == "/docs/" {
+			body := w.Body.String()
+			if !strings.Contains(body, "Generate the safe repository setup") || !strings.Contains(body, "data-copy=\"agent-prompt\"") {
+				t.Fatal("docs should include the interactive, credential-safe agent onboarding guide")
+			}
+			if strings.Contains(body, "Project token: clank_") {
+				t.Fatal("docs must not embed a project credential")
+			}
+		}
+		if path == "/docs/docs.js" && !strings.Contains(w.Body.String(), "Never ask me to paste a project token into chat") {
+			t.Fatal("generated agent prompt should preserve the credential boundary")
 		}
 	}
 	r := httptest.NewRequest("GET", "/api/v1/projects", nil)

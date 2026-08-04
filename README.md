@@ -192,6 +192,7 @@ RC-009 strongly validates the exercised pilot behavior; it does not establish po
 
 ## Documentation
 
+- [Interactive product and agent setup guide](https://clank.shamanicarts.dev/docs/)
 - [Design specification](docs/design/spec.md)
 - [Hosted accounts and replication specification](docs/design/hosted-replication-spec.md)
 - [Implementation roadmap](docs/implementation-plan.md)
