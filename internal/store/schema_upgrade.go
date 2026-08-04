@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const latestSchemaVersion = 12
+const latestSchemaVersion = 13
 
 const hostedReplicationSchema = `
 ALTER TABLE workspaces ADD COLUMN slug TEXT NOT NULL DEFAULT '';
@@ -288,6 +288,16 @@ const localPasswordsSchema = `
 ALTER TABLE users ADD COLUMN password_hash TEXT NOT NULL DEFAULT '';
 `
 
+const runDeliveryProvenanceSchema = `
+ALTER TABLE runs ADD COLUMN delivery_branch TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN pull_request_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN pull_request_number INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE runs ADD COLUMN pull_request_state TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN merge_commit_sha TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN merged_at TEXT;
+CREATE INDEX IF NOT EXISTS idx_auth_rate_limits_window ON auth_rate_limits(window_started_at);
+`
+
 func applyMigrations(db *sql.DB) error {
 	tx, err := db.Begin()
 	if err != nil {
@@ -392,6 +402,14 @@ func applyMigrations(db *sql.DB) error {
 			return fmt.Errorf("migration 12 local passwords: %w", err)
 		}
 		if _, err = tx.Exec(`INSERT INTO schema_migrations(version,applied_at) VALUES(12,strftime('%Y-%m-%dT%H:%M:%fZ','now'))`); err != nil {
+			return err
+		}
+	}
+	if version < 13 {
+		if _, err = tx.Exec(runDeliveryProvenanceSchema); err != nil {
+			return fmt.Errorf("migration 13 run delivery provenance: %w", err)
+		}
+		if _, err = tx.Exec(`INSERT INTO schema_migrations(version,applied_at) VALUES(13,strftime('%Y-%m-%dT%H:%M:%fZ','now'))`); err != nil {
 			return err
 		}
 	}

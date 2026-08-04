@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/ShamanicArts/clankspace/internal/domain"
 	"github.com/ShamanicArts/clankspace/internal/githubsync"
@@ -46,6 +47,10 @@ func TestTwoInstancesPairPullPushAndRevoke(t *testing.T) {
 	authorityDB, authorityPrincipal, _, authorityMembership := testInstance(t, "authority")
 	core := service.New(authorityDB)
 	project, _, err := core.CreateProject(ctx, authorityPrincipal, "project-create", "shared-project", "Shared project", "A replicated project")
+	if err != nil {
+		t.Fatal(err)
+	}
+	repository, _, err := authorityDB.UpsertRepository(ctx, authorityPrincipal, project.ID, "shared-repository", domain.Repository{URL: "https://github.com/example/repo", Host: "github.com", Owner: "example", Name: "repo", Visibility: "public"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,12 +117,18 @@ func TestTwoInstancesPairPullPushAndRevoke(t *testing.T) {
 		t.Fatal(err)
 	}
 	replicaCore := service.New(replicaDB)
-	run, _, err := replicaCore.StartRun(ctx, replicaPrincipal, "replica-run", domain.StartRunInput{ProjectID: project.ID, AgentName: "Local agent", Harness: "codex", Provider: "openai", Model: "test-model", Reasoning: "high", Role: "primary", RunType: "interactive", Objective: "Record offline context"})
+	run, _, err := replicaCore.StartRun(ctx, replicaPrincipal, "replica-run", domain.StartRunInput{ProjectID: project.ID, RepositoryID: repository.ID, AgentName: "Local agent", Harness: "codex", Provider: "openai", Model: "test-model", Reasoning: "high", Role: "primary", RunType: "interactive", Branch: "offline/provenance", BaseSHA: "1111111111111111111111111111111111111111", HeadSHA: "1111111111111111111111111111111111111111", Objective: "Record offline context"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	offline, _, err := replicaCore.CreateNote(ctx, replicaPrincipal, project.ID, "offline-note", domain.CreateNoteInput{RunID: run.ID, Kind: "checkpoint", Title: "Local validation passed", Summary: "The local replica completed its focused check while disconnected.", Rationale: "This proves local writes do not wait for the authority.", LedBy: "agent", DirectionBasis: "autonomous_agent_judgment", Confidence: "high", Verification: "focused test passed"})
 	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = replicaDB.EndRun(ctx, replicaPrincipal, "replica-run-end", run.ID, domain.EndRunInput{Outcome: "completed", HeadSHA: "2222222222222222222222222222222222222222", PullRequestURL: "https://github.com/example/repo/pull/7", PullRequestNumber: 7, PullRequestState: "open"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = replicaDB.LinkRunDelivery(ctx, replicaPrincipal, "replica-run-merged", run.ID, domain.LinkRunDeliveryInput{PullRequestState: "merged", MergeCommitSHA: "3333333333333333333333333333333333333333"}); err != nil {
 		t.Fatal(err)
 	}
 	if err = client.SyncAll(ctx, replicaDB); err != nil {
@@ -133,6 +144,11 @@ func TestTwoInstancesPairPullPushAndRevoke(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("pushed note missing: %#v", authorityNotes)
+	}
+	for _, note := range authorityNotes {
+		if note.ID == offline.ID && (note.Run == nil || note.Run.PullRequestNumber != 7 || note.Run.PullRequestState != "merged" || note.Run.MergeCommitSHA == "") {
+			t.Fatalf("delivery provenance did not converge: %#v", note.Run)
+		}
 	}
 	_, _, err = core.SupersedeNote(ctx, authorityPrincipal, project.ID, "authority-supersede", initial.ID, domain.SupersedeNoteInput{ExpectedRevision: 1, Reason: "Authority learned a new constraint.", Replacement: &domain.CreateNoteInput{Kind: "intent", Title: "Authority successor", Summary: "The authority recorded one new account.", LedBy: "human", DirectionBasis: "explicit_human_direction", Confidence: "high"}})
 	if err != nil {
@@ -263,10 +279,27 @@ func TestWorkspaceSnapshotDoesNotTruncateRunHistory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	repository, _, err := db.UpsertRepository(ctx, principal, project.ID, "snapshot-repository", domain.Repository{URL: "https://github.com/example/repo", Host: "github.com", Owner: "example", Name: "repo", Visibility: "public"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var deliveryRun domain.Run
 	for index := 0; index < 501; index++ {
-		_, _, err = core.StartRun(ctx, principal, fmt.Sprintf("snapshot-run-%03d", index), domain.StartRunInput{ProjectID: project.ID, AgentName: "archive-agent", Role: "automation", Objective: fmt.Sprintf("Archived run %03d", index)})
+		input := domain.StartRunInput{ProjectID: project.ID, AgentName: "archive-agent", Role: "automation", Objective: fmt.Sprintf("Archived run %03d", index)}
+		if index == 0 {
+			input.RepositoryID, input.Branch, input.BaseSHA, input.HeadSHA = repository.ID, "feature/snapshot", "1111111111111111111111111111111111111111", "1111111111111111111111111111111111111111"
+		}
+		run, _, startErr := core.StartRun(ctx, principal, fmt.Sprintf("snapshot-run-%03d", index), input)
+		err = startErr
 		if err != nil {
 			t.Fatal(err)
+		}
+		if index == 0 {
+			merged := time.Date(2026, time.August, 4, 2, 0, 0, 0, time.UTC)
+			deliveryRun, _, err = db.LinkRunDelivery(ctx, principal, "snapshot-delivery", run.ID, domain.LinkRunDeliveryInput{DeliveryBranch: "release/snapshot", HeadSHA: "2222222222222222222222222222222222222222", PullRequestURL: "https://github.com/example/repo/pull/5", PullRequestNumber: 5, PullRequestState: "merged", MergeCommitSHA: "3333333333333333333333333333333333333333", MergedAt: &merged})
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 	snapshot, err := db.BuildWorkspaceSnapshot(ctx, principal.WorkspaceID)
@@ -275,5 +308,35 @@ func TestWorkspaceSnapshotDoesNotTruncateRunHistory(t *testing.T) {
 	}
 	if len(snapshot.Projects) != 1 || len(snapshot.Projects[0].Runs) != 501 {
 		t.Fatalf("snapshot truncated run history: projects=%d runs=%d", len(snapshot.Projects), len(snapshot.Projects[0].Runs))
+	}
+	found := false
+	for _, run := range snapshot.Projects[0].Runs {
+		if run.ID == deliveryRun.ID {
+			found = run.Branch == "feature/snapshot" && run.DeliveryBranch == "release/snapshot" && run.PullRequestNumber == 5 && run.MergeCommitSHA != "" && run.MergedAt != nil
+		}
+	}
+	if !found {
+		t.Fatal("snapshot lost run delivery provenance")
+	}
+	replicas, err := db.ListReplicas(ctx, principal.WorkspaceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var authority domain.Replica
+	for _, replica := range replicas {
+		if replica.Role == "authority" {
+			authority = replica
+		}
+	}
+	if authority.ID == "" {
+		t.Fatal("snapshot source authority is missing")
+	}
+	importedDB, _, importedUser, _ := testInstance(t, "snapshot-import")
+	if err = importedDB.ImportWorkspaceSnapshot(ctx, snapshot, authority, importedUser.ID); err != nil {
+		t.Fatal(err)
+	}
+	imported, err := importedDB.GetRun(ctx, deliveryRun.ID)
+	if err != nil || imported.Branch != "feature/snapshot" || imported.BaseSHA != "1111111111111111111111111111111111111111" || imported.DeliveryBranch != "release/snapshot" || imported.HeadSHA != "2222222222222222222222222222222222222222" || imported.PullRequestURL != "https://github.com/example/repo/pull/5" || imported.PullRequestNumber != 5 || imported.PullRequestState != "merged" || imported.MergeCommitSHA == "" || imported.MergedAt == nil {
+		t.Fatalf("snapshot import lost run delivery provenance: %#v, %v", imported, err)
 	}
 }

@@ -32,7 +32,7 @@ The hosted/replication design is recorded in [the approved specification](docs/d
 - retrieves bounded project context with full-text, path, recency, and execution-risk signals;
 - supports explicit supersession with optimistic revisions;
 - attaches public GitHub repositories and caches open-PR evidence read-only;
-- exposes one CLI, eight stdio MCP tools, and a portable agent skill;
+- exposes one CLI, nine stdio MCP tools, and a portable agent skill;
 - provides a quiet human dashboard over the append log;
 - exports deterministic project JSON and retains an append-only event/receipt trail.
 - lets a human own or join several workspaces with one email identity;
@@ -51,7 +51,7 @@ The hosted service is deliberately invite-only. An agent or operator holding the
 
 Repository setup automatically creates a separate project identity for each approved agent group. The setup URL shows the repository, project, agent identity, and verification code before login; after login, the same request is presented for approval. Distinct identities let ClankSpace distinguish an incumbent's active work from a later collaborator entering the same boundary.
 
-There is no public registration, billing, password database, private GitHub integration, or claim of end-to-end encryption in this milestone. A hosting operator can technically read managed workspace content. Self-hosting remains fully useful without the cloud.
+There is no public registration, billing, outbound email dependency, private GitHub integration, or claim of end-to-end encryption in this milestone. Password hashes are stored locally with Argon2id; a hosting operator can technically read managed workspace content. Self-hosting remains fully useful without the cloud.
 
 Do not bake an exe.dev or Railway provider hostname into collaborator repositories. Use `clank.shamanicarts.dev`; the stable domain is the portability boundary. Evaluation infrastructure is disposable and should be provisioned only for an active campaign.
 

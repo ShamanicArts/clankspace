@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -95,6 +96,63 @@ func TestRunHelpDoesNotRequireAClient(t *testing.T) {
 func TestRunRejectsUnknownActionBeforeUsingClient(t *testing.T) {
 	if err := runCommand(context.Background(), nil, []string{"status"}); err == nil {
 		t.Fatal("expected an unsupported run action to fail")
+	}
+}
+
+func TestRunDeliveryDetectsGitCoordinatesWithoutManualFlags(t *testing.T) {
+	repository := t.TempDir()
+	for _, args := range [][]string{{"init", "-b", "feature/provenance"}, {"config", "user.email", "agent@example.test"}, {"config", "user.name", "Agent"}} {
+		command := exec.Command("git", args...)
+		command.Dir = repository
+		if output, err := command.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, output)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(repository, "README.md"), []byte("delivery provenance\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"add", "README.md"}, {"commit", "-m", "test provenance"}} {
+		command := exec.Command("git", args...)
+		command.Dir = repository
+		if output, err := command.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, output)
+		}
+	}
+	delivery := detectRunDelivery(t.Context(), repository)
+	if delivery.DeliveryBranch != "feature/provenance" || len(delivery.HeadSHA) != 40 {
+		t.Fatalf("delivery = %#v", delivery)
+	}
+}
+
+func TestRunDeliveryReadsPullRequestFromGitHubCLI(t *testing.T) {
+	repository := t.TempDir()
+	for _, args := range [][]string{{"init", "-b", "feature/provenance"}, {"config", "user.email", "agent@example.test"}, {"config", "user.name", "Agent"}} {
+		command := exec.Command("git", args...)
+		command.Dir = repository
+		if output, err := command.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, output)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(repository, "README.md"), []byte("delivery provenance\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"add", "README.md"}, {"commit", "-m", "test provenance"}} {
+		command := exec.Command("git", args...)
+		command.Dir = repository
+		if output, err := command.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, output)
+		}
+	}
+	bin := t.TempDir()
+	gh := filepath.Join(bin, "gh")
+	body := "#!/bin/sh\nprintf '%s\\n' '{\"url\":\"https://github.com/example/repo/pull/42\",\"number\":42,\"state\":\"MERGED\",\"headRefOid\":\"2222222222222222222222222222222222222222\",\"mergedAt\":\"2026-08-04T02:00:00Z\",\"mergeCommit\":{\"oid\":\"3333333333333333333333333333333333333333\"}}'\n"
+	if err := os.WriteFile(gh, []byte(body), 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	delivery := detectRunDelivery(t.Context(), repository)
+	if delivery.PullRequestNumber != 42 || delivery.PullRequestState != "merged" || delivery.MergeCommitSHA == "" || delivery.MergedAt == nil {
+		t.Fatalf("delivery = %#v", delivery)
 	}
 }
 

@@ -110,7 +110,7 @@ func requestFingerprint(r *http.Request) string {
 	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
 		source = host
 	}
-	return source + "|" + r.UserAgent()
+	return source
 }
 
 func (s *Server) setSessionCookies(w http.ResponseWriter, result store.SessionResult) {
@@ -153,7 +153,7 @@ func (s *Server) inviteAccept(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	result, err := s.Store.ConsumeInviteWithPassword(r.Context(), in.Token, in.DisplayName, in.Password)
+	result, err := s.Store.ConsumeInviteWithPassword(r.Context(), in.Token, in.DisplayName, in.Password, requestFingerprint(r))
 	if err != nil {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invitation is invalid, expired, or the password does not match this account"})
 		return
@@ -450,6 +450,13 @@ func (s *Server) createInviteLink(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, err)
 		return
+	}
+	if s.SyncEnabled {
+		allowed, shareErr := s.Store.CanShareHumans(r.Context(), membership.WorkspaceID)
+		if shareErr != nil || !allowed {
+			writeJSON(w, http.StatusForbidden, map[string]string{"error": "this mirror may not invite additional humans"})
+			return
+		}
 	}
 	var in struct{ Email, Role string }
 	if !decode(w, r, &in) {

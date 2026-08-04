@@ -10,11 +10,11 @@ updated: 2026-08-04
 
 ## Current focus
 
-Prepare the deployed hosted-replication candidate for real trusted-collaborator use. Human onboarding now uses local passwords and direct owner-generated invite links, removing SMTP as an operational dependency. The next product signal should come from real Shuv/Shamanic use, not a larger synthetic campaign.
+Dogfood the deployed service in real ClankSpace and shuv2code work. Human onboarding uses local passwords and direct owner-generated invite links. Runs now need to preserve origin branch/commit and eventual commit/PR/merge evidence automatically, so notes stay sparse while still explaining where a decision landed.
 
 PR #24 replaced manual first-run workspace plumbing with `clank setup`: the agent infers the Git repository and project, opens a short-lived browser request, and waits for one human approval. The server creates or reuses the project, links a supported public GitHub remote, and returns a project-only credential directly to the CLI. The CLI stores it outside the repository, installs the skill and pointer, adds one lean agent instruction, and verifies access. A fresh `go-chi/chi` checkout passed the complete browser-to-terminal flow without a token entering chat.
 
-## Active phase
+## Completed platform milestone
 
 PR #21 merged invitation-only human accounts, many workspaces per
 human, workspace roles, project-scoped agent keys, a quiet human management surface, signed

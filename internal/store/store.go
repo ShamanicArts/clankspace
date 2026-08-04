@@ -11,8 +11,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -27,6 +30,8 @@ var (
 	ErrConflict            = errors.New("revision conflict")
 	ErrIdempotencyKeyReuse = errors.New("idempotency key reused with different request")
 )
+
+var fullGitSHA = regexp.MustCompile(`^[0-9a-fA-F]{40}([0-9a-fA-F]{24})?$`)
 
 type Store struct {
 	db             *sql.DB
@@ -471,6 +476,23 @@ func (s *Store) StartRun(ctx context.Context, principal domain.Principal, key st
 			}
 			return "", "", nil, err
 		}
+		if len(in.Branch) > 255 || len(in.Worktree) > 4096 {
+			return "", "", nil, errors.New("run branch or worktree is too long")
+		}
+		for label, sha := range map[string]string{"base SHA": in.BaseSHA, "head SHA": in.HeadSHA} {
+			if sha != "" && !fullGitSHA.MatchString(sha) {
+				return "", "", nil, fmt.Errorf("%s must be a full 40- or 64-character hexadecimal object ID", label)
+			}
+		}
+		if in.RepositoryID != "" {
+			var repositoryCount int
+			if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM project_repositories WHERE project_id=? AND repository_id=?`, in.ProjectID, in.RepositoryID).Scan(&repositoryCount); err != nil || repositoryCount != 1 {
+				if err == nil {
+					err = errors.New("repository is not attached to this project")
+				}
+				return "", "", nil, err
+			}
+		}
 		agentName := strings.TrimSpace(in.AgentName)
 		if agentName == "" {
 			agentName = "agent"
@@ -508,8 +530,11 @@ func (s *Store) StartRun(ctx context.Context, principal domain.Principal, key st
 
 func (s *Store) EndRun(ctx context.Context, principal domain.Principal, key, runID string, in domain.EndRunInput) (domain.Run, domain.Receipt, error) {
 	b, receipt, err := s.mutate(ctx, principal.WorkspaceID, "", principal.ID, principal.ID, runID, key, in, func(tx *sql.Tx) (string, string, any, error) {
+		if err := validateRunDeliveryTx(ctx, tx, runID, principal.ID, domain.LinkRunDeliveryInput{DeliveryBranch: in.DeliveryBranch, HeadSHA: in.HeadSHA, PullRequestURL: in.PullRequestURL, PullRequestNumber: in.PullRequestNumber, PullRequestState: in.PullRequestState, MergeCommitSHA: in.MergeCommitSHA, MergedAt: in.MergedAt}); err != nil {
+			return "", "", nil, err
+		}
 		t := now()
-		result, err := tx.ExecContext(ctx, `UPDATE runs SET ended_at=?,outcome=?,verification=? WHERE id=? AND principal_id=? AND ended_at IS NULL`, ts(t), in.Outcome, in.Verification, runID, principal.ID)
+		result, err := tx.ExecContext(ctx, `UPDATE runs SET ended_at=?,outcome=?,verification=?,delivery_branch=CASE WHEN ?='' THEN delivery_branch ELSE ? END,head_sha=CASE WHEN ?='' THEN head_sha ELSE ? END,pull_request_url=CASE WHEN ?='' THEN pull_request_url ELSE ? END,pull_request_number=CASE WHEN ?=0 THEN pull_request_number ELSE ? END,pull_request_state=CASE WHEN ?='' THEN pull_request_state ELSE ? END,merge_commit_sha=CASE WHEN ?='' THEN merge_commit_sha ELSE ? END,merged_at=COALESCE(?,merged_at) WHERE id=? AND principal_id=? AND ended_at IS NULL`, ts(t), in.Outcome, in.Verification, in.DeliveryBranch, in.DeliveryBranch, in.HeadSHA, in.HeadSHA, in.PullRequestURL, in.PullRequestURL, in.PullRequestNumber, in.PullRequestNumber, in.PullRequestState, in.PullRequestState, in.MergeCommitSHA, in.MergeCommitSHA, nullableTime(in.MergedAt), runID, principal.ID)
 		if err != nil {
 			return "", "", nil, err
 		}
@@ -528,15 +553,104 @@ func (s *Store) EndRun(ctx context.Context, principal domain.Principal, key, run
 	}
 	var r domain.Run
 	err = json.Unmarshal(b, &r)
+	if err == nil && (in.DeliveryBranch != "" || in.HeadSHA != "" || in.PullRequestURL != "" || in.PullRequestNumber != 0 || in.PullRequestState != "" || in.MergeCommitSHA != "" || in.MergedAt != nil) {
+		linked, _, linkErr := s.LinkRunDelivery(ctx, principal, key+":delivery", runID, domain.LinkRunDeliveryInput{DeliveryBranch: in.DeliveryBranch, HeadSHA: in.HeadSHA, PullRequestURL: in.PullRequestURL, PullRequestNumber: in.PullRequestNumber, PullRequestState: in.PullRequestState, MergeCommitSHA: in.MergeCommitSHA, MergedAt: in.MergedAt})
+		if linkErr != nil {
+			return domain.Run{}, receipt, linkErr
+		}
+		r = linked
+	}
 	return r, receipt, err
 }
 
-const runSelect = `SELECT r.id,r.project_id,r.agent_id,a.name,r.principal_id,p.display_name,r.harness,r.harness_version,r.provider,r.model,r.reasoning,r.role,COALESCE(r.parent_run_id,''),COALESCE(r.root_run_id,''),r.run_type,r.permission_mode,r.interaction_mode,COALESCE(r.repository_id,''),r.branch,r.worktree,r.base_sha,r.head_sha,r.objective,r.instruction_profile_json,r.started_at,COALESCE(r.ended_at,''),r.outcome,r.verification FROM runs r JOIN agents a ON a.id=r.agent_id JOIN principals p ON p.id=r.principal_id`
+func (s *Store) LinkRunDelivery(ctx context.Context, principal domain.Principal, key, runID string, in domain.LinkRunDeliveryInput) (domain.Run, domain.Receipt, error) {
+	b, receipt, err := s.mutate(ctx, principal.WorkspaceID, "", principal.ID, principal.ID, runID, key, in, func(tx *sql.Tx) (string, string, any, error) {
+		if err := validateRunDeliveryTx(ctx, tx, runID, principal.ID, in); err != nil {
+			return "", "", nil, err
+		}
+		result, err := tx.ExecContext(ctx, `UPDATE runs SET delivery_branch=CASE WHEN ?='' THEN delivery_branch ELSE ? END,head_sha=CASE WHEN ?='' THEN head_sha ELSE ? END,pull_request_url=CASE WHEN ?='' THEN pull_request_url ELSE ? END,pull_request_number=CASE WHEN ?=0 THEN pull_request_number ELSE ? END,pull_request_state=CASE WHEN ?='' THEN pull_request_state ELSE ? END,merge_commit_sha=CASE WHEN ?='' THEN merge_commit_sha ELSE ? END,merged_at=COALESCE(?,merged_at) WHERE id=? AND principal_id=?`, in.DeliveryBranch, in.DeliveryBranch, in.HeadSHA, in.HeadSHA, in.PullRequestURL, in.PullRequestURL, in.PullRequestNumber, in.PullRequestNumber, in.PullRequestState, in.PullRequestState, in.MergeCommitSHA, in.MergeCommitSHA, nullableTime(in.MergedAt), runID, principal.ID)
+		if err != nil {
+			return "", "", nil, err
+		}
+		if count, _ := result.RowsAffected(); count == 0 {
+			return "", "", nil, ErrNotFound
+		}
+		r, err := scanRun(tx.QueryRowContext(ctx, runSelect+` WHERE r.id=?`, runID))
+		return runID, "run.delivery_linked", r, err
+	})
+	if err != nil {
+		return domain.Run{}, receipt, err
+	}
+	var r domain.Run
+	err = json.Unmarshal(b, &r)
+	return r, receipt, err
+}
+
+func validateRunDeliveryTx(ctx context.Context, tx *sql.Tx, runID, principalID string, in domain.LinkRunDeliveryInput) error {
+	if len(in.DeliveryBranch) > 255 || len(in.PullRequestURL) > 2048 {
+		return errors.New("delivery branch or pull request URL is too long")
+	}
+	for label, sha := range map[string]string{"head SHA": in.HeadSHA, "merge commit SHA": in.MergeCommitSHA} {
+		if sha != "" && !fullGitSHA.MatchString(sha) {
+			return fmt.Errorf("%s must be a full 40- or 64-character hexadecimal object ID", label)
+		}
+	}
+	if in.PullRequestNumber < 0 {
+		return errors.New("pull request number must be positive")
+	}
+	if in.PullRequestState != "" && in.PullRequestState != "open" && in.PullRequestState != "closed" && in.PullRequestState != "merged" {
+		return errors.New("pull request state must be open, closed, or merged")
+	}
+	var repositoryID, host, owner, name, currentURL, currentState string
+	var currentNumber int
+	err := tx.QueryRowContext(ctx, `SELECT COALESCE(r.repository_id,''),COALESCE(repo.host,''),COALESCE(repo.owner,''),COALESCE(repo.name,''),r.pull_request_url,r.pull_request_number,r.pull_request_state FROM runs r LEFT JOIN repositories repo ON repo.id=r.repository_id WHERE r.id=? AND r.principal_id=?`, runID, principalID).Scan(&repositoryID, &host, &owner, &name, &currentURL, &currentNumber, &currentState)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	pullURL := in.PullRequestURL
+	if pullURL == "" {
+		pullURL = currentURL
+	}
+	pullNumber := in.PullRequestNumber
+	if pullNumber == 0 {
+		pullNumber = currentNumber
+	}
+	state := in.PullRequestState
+	if state == "" {
+		state = currentState
+	}
+	if pullURL != "" {
+		if repositoryID == "" {
+			return errors.New("a pull request cannot be linked until the run has an attached repository")
+		}
+		parsed, parseErr := url.Parse(pullURL)
+		if parseErr != nil || parsed == nil {
+			return errors.New("pull request URL is invalid")
+		}
+		parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
+		if parsed.Scheme != "https" || !strings.EqualFold(parsed.Hostname(), host) || len(parts) != 4 || !strings.EqualFold(parts[0], owner) || !strings.EqualFold(parts[1], name) || parts[2] != "pull" {
+			return errors.New("pull request URL must belong to the run repository")
+		}
+		number, numberErr := strconv.Atoi(parts[3])
+		if numberErr != nil || number <= 0 || (pullNumber != 0 && pullNumber != number) {
+			return errors.New("pull request URL and number do not match")
+		}
+	}
+	if (in.MergeCommitSHA != "" || in.MergedAt != nil) && state != "merged" {
+		return errors.New("merge evidence requires pull request state merged")
+	}
+	return nil
+}
+
+const runSelect = `SELECT r.id,r.project_id,r.agent_id,a.name,r.principal_id,p.display_name,r.harness,r.harness_version,r.provider,r.model,r.reasoning,r.role,COALESCE(r.parent_run_id,''),COALESCE(r.root_run_id,''),r.run_type,r.permission_mode,r.interaction_mode,COALESCE(r.repository_id,''),r.branch,r.worktree,r.base_sha,r.head_sha,r.delivery_branch,r.pull_request_url,r.pull_request_number,r.pull_request_state,r.merge_commit_sha,COALESCE(r.merged_at,''),r.objective,r.instruction_profile_json,r.started_at,COALESCE(r.ended_at,''),r.outcome,r.verification FROM runs r JOIN agents a ON a.id=r.agent_id JOIN principals p ON p.id=r.principal_id`
 
 func scanRun(row *sql.Row) (domain.Run, error) {
 	var r domain.Run
-	var profile, started, ended string
-	err := row.Scan(&r.ID, &r.ProjectID, &r.AgentID, &r.AgentName, &r.PrincipalID, &r.PrincipalName, &r.Harness, &r.HarnessVersion, &r.Provider, &r.Model, &r.Reasoning, &r.Role, &r.ParentRunID, &r.RootRunID, &r.RunType, &r.PermissionMode, &r.InteractionMode, &r.RepositoryID, &r.Branch, &r.Worktree, &r.BaseSHA, &r.HeadSHA, &r.Objective, &profile, &started, &ended, &r.Outcome, &r.Verification)
+	var profile, started, ended, merged string
+	err := row.Scan(&r.ID, &r.ProjectID, &r.AgentID, &r.AgentName, &r.PrincipalID, &r.PrincipalName, &r.Harness, &r.HarnessVersion, &r.Provider, &r.Model, &r.Reasoning, &r.Role, &r.ParentRunID, &r.RootRunID, &r.RunType, &r.PermissionMode, &r.InteractionMode, &r.RepositoryID, &r.Branch, &r.Worktree, &r.BaseSHA, &r.HeadSHA, &r.DeliveryBranch, &r.PullRequestURL, &r.PullRequestNumber, &r.PullRequestState, &r.MergeCommitSHA, &merged, &r.Objective, &profile, &started, &ended, &r.Outcome, &r.Verification)
 	if err != nil {
 		return r, err
 	}
@@ -545,6 +659,10 @@ func scanRun(row *sql.Row) (domain.Run, error) {
 	if ended != "" {
 		t := parseTime(ended)
 		r.EndedAt = &t
+	}
+	if merged != "" {
+		t := parseTime(merged)
+		r.MergedAt = &t
 	}
 	return r, nil
 }
@@ -569,8 +687,8 @@ func (s *Store) ListRuns(ctx context.Context, projectID string, limit int) ([]do
 	runs := make([]domain.Run, 0)
 	for rows.Next() {
 		var run domain.Run
-		var profile, started, ended string
-		if err = rows.Scan(&run.ID, &run.ProjectID, &run.AgentID, &run.AgentName, &run.PrincipalID, &run.PrincipalName, &run.Harness, &run.HarnessVersion, &run.Provider, &run.Model, &run.Reasoning, &run.Role, &run.ParentRunID, &run.RootRunID, &run.RunType, &run.PermissionMode, &run.InteractionMode, &run.RepositoryID, &run.Branch, &run.Worktree, &run.BaseSHA, &run.HeadSHA, &run.Objective, &profile, &started, &ended, &run.Outcome, &run.Verification); err != nil {
+		var profile, started, ended, merged string
+		if err = rows.Scan(&run.ID, &run.ProjectID, &run.AgentID, &run.AgentName, &run.PrincipalID, &run.PrincipalName, &run.Harness, &run.HarnessVersion, &run.Provider, &run.Model, &run.Reasoning, &run.Role, &run.ParentRunID, &run.RootRunID, &run.RunType, &run.PermissionMode, &run.InteractionMode, &run.RepositoryID, &run.Branch, &run.Worktree, &run.BaseSHA, &run.HeadSHA, &run.DeliveryBranch, &run.PullRequestURL, &run.PullRequestNumber, &run.PullRequestState, &run.MergeCommitSHA, &merged, &run.Objective, &profile, &started, &ended, &run.Outcome, &run.Verification); err != nil {
 			return nil, err
 		}
 		_ = json.Unmarshal([]byte(profile), &run.InstructionProfile)
@@ -578,6 +696,10 @@ func (s *Store) ListRuns(ctx context.Context, projectID string, limit int) ([]do
 		if ended != "" {
 			t := parseTime(ended)
 			run.EndedAt = &t
+		}
+		if merged != "" {
+			t := parseTime(merged)
+			run.MergedAt = &t
 		}
 		runs = append(runs, run)
 	}
@@ -596,8 +718,8 @@ func (s *Store) ListAllRuns(ctx context.Context, projectID string) ([]domain.Run
 	runs := make([]domain.Run, 0)
 	for rows.Next() {
 		var run domain.Run
-		var profile, started, ended string
-		if err = rows.Scan(&run.ID, &run.ProjectID, &run.AgentID, &run.AgentName, &run.PrincipalID, &run.PrincipalName, &run.Harness, &run.HarnessVersion, &run.Provider, &run.Model, &run.Reasoning, &run.Role, &run.ParentRunID, &run.RootRunID, &run.RunType, &run.PermissionMode, &run.InteractionMode, &run.RepositoryID, &run.Branch, &run.Worktree, &run.BaseSHA, &run.HeadSHA, &run.Objective, &profile, &started, &ended, &run.Outcome, &run.Verification); err != nil {
+		var profile, started, ended, merged string
+		if err = rows.Scan(&run.ID, &run.ProjectID, &run.AgentID, &run.AgentName, &run.PrincipalID, &run.PrincipalName, &run.Harness, &run.HarnessVersion, &run.Provider, &run.Model, &run.Reasoning, &run.Role, &run.ParentRunID, &run.RootRunID, &run.RunType, &run.PermissionMode, &run.InteractionMode, &run.RepositoryID, &run.Branch, &run.Worktree, &run.BaseSHA, &run.HeadSHA, &run.DeliveryBranch, &run.PullRequestURL, &run.PullRequestNumber, &run.PullRequestState, &run.MergeCommitSHA, &merged, &run.Objective, &profile, &started, &ended, &run.Outcome, &run.Verification); err != nil {
 			return nil, err
 		}
 		_ = json.Unmarshal([]byte(profile), &run.InstructionProfile)
@@ -605,6 +727,10 @@ func (s *Store) ListAllRuns(ctx context.Context, projectID string) ([]domain.Run
 		if ended != "" {
 			t := parseTime(ended)
 			run.EndedAt = &t
+		}
+		if merged != "" {
+			t := parseTime(merged)
+			run.MergedAt = &t
 		}
 		runs = append(runs, run)
 	}

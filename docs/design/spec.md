@@ -3,7 +3,7 @@ type: spec
 status: approved
 summary: Implemented specification for the validated ClankSpace pilot and its permanent-production boundary.
 note_created: 2026-08-02
-updated: 2026-08-03
+updated: 2026-08-04
 ---
 
 # ClankSpace Design Specification
@@ -127,6 +127,14 @@ instruction/skill names or hashes
 start/end + outcome + verification
 ```
 
+Git coordinates are captured at the run boundary, not retyped on every note. `run start`
+records the attached repository, branch, worktree, and starting commit. `run end` updates
+the delivered HEAD and, when an authenticated GitHub CLI is available, records the current
+pull request. Explicit flags cover other environments. A later
+`run link` enriches that same run after the PR opens or merges with its URL, number, state,
+merge commit, and merge time. Notes retain their contemporaneous text and inherit this
+structured delivery evidence through the run; reconciliation never rewrites the decision.
+
 Never capture chain-of-thought, complete prompts, environment dumps, sensitive hostnames, or unavailable fields guessed by the agent.
 
 ## 6. Agent workflow
@@ -181,6 +189,7 @@ GET/POST /api/v1/projects/{id}/notes
 POST     /api/v1/projects/{id}/notes/{id}/supersede
 GET/POST /api/v1/projects/{id}/trajectories
 POST     /api/v1/projects/{id}/brief
+POST     /api/v1/runs/{id}/delivery
 GET      /healthz
 GET      /readyz
 ```
@@ -193,6 +202,7 @@ Mutations require `Idempotency-Key`. Lifecycle mutations also require expected r
 clank_project_create
 clank_run_start
 clank_run_end
+clank_run_link
 clank_brief
 clank_record
 clank_supersede
@@ -268,7 +278,7 @@ The current exe.dev service stores SQLite under `/var/lib/clankspace` and runs o
 - [x] Publish the repository under the MIT license.
 - [x] Deploy isolated candidate/evaluation services with verified backup, restore, and rollback.
 - [x] Validate the core interaction on real-repository worlds and an event-gated two-maintainer episode.
-- [ ] Migrate the validated candidate to one persistent Railway service and rehearse recovery.
-- [ ] Route `clank.shamanicarts.dev` to Railway and retire the temporary exe.dev candidate after its rollback window.
+- [x] Promote exe.dev to the persistent small-pilot service, route `clank.shamanicarts.dev`, and rehearse recovery; retain Railway as a validated later migration target.
 - [ ] Publish prebuilt pilot release binaries and onboard the first external collaborator project.
-- [ ] Implement and validate the approved hosted-account and workspace-replication extension.
+- [x] Implement and validate the approved hosted-account and workspace-replication extension in controlled E2E flows.
+- [ ] Complete real trusted-collaborator dogfooding on ClankSpace and shuv2code.

@@ -186,6 +186,13 @@ func (c *Client) EndRun(ctx context.Context, id string, in domain.EndRunInput) (
 	err := c.Do(ctx, "POST", "/runs/"+id+"/end", in, &o)
 	return o.Run, err
 }
+func (c *Client) LinkRunDelivery(ctx context.Context, id string, in domain.LinkRunDeliveryInput) (domain.Run, error) {
+	var o struct {
+		Run domain.Run `json:"run"`
+	}
+	err := c.Do(ctx, http.MethodPost, "/runs/"+id+"/delivery", in, &o)
+	return o.Run, err
+}
 func (c *Client) ListRuns(ctx context.Context, project string, limit int) ([]domain.Run, error) {
 	var out struct {
 		Runs []domain.Run `json:"runs"`

@@ -3,7 +3,7 @@ type: strategy
 status: active
 summary: Delivery roadmap from the validated core through hosted accounts, portable replication, collaborator use, and hardened hosting.
 note_created: 2026-08-02
-updated: 2026-08-03
+updated: 2026-08-04
 ---
 
 # ClankSpace Implementation Plan
@@ -75,13 +75,14 @@ That exercise validated the application, isolation boundaries, and migration mec
 - [x] Remove Railway's active deployment and custom-domain claim while retaining its dormant project/volume temporarily.
 - [x] Export and delete idle eval/runner VMs; reprovision them only for active campaigns.
 
-## Phase 5: trusted collaborator onboarding and packaging — next
+## Phase 5: trusted collaborator onboarding and packaging — active
 
 - [ ] Publish checksummed Linux, macOS, and Windows binaries as `v0.1.0-pilot`.
 - [ ] Add a one-line installer or package-manager path.
 - [ ] Provision the real `shuv2code` project with distinct Shuv and Shamanic project identities.
 - [ ] Open the repository integration PR containing the pointer, skill, and lean agent instruction.
 - [ ] Run one real cross-maintainer canary and inspect the resulting append log with both humans.
+- [ ] Dogfood automatic run, commit, pull-request, and merge provenance on both ClankSpace and shuv2code.
 - [x] Schedule and live-test the daily off-provider SQLite backup.
 - [ ] Schedule external health checks.
 
@@ -89,7 +90,7 @@ That exercise validated the application, isolation boundaries, and migration mec
 
 Measure time, token, tool-call, interruption, false-pause, and useful-conflict deltas against matched no-Clank runs. Expand repository/model/seed coverage before introducing embeddings. Add semantic retrieval only when deterministic lexical baselines and failure cases are frozen.
 
-## Phase 7: hosted accounts and workspace replication — complete and deployed
+## Phase 7: hosted accounts and workspace replication — implementation complete and deployed
 
 The approved extension in
 [`docs/design/hosted-replication-spec.md`](design/hosted-replication-spec.md) is implemented:
@@ -104,8 +105,8 @@ including the defect found and fixed during the run, is indexed in
 [`docs/research_results/2026-08-03-hosted-replication-e2e.md`](research_results/2026-08-03-hosted-replication-e2e.md).
 
 PR #21 merged the candidate and its living `/docs/` guide. Production runs the merged main
-binary with signed replication enabled. Authentication remains in bootstrap mode until an
-SMTP sender is chosen; switching to hybrid/email mode is configuration-only.
+binary with signed replication enabled. Human access now uses direct owner-created invite
+links plus local passwords; SMTP is not part of the normal onboarding path.
 
 ## Research backlog
 

@@ -128,6 +128,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/v1/projects/{project}/repositories/{repo}/refresh", s.auth(http.HandlerFunc(s.refreshRepository)))
 	mux.Handle("POST /api/v1/runs", s.auth(http.HandlerFunc(s.runs)))
 	mux.Handle("POST /api/v1/runs/{run}/end", s.auth(http.HandlerFunc(s.endRun)))
+	mux.Handle("POST /api/v1/runs/{run}/delivery", s.auth(http.HandlerFunc(s.linkRunDelivery)))
 	assets, _ := fs.Sub(webFiles, "web")
 	mux.Handle("GET /", http.FileServer(http.FS(assets)))
 	return requestLog(s.Log, mux)
@@ -428,6 +429,22 @@ func (s *Server) endRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	run, receipt, err := s.Store.EndRun(r.Context(), principal(r), idempotency(r), r.PathValue("run"), in)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"run": run, "receipt": receipt})
+}
+
+func (s *Server) linkRunDelivery(w http.ResponseWriter, r *http.Request) {
+	if !requireScope(w, r, "project:write") {
+		return
+	}
+	var in domain.LinkRunDeliveryInput
+	if !decode(w, r, &in) {
+		return
+	}
+	run, receipt, err := s.Store.LinkRunDelivery(r.Context(), principal(r), idempotency(r), r.PathValue("run"), in)
 	if err != nil {
 		writeError(w, err)
 		return
