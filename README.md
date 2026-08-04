@@ -81,7 +81,7 @@ The normal path is one command from the repository root:
 clank setup --url https://clank.shamanicarts.dev
 ```
 
-`clank setup` infers the project and Git remote, opens a short-lived approval page, creates or reuses the project, and returns a project-only credential directly to the CLI. After approval it installs the ClankSpace skill, writes the non-secret repository pointer, adds one lean `AGENTS.md` instruction, stores the credential outside the repository, links a supported public GitHub remote, and verifies access.
+`clank setup` infers the project and Git remote, opens a short-lived approval page, creates or reuses the project, and returns a project-only credential directly to the CLI. After approval it installs the ClankSpace skill, writes the non-secret repository pointer, adds one lean `AGENTS.md` instruction, stores the credential outside the repository, links a supported public GitHub remote, and verifies access. The completion result explicitly requires the current agent to read `.agents/skills/clankspace/SKILL.md` before it runs another ClankSpace command or continues project work; setup does not assume a running harness will discover a newly installed skill automatically.
 
 The coding-agent prompt at [the hosted front page](https://clank.shamanicarts.dev) runs this on the human's behalf. The human only approves the browser request; no credential is pasted into chat.
 
