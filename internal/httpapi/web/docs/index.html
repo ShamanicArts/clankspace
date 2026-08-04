@@ -62,8 +62,9 @@
         <h3>1. Paste this into the coding agent</h3>
         <div class="copy-block prompt"><button class="primary-copy" data-copy="agent-prompt">Copy agent setup prompt</button><pre id="agent-prompt"></pre></div>
 
-        <h3>2. Approve the browser request</h3>
-        <p>The CLI opens a page showing the inferred repository, project, and agent identity. If you have multiple workspaces, choose one. With one workspace, the server uses it automatically; with none, the server creates one during approval. The waiting agent must not inspect the host or search for workspace credentials. The project credential returns directly to the CLI and is never shown to the agent or browser.</p>
+        <h3>2. Complete the human handoff</h3>
+        <p>The CLI opens a page showing the inferred repository, project, and agent identity. The agent should give you that short-lived URL and code. Existing users sign in. A new collaborator first opens the one-time invite URL created by a workspace owner. The first installation owner receives an invite URL created with <code>clank auth bootstrap-owner</code> by an operator or agent that already holds the installation credential locally.</p>
+        <p>Setup URLs, verification codes, and intended-human invite URLs may be shared with that human. Installation, workspace, and project bearer tokens must not enter chat. With one workspace, the server uses it automatically; with none, it creates one during approval. The project token returns directly to the waiting CLI and is stored locally.</p>
 
         <h3>3. Done</h3>
         <p>The agent reports the installed files, resolved service and project, and the result of its first read-only context check.</p>
