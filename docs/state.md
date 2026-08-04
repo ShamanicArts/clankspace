@@ -35,7 +35,8 @@ implementation report and six recordings are preserved outside the repository un
 `~/.agent/diagrams/clankspace-e2e-final-2026-08-03/`; no live credentials are stored in the
 repository.
 
-Merged main `4af2889` is deployed on exe.dev. Production schema version 13 passed
+Production binary `4af2889` is deployed on exe.dev; public main `6a54cce` adds only the
+completed dogfood documentation. Production schema version 13 passed
 `PRAGMA integrity_check`; one workspace now contains the ClankSpace, BespokeSynth, and
 shuv2code projects. ClankSpace's provenance decision is attached to merged PR #33, and the
 first shuv2code records are attached to open PR #76.
