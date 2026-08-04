@@ -10,7 +10,7 @@ updated: 2026-08-04
 
 ## Current focus
 
-Dogfood the deployed service in real ClankSpace and shuv2code work. Human onboarding uses local passwords and direct owner-generated invite links. Runs now need to preserve origin branch/commit and eventual commit/PR/merge evidence automatically, so notes stay sparse while still explaining where a decision landed.
+Continue the first real cross-maintainer canary. ClankSpace and shuv2code now both dogfood automatic origin/delivery provenance. shuv2code PR #76 carries the portable pointer, skill, and instruction; its first Shamanic-agent run and two maintainer-grounded records are live. The next real step is a distinct Shuv agent identity and a naturally overlapping task, not more synthetic seeding.
 
 PR #24 replaced manual first-run workspace plumbing with `clank setup`: the agent infers the Git repository and project, opens a short-lived browser request, and waits for one human approval. The server creates or reuses the project, links a supported public GitHub remote, and returns a project-only credential directly to the CLI. The CLI stores it outside the repository, installs the skill and pointer, adds one lean agent instruction, and verifies access. A fresh `go-chi/chi` checkout passed the complete browser-to-terminal flow without a token entering chat.
 
@@ -35,8 +35,10 @@ implementation report and six recordings are preserved outside the repository un
 `~/.agent/diagrams/clankspace-e2e-final-2026-08-03/`; no live credentials are stored in the
 repository.
 
-Merged main `6904b3a` is deployed on exe.dev. Production schema version 12 passed
-`PRAGMA integrity_check`; the original one workspace, one project, and four notes remain.
+Merged main `4af2889` is deployed on exe.dev. Production schema version 13 passed
+`PRAGMA integrity_check`; one workspace now contains the ClankSpace, BespokeSynth, and
+shuv2code projects. ClankSpace's provenance decision is attached to merged PR #33, and the
+first shuv2code records are attached to open PR #76.
 The service has a durable installation secret, signed-sync identity, retained prior binary,
 and an integrity-checked pre-deployment snapshot both on-host and off-host. PR #26 added
 Argon2id password sign-in, direct dashboard/CLI invite links, and a setup page that presents
