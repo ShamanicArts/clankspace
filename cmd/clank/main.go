@@ -680,7 +680,7 @@ project pointer, skill, AGENTS.md instruction, and project-scoped local credenti
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stdout, "Approve this repository once:\n%s\n\nCode: %s\nWaiting for approval…\n", started.VerificationURL, started.UserCode)
+	fmt.Fprintf(os.Stdout, "Approve this repository once:\n%s\n\nCode: %s\nWaiting for human approval…\n\nStop here. The server resolves or creates the workspace after the human signs in. Do not access the server host, inspect deployment files, search for a workspace, or ask for a token.\n", started.VerificationURL, started.UserCode)
 	if !*noBrowser {
 		_ = openBrowser(started.VerificationURL)
 	}
