@@ -1,20 +1,20 @@
 ---
 type: state
 status: active
-summary: Hosted accounts and signed replication are implemented and E2E-validated on the feature branch; the lean exe.dev pilot remains the current public deployment.
+summary: Hosted accounts, signed replication, and interactive onboarding docs are merged and deployed to the lean exe.dev pilot.
 note_created: 2026-08-02
-updated: 2026-08-03
+updated: 2026-08-04
 ---
 
 # State
 
 ## Current focus
 
-Prepare the hosted-replication candidate for trusted collaborators. The new product slice is implemented and locally validated; it is not yet merged into or deployed over the existing lean exe.dev pilot. The next useful signal should come from real Shuv/Shamanic use, not a larger synthetic campaign.
+Prepare the deployed hosted-replication candidate for real trusted-collaborator use. The code, living docs, and recorded proof are public; the next operational dependency is selecting an SMTP sender before changing production from bootstrap authentication to hybrid invitation/email authentication. The next product signal should come from real Shuv/Shamanic use, not a larger synthetic campaign.
 
 ## Active phase
 
-Branch `feat/hosted-replication` adds invitation-only email accounts, many workspaces per
+PR #21 merged invitation-only email accounts, many workspaces per
 human, workspace roles, project-scoped agent keys, a quiet human management surface, signed
 snapshot-plus-event replication, offline local writes, self-hosted authority, cloud mirrors,
 replica revocation, encrypted local secrets, migration backups, and downgrade protection.
@@ -33,8 +33,13 @@ implementation report and six recordings are preserved outside the repository un
 `~/.agent/diagrams/clankspace-e2e-final-2026-08-03/`; no live credentials are stored in the
 repository.
 
-The currently deployed service remains the earlier public-main pilot described below until
-the hosted-replication branch is intentionally reviewed and promoted.
+Merged main `66faea4` is deployed on exe.dev. Production schema version 10 passed
+`PRAGMA integrity_check`; the original one workspace, one project, and four notes remain.
+The service has a durable installation secret, signed-sync identity, retained prior binary,
+and an integrity-checked pre-deployment snapshot both on-host and off-host. Bootstrap login
+remains active because no SMTP sender is configured yet. The interactive guide is served at
+`https://clank.shamanicarts.dev/docs/` and includes the setup builder, copyable agent prompt,
+and six recordings.
 
 Production runs from public `main` on `clankspace-prod.exe.xyz`, published through `clank.shamanicarts.dev`. The final Railway database was downloaded quiescently, passed `PRAGMA integrity_check`, and was restored with the matching production bootstrap credential. Strict-HTTPS health/readiness, CLI context, and deterministic authenticated export pass; the project contains the expected four notes. A persistent daily local timer performs SQLite's online backup remotely, pulls the completed snapshot off-provider, verifies integrity, and writes a checksum manifest; its first live run passed. Railway has no active deployment. The runner and evaluation VM evidence was checksum-verified locally before both disposable VMs were deleted.
 
@@ -63,7 +68,8 @@ PR #9 merged the gate into `lab/pilot-v1-base`; PR #10 promoted that lab state t
 - gate: `evals/gates/product-rc-009.result.json`
 - review report: `docs/research_results/2026-08-03-rc009-full-package-validation.md`
 - completion audit: `docs/research_results/2026-08-03-night-shift-completion-audit.md`
-- draft PR: `https://github.com/ShamanicArts/clankspace/pull/9`
+- hosted replication and docs: `https://github.com/ShamanicArts/clankspace/pull/21`
+- living guide: `https://clank.shamanicarts.dev/docs/`
 
 The operations journal and raw workflow evidence are preserved in the local runner export. No Operations or workflow viewer is currently hosted; those surfaces return with the next reprovisioned evaluation campaign.
 
