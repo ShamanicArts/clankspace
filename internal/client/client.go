@@ -32,6 +32,11 @@ type SetupExchange struct {
 	Token   string         `json:"token"`
 }
 
+type WorkspaceInviteLink struct {
+	Invite    domain.WorkspaceInvite `json:"invite"`
+	InviteURL string                 `json:"inviteUrl"`
+}
+
 func New(baseURL, token string) *Client {
 	return &Client{BaseURL: strings.TrimRight(baseURL, "/"), Token: token, HTTP: &http.Client{Timeout: 20 * time.Second}}
 }
@@ -128,6 +133,12 @@ func (c *Client) CreateWorkspace(ctx context.Context, slug, name string) (domain
 	}
 	err := c.Do(ctx, http.MethodPost, "/admin/workspaces", map[string]string{"slug": slug, "name": name}, &out)
 	return out.Workspace, err
+}
+
+func (c *Client) CreateWorkspaceInvite(ctx context.Context, email, role string) (WorkspaceInviteLink, error) {
+	var out WorkspaceInviteLink
+	err := c.Do(ctx, http.MethodPost, "/invites", map[string]string{"email": email, "role": role}, &out)
+	return out, err
 }
 func (c *Client) CreateProject(ctx context.Context, slug, name, description string) (domain.Project, error) {
 	var o struct {

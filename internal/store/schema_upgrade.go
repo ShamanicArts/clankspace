@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const latestSchemaVersion = 11
+const latestSchemaVersion = 12
 
 const hostedReplicationSchema = `
 ALTER TABLE workspaces ADD COLUMN slug TEXT NOT NULL DEFAULT '';
@@ -284,6 +284,10 @@ CREATE TABLE setup_requests (
 CREATE INDEX idx_setup_requests_expires ON setup_requests(expires_at, consumed_at);
 `
 
+const localPasswordsSchema = `
+ALTER TABLE users ADD COLUMN password_hash TEXT NOT NULL DEFAULT '';
+`
+
 func applyMigrations(db *sql.DB) error {
 	tx, err := db.Begin()
 	if err != nil {
@@ -380,6 +384,14 @@ func applyMigrations(db *sql.DB) error {
 			return fmt.Errorf("migration 11 setup requests: %w", err)
 		}
 		if _, err = tx.Exec(`INSERT INTO schema_migrations(version,applied_at) VALUES(11,strftime('%Y-%m-%dT%H:%M:%fZ','now'))`); err != nil {
+			return err
+		}
+	}
+	if version < 12 {
+		if _, err = tx.Exec(localPasswordsSchema); err != nil {
+			return fmt.Errorf("migration 12 local passwords: %w", err)
+		}
+		if _, err = tx.Exec(`INSERT INTO schema_migrations(version,applied_at) VALUES(12,strftime('%Y-%m-%dT%H:%M:%fZ','now'))`); err != nil {
 			return err
 		}
 	}

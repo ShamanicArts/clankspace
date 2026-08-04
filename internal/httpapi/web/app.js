@@ -82,21 +82,36 @@ function formatTime(timestamp) {
 }
 
 async function boot() {
-	if (pendingSetupCode) sessionStorage.setItem('clank-setup-code', pendingSetupCode)
+	if (pendingSetupCode) {
+    sessionStorage.setItem('clank-setup-code', pendingSetupCode)
+    await renderPendingSetup()
+  }
   const meta = await request('/meta', {}, 'public').catch(() => ({ authMode: 'bootstrap' }))
   authMode = meta.authMode || 'bootstrap'
-  const emailEnabled = authMode !== 'bootstrap'
   $('#email-login').classList.remove('hidden')
-  $('#email').disabled = !emailEnabled
-  $('#email-form button').disabled = !emailEnabled
-  $('#email-unavailable').classList.toggle('hidden', authMode !== 'bootstrap')
-  $('#bootstrap-login').open = !emailEnabled
-  const authToken = new URLSearchParams(location.search).get('token')
+  const params = new URLSearchParams(location.search)
+  const inviteToken = params.get('invite')
+  if (inviteToken) {
+    const response = await request('/auth/invites/' + encodeURIComponent(inviteToken), {}, 'public')
+    const invite = response.invite
+    $('#consume-title').textContent = `Join ${invite.workspaceName}`
+    $('#consume-copy').textContent = `This invite grants ${invite.role} access. Choose the name collaborators will see and a password for ${invite.email}.`
+    $('#invite-email').value = invite.email
+    $('#auth-request').classList.add('hidden')
+    $('#auth-consume').classList.remove('hidden')
+    showSignedIn(false)
+    return
+  }
+  const authToken = params.get('token')
   if (authToken) {
     const returning = authToken.startsWith('login_')
     $('#consume-title').textContent = returning ? 'Sign in to ClankSpace' : 'Accept invitation'
     $('#consume-copy').textContent = returning ? 'This one-time link will open your account.' : 'Confirm the name collaborators should see beside your project context.'
     $('#display-name-label').classList.toggle('hidden', returning)
+    $('#invite-email-label').classList.add('hidden')
+    $('#invite-password-label').classList.add('hidden')
+    $('#invite-password').required = false
+    $('#display-name').required = !returning
     $('#auth-request').classList.add('hidden')
     $('#auth-consume').classList.remove('hidden')
     showSignedIn(false)
@@ -125,6 +140,24 @@ async function boot() {
   showSignedIn(false)
 }
 
+async function renderPendingSetup() {
+  try {
+    const response = await request('/setup/requests/' + encodeURIComponent(pendingSetupCode), {}, 'public')
+    const item = response.request
+    $('#normal-intro').classList.add('hidden')
+    $('#device-request').classList.remove('hidden')
+    $('#device-project').textContent = item.projectName
+    $('#device-repository').textContent = item.repositoryUrl || 'No repository URL supplied'
+    $('#device-agent').textContent = item.agentName
+    $('#device-code').textContent = item.userCode
+  } catch (error) {
+    sessionStorage.removeItem('clank-setup-code')
+    pendingSetupCode = ''
+    history.replaceState({}, '', '/')
+    toast(error.message)
+  }
+}
+
 async function openAccount() {
   showSignedIn(true)
   $('#account-name').textContent = account.user.displayName
@@ -149,7 +182,7 @@ async function openLegacy() {
   renderWorkspaceNav()
   renderProjectNav()
   $('#project-nav-wrap').classList.remove('hidden')
-  $('#legacy-claim').classList.toggle('hidden', authMode === 'bootstrap')
+  $('#legacy-claim').classList.remove('hidden')
   if (projectList[0]) await openProject(projectList[0].id)
   else showView('workspace-view')
 	await maybeApproveSetup()
@@ -336,8 +369,14 @@ function modal(title, fields, onSave, saveLabel = 'Save') {
 
 $('#email-form').onsubmit = async (event) => {
   event.preventDefault()
-  const response = await request('/auth/magic-link', { method: 'POST', body: JSON.stringify({ email: $('#email').value.trim() }) }, 'public')
-  $('#email-status').textContent = response.status
+  try {
+    await request('/auth/password', { method: 'POST', body: JSON.stringify({ email: $('#email').value.trim(), password: $('#password').value }) }, 'public')
+    account = await request('/account', {}, 'session')
+    accessMode = 'session'
+    await openAccount()
+  } catch (error) {
+    $('#email-status').textContent = error.message
+  }
 }
 
 $('#copy-setup-prompt').onclick = async () => {
@@ -352,8 +391,13 @@ $('#copy-setup-prompt').onclick = async () => {
 
 $('#consume-form').onsubmit = async (event) => {
   event.preventDefault()
-  const token = new URLSearchParams(location.search).get('token')
-  await request('/auth/consume', { method: 'POST', body: JSON.stringify({ token, displayName: $('#display-name').value.trim() }) }, 'public')
+  const params = new URLSearchParams(location.search)
+  const invite = params.get('invite')
+  const token = invite || params.get('token')
+  const path = invite ? '/auth/invites/accept' : '/auth/consume'
+  const input = { token, displayName: $('#display-name').value.trim() }
+  if (invite) input.password = $('#invite-password').value
+  await request(path, { method: 'POST', body: JSON.stringify(input) }, 'public')
   history.replaceState({}, '', '/')
   account = await request('/account', {}, 'session')
   accessMode = 'session'
@@ -380,12 +424,11 @@ $('#brand-home').onclick = (event) => { if (account && accessMode === 'session')
 $('#new-workspace').onclick = () => modal('New workspace', '<label>Name<input name="name" required></label><label>Slug<input name="slug" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required></label>', async (form) => { const response = await request('/account/workspaces', { method: 'POST', body: JSON.stringify(Object.fromEntries(form)) }); account = await request('/account'); workspaceList = account.workspaces; renderWorkspaceNav(); renderWorkspaceHome(); await selectWorkspace(response.workspace.id); toast('Workspace created') }, 'Create workspace')
 $('#import-self-host').onclick = () => modal('Mirror a self-hosted workspace', '<p>Create a one-time code, then run the shown command on the self-hosted authority. The self-host stays in control.</p>', async () => { const response = await request('/account/mirror-offers', { method: 'POST', body: '{}' }); const command = `clank replica mirror --remote ${location.origin} --workspace &lt;workspace-id&gt; --code ${esc(response.code)}`; setTimeout(() => modal('Run this on the self-host', `<p>${esc(response.notice)}</p><label>Command<input value="${command}" readonly></label><p>Expires ${esc(formatTime(response.expiresAt))}.</p>`, async () => {}, 'Done'), 80) }, 'Create mirror code')
 
-$('#claim-account').onclick = () => modal('Create hosted account', '<p>Link this bootstrap owner to an email address. We will send a one-time sign-in link next.</p><label>Display name<input name="displayName" required></label><label>Email address<input name="email" type="email" required></label>', async (form) => {
+$('#claim-account').onclick = () => modal('Create account', '<p>Link this installation owner to an email address and password. No email is sent.</p><label>Display name<input name="displayName" required></label><label>Email address<input name="email" type="email" required></label><label>Password<input name="password" type="password" minlength="8" autocomplete="new-password" required></label>', async (form) => {
   const input = Object.fromEntries(form)
   await request('/admin/claim', { method: 'POST', body: JSON.stringify(input) }, 'legacy')
-  await request('/auth/magic-link', { method: 'POST', body: JSON.stringify({ email: input.email }) }, 'public')
   $('#legacy-claim').classList.add('hidden')
-  setTimeout(() => modal('Check your email', '<p>Your hosted account is ready. Open the one-time link to enter it; bootstrap token access remains available.</p>', async () => {}, 'Done'), 80)
+  setTimeout(() => modal('Account ready', '<p>You can now sign in with that email and password. Installation token access remains available.</p>', async () => {}, 'Done'), 80)
 }, 'Create account')
 
 function newProject() {
@@ -395,7 +438,17 @@ function newProject() {
 $('#new-project').onclick = newProject
 $('#workspace-new-project').onclick = newProject
 $('#workspace-settings').onclick = () => { $('#access-section').classList.toggle('hidden'); $('#access-section').scrollIntoView({ behavior: 'smooth' }) }
-$('#invite-person').onclick = () => modal('Invite person', '<p>They will receive a one-time email link for this workspace.</p><label>Email<input name="email" type="email" required></label><label>Role<select name="role"><option value="member">Member</option><option value="owner">Owner</option></select></label>', async (form) => { await request(`/account/workspaces/${currentWorkspace.id}/invites`, { method: 'POST', body: JSON.stringify(Object.fromEntries(form)) }); invites = (await request(`/account/workspaces/${currentWorkspace.id}/invites`)).invites || []; renderMembers(); toast('Invitation sent') }, 'Send invitation')
+$('#invite-person').onclick = () => modal('Create invite link', '<p>ClankSpace will match this email to the account created from the link. Share the link yourself.</p><label>Email<input name="email" type="email" required></label><label>Role<select name="role"><option value="member">Member</option><option value="owner">Owner</option></select></label>', async (form) => {
+  const response = await request(`/account/workspaces/${currentWorkspace.id}/invites`, { method: 'POST', body: JSON.stringify(Object.fromEntries(form)) })
+  invites = (await request(`/account/workspaces/${currentWorkspace.id}/invites`)).invites || []
+  renderMembers()
+  setTimeout(() => {
+    modal('Share this invite link', `<p>This one-time link expires in 24 hours. Send it to <strong>${esc(response.invite.email)}</strong>.</p><label>Invite link<input id="created-invite-link" value="${esc(response.inviteUrl)}" readonly></label>`, async () => {}, 'Done')
+    const field = $('#created-invite-link')
+    field.onclick = () => { field.select(); navigator.clipboard.writeText(field.value).then(() => toast('Invite link copied')).catch(() => {}) }
+    field.select()
+  }, 80)
+}, 'Create link')
 
 async function revokeReplica(id) { await request(`/account/workspaces/${currentWorkspace.id}/replicas/${id}/revoke`, { method: 'POST', body: '{}' }); replicas = (await request(`/account/workspaces/${currentWorkspace.id}/replicas`)).replicas || []; renderReplicas(); toast('Replica revoked; later offline events will be rejected') }
 

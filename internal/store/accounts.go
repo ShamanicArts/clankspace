@@ -302,48 +302,94 @@ func (s *Store) EnsureLocalUserForPrincipal(ctx context.Context, principal domai
 }
 
 func (s *Store) CreateWorkspaceInvite(ctx context.Context, inviter domain.Membership, email, role, baseURL string) (domain.WorkspaceInvite, error) {
+	invite, _, err := s.createWorkspaceInvite(ctx, inviter, email, role, baseURL, true)
+	return invite, err
+}
+
+type WorkspaceInviteLink struct {
+	Invite domain.WorkspaceInvite `json:"invite"`
+	URL    string                 `json:"inviteUrl"`
+}
+
+type WorkspaceInvitePreview struct {
+	Email         string    `json:"email"`
+	Role          string    `json:"role"`
+	WorkspaceID   string    `json:"workspaceId"`
+	WorkspaceName string    `json:"workspaceName"`
+	ExpiresAt     time.Time `json:"expiresAt"`
+}
+
+func (s *Store) CreateWorkspaceInviteLink(ctx context.Context, inviter domain.Membership, email, role, baseURL string) (WorkspaceInviteLink, error) {
+	invite, link, err := s.createWorkspaceInvite(ctx, inviter, email, role, baseURL, false)
+	return WorkspaceInviteLink{Invite: invite, URL: link}, err
+}
+
+func (s *Store) WorkspaceInvitePreview(ctx context.Context, token string) (WorkspaceInvitePreview, error) {
+	var item WorkspaceInvitePreview
+	var expires string
+	err := s.db.QueryRowContext(ctx, `SELECT i.email_normalized,i.role,i.workspace_id,w.name,i.expires_at FROM workspace_invites i JOIN workspaces w ON w.id=i.workspace_id WHERE i.token_hash=? AND i.accepted_at IS NULL AND i.revoked_at IS NULL AND datetime(i.expires_at)>datetime(?) AND w.status='active'`, hashToken(strings.TrimSpace(token)), ts(now())).Scan(&item.Email, &item.Role, &item.WorkspaceID, &item.WorkspaceName, &expires)
+	if errors.Is(err, sql.ErrNoRows) {
+		return item, ErrNotFound
+	}
+	if err != nil {
+		return item, err
+	}
+	item.ExpiresAt = parseTime(expires)
+	return item, nil
+}
+
+func (s *Store) createWorkspaceInvite(ctx context.Context, inviter domain.Membership, email, role, baseURL string, sendEmail bool) (domain.WorkspaceInvite, string, error) {
 	if inviter.Role != "owner" || inviter.Status != "active" {
-		return domain.WorkspaceInvite{}, errors.New("workspace owner required")
+		return domain.WorkspaceInvite{}, "", errors.New("workspace owner required")
 	}
 	email, err := normalizeEmail(email)
 	if err != nil {
-		return domain.WorkspaceInvite{}, err
+		return domain.WorkspaceInvite{}, "", err
 	}
 	if role == "" {
 		role = "member"
 	}
 	if role != "owner" && role != "member" {
-		return domain.WorkspaceInvite{}, errors.New("invite role must be owner or member")
+		return domain.WorkspaceInvite{}, "", errors.New("invite role must be owner or member")
 	}
 	token, err := randomToken("invite_")
 	if err != nil {
-		return domain.WorkspaceInvite{}, err
+		return domain.WorkspaceInvite{}, "", err
 	}
 	t := now()
 	invite := domain.WorkspaceInvite{ID: newID("invite"), WorkspaceID: inviter.WorkspaceID, Email: email, Role: role, ExpiresAt: t.Add(24 * time.Hour), CreatedAt: t}
-	link := strings.TrimRight(baseURL, "/") + "/?token=" + url.QueryEscape(token)
-	payload, _ := json.Marshal(emailPayload{Subject: "Join a ClankSpace workspace", Body: "Open this one-time link to join the workspace:\n\n" + link + "\n\nThis link expires in 24 hours."})
-	sealed, err := s.seal(payload)
-	if err != nil {
-		return domain.WorkspaceInvite{}, err
+	queryKey := "invite"
+	if sendEmail {
+		queryKey = "token"
+	}
+	link := strings.TrimRight(baseURL, "/") + "/?" + queryKey + "=" + url.QueryEscape(token)
+	var sealed []byte
+	if sendEmail {
+		payload, _ := json.Marshal(emailPayload{Subject: "Join a ClankSpace workspace", Body: "Open this one-time link to join the workspace:\n\n" + link + "\n\nThis link expires in 24 hours."})
+		sealed, err = s.seal(payload)
+		if err != nil {
+			return domain.WorkspaceInvite{}, "", err
+		}
 	}
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return domain.WorkspaceInvite{}, err
+		return domain.WorkspaceInvite{}, "", err
 	}
 	defer tx.Rollback()
 	if _, err = tx.ExecContext(ctx, `INSERT INTO workspace_invites(id,workspace_id,email_normalized,role,token_hash,invited_by_membership_id,expires_at,created_at) VALUES(?,?,?,?,?,?,?,?)`, invite.ID, invite.WorkspaceID, invite.Email, invite.Role, hashToken(token), inviter.ID, ts(invite.ExpiresAt), ts(t)); err != nil {
-		return domain.WorkspaceInvite{}, err
+		return domain.WorkspaceInvite{}, "", err
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO email_outbox(id,recipient,template,payload_ciphertext,next_attempt_at,created_at) VALUES(?,?,?,?,?,?)`, newID("mail"), email, "workspace_invite", sealed, ts(t), ts(t)); err != nil {
-		return domain.WorkspaceInvite{}, err
+	if sendEmail {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO email_outbox(id,recipient,template,payload_ciphertext,next_attempt_at,created_at) VALUES(?,?,?,?,?,?)`, newID("mail"), email, "workspace_invite", sealed, ts(t), ts(t)); err != nil {
+			return domain.WorkspaceInvite{}, "", err
+		}
 	}
 	if err = tx.Commit(); err != nil {
-		return domain.WorkspaceInvite{}, err
+		return domain.WorkspaceInvite{}, "", err
 	}
-	return invite, nil
+	return invite, link, nil
 }
 
 func (s *Store) RequestMagicLink(ctx context.Context, email, fingerprint, baseURL string) error {
@@ -360,7 +406,7 @@ func (s *Store) RequestMagicLink(ctx context.Context, email, fingerprint, baseUR
 		return err
 	}
 	var eligible int
-	if err = s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM users WHERE email_normalized=? AND status='active' AND login_kind='email'`, email).Scan(&eligible); err != nil {
+	if err = s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM users WHERE email_normalized=? AND status='active'`, email).Scan(&eligible); err != nil {
 		return err
 	}
 	if eligible == 0 {
@@ -424,6 +470,24 @@ func (s *Store) allowAuthRequest(ctx context.Context, key string, maximum int) (
 }
 
 func (s *Store) ConsumeAuthToken(ctx context.Context, token, displayName string) (SessionResult, error) {
+	return s.consumeAuthToken(ctx, token, displayName, "", "", false)
+}
+
+func (s *Store) ConsumeInviteWithPassword(ctx context.Context, token, displayName, password string) (SessionResult, error) {
+	if err := validatePassword(password); err != nil {
+		return SessionResult{}, err
+	}
+	if _, err := s.WorkspaceInvitePreview(ctx, token); err != nil {
+		return SessionResult{}, err
+	}
+	passwordHash, err := hashPassword(password)
+	if err != nil {
+		return SessionResult{}, err
+	}
+	return s.consumeAuthToken(ctx, token, displayName, password, passwordHash, true)
+}
+
+func (s *Store) consumeAuthToken(ctx context.Context, token, displayName, password, passwordHash string, inviteOnly bool) (SessionResult, error) {
 	tokenHash := hashToken(strings.TrimSpace(token))
 	t := now()
 	s.writeMu.Lock()
@@ -435,10 +499,13 @@ func (s *Store) ConsumeAuthToken(ctx context.Context, token, displayName string)
 	defer tx.Rollback()
 	var email string
 	var inviteID, workspaceID, role sql.NullString
-	err = tx.QueryRowContext(ctx, `SELECT id,workspace_id,email_normalized,role FROM workspace_invites WHERE token_hash=? AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at>?`, tokenHash, ts(t)).Scan(&inviteID, &workspaceID, &email, &role)
+	err = tx.QueryRowContext(ctx, `SELECT id,workspace_id,email_normalized,role FROM workspace_invites WHERE token_hash=? AND accepted_at IS NULL AND revoked_at IS NULL AND datetime(expires_at)>datetime(?)`, tokenHash, ts(t)).Scan(&inviteID, &workspaceID, &email, &role)
 	if errors.Is(err, sql.ErrNoRows) {
+		if inviteOnly {
+			return SessionResult{}, ErrNotFound
+		}
 		var challengeID string
-		err = tx.QueryRowContext(ctx, `SELECT id,email_normalized FROM login_challenges WHERE token_hash=? AND consumed_at IS NULL AND expires_at>?`, tokenHash, ts(t)).Scan(&challengeID, &email)
+		err = tx.QueryRowContext(ctx, `SELECT id,email_normalized FROM login_challenges WHERE token_hash=? AND consumed_at IS NULL AND datetime(expires_at)>datetime(?)`, tokenHash, ts(t)).Scan(&challengeID, &email)
 		if errors.Is(err, sql.ErrNoRows) {
 			return SessionResult{}, ErrNotFound
 		}
@@ -454,7 +521,8 @@ func (s *Store) ConsumeAuthToken(ctx context.Context, token, displayName string)
 	var user domain.User
 	var userCreated string
 	var lastLogin sql.NullString
-	err = tx.QueryRowContext(ctx, `SELECT id,email_normalized,display_name,status,created_at,last_login_at,login_kind FROM users WHERE email_normalized=?`, email).Scan(&user.ID, &user.Email, &user.DisplayName, &user.Status, &userCreated, &lastLogin, &user.LoginKind)
+	var existingPassword string
+	err = tx.QueryRowContext(ctx, `SELECT id,email_normalized,display_name,status,created_at,last_login_at,login_kind,password_hash FROM users WHERE email_normalized=?`, email).Scan(&user.ID, &user.Email, &user.DisplayName, &user.Status, &userCreated, &lastLogin, &user.LoginKind, &existingPassword)
 	if errors.Is(err, sql.ErrNoRows) {
 		if !inviteID.Valid {
 			return SessionResult{}, ErrNotFound
@@ -464,7 +532,7 @@ func (s *Store) ConsumeAuthToken(ctx context.Context, token, displayName string)
 			displayName = displayNameForEmail(email)
 		}
 		user = domain.User{ID: newID("user"), Email: email, DisplayName: displayName, Status: "active", LoginKind: "email", CreatedAt: t}
-		if _, err = tx.ExecContext(ctx, `INSERT INTO users(id,email_normalized,display_name,status,created_at,last_login_at,login_kind) VALUES(?,?,?,?,?,?,?)`, user.ID, user.Email, user.DisplayName, user.Status, ts(t), ts(t), "email"); err != nil {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO users(id,email_normalized,display_name,status,created_at,last_login_at,login_kind,password_hash) VALUES(?,?,?,?,?,?,?,?)`, user.ID, user.Email, user.DisplayName, user.Status, ts(t), ts(t), "email", passwordHash); err != nil {
 			return SessionResult{}, err
 		}
 	} else if err != nil {
@@ -473,6 +541,15 @@ func (s *Store) ConsumeAuthToken(ctx context.Context, token, displayName string)
 		user.CreatedAt = parseTime(userCreated)
 		if user.Status != "active" {
 			return SessionResult{}, ErrNotFound
+		}
+		if inviteOnly {
+			if existingPassword == "" {
+				if _, err = tx.ExecContext(ctx, `UPDATE users SET password_hash=? WHERE id=?`, passwordHash, user.ID); err != nil {
+					return SessionResult{}, err
+				}
+			} else if !verifyPassword(existingPassword, password) {
+				return SessionResult{}, ErrNotFound
+			}
 		}
 		if _, err = tx.ExecContext(ctx, `UPDATE users SET last_login_at=? WHERE id=?`, ts(t), user.ID); err != nil {
 			return SessionResult{}, err
@@ -508,6 +585,76 @@ func (s *Store) ConsumeAuthToken(ctx context.Context, token, displayName string)
 		return SessionResult{}, err
 	}
 	session := domain.BrowserSession{ID: newID("session"), UserID: user.ID, ExpiresAt: t.Add(30 * 24 * time.Hour)}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO browser_sessions(id,user_id,token_hash,csrf_hash,expires_at,last_seen_at,created_at) VALUES(?,?,?,?,?,?,?)`, session.ID, session.UserID, hashToken(sessionToken), hashToken(csrfToken), ts(session.ExpiresAt), ts(t), ts(t)); err != nil {
+		return SessionResult{}, err
+	}
+	if err = tx.Commit(); err != nil {
+		return SessionResult{}, err
+	}
+	session.CSRFToken = csrfToken
+	return SessionResult{User: user, Session: session, SessionToken: sessionToken, CSRFToken: csrfToken}, nil
+}
+
+func (s *Store) SetUserPassword(ctx context.Context, userID, password string) error {
+	encoded, err := hashPassword(password)
+	if err != nil {
+		return err
+	}
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+	result, err := s.db.ExecContext(ctx, `UPDATE users SET password_hash=? WHERE id=? AND status='active'`, encoded, userID)
+	if err != nil {
+		return err
+	}
+	if count, _ := result.RowsAffected(); count != 1 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *Store) AuthenticatePassword(ctx context.Context, email, password, fingerprint string) (SessionResult, error) {
+	email, err := normalizeEmail(email)
+	if err != nil {
+		return SessionResult{}, ErrNotFound
+	}
+	allowed, err := s.allowAuthRequest(ctx, "password-email:"+email, 10)
+	if err != nil || !allowed {
+		return SessionResult{}, ErrNotFound
+	}
+	allowed, err = s.allowAuthRequest(ctx, "password-source:"+fingerprint, 30)
+	if err != nil || !allowed {
+		return SessionResult{}, ErrNotFound
+	}
+	var user domain.User
+	var created string
+	var lastLogin sql.NullString
+	var passwordHash string
+	err = s.db.QueryRowContext(ctx, `SELECT id,email_normalized,display_name,status,created_at,last_login_at,login_kind,password_hash FROM users WHERE email_normalized=?`, email).Scan(&user.ID, &user.Email, &user.DisplayName, &user.Status, &created, &lastLogin, &user.LoginKind, &passwordHash)
+	if err != nil || user.Status != "active" || passwordHash == "" || !verifyPassword(passwordHash, password) {
+		return SessionResult{}, ErrNotFound
+	}
+	t := now()
+	user.CreatedAt = parseTime(created)
+	user.LastLoginAt = &t
+	sessionToken, err := randomToken("session_")
+	if err != nil {
+		return SessionResult{}, err
+	}
+	csrfToken, err := randomToken("csrf_")
+	if err != nil {
+		return SessionResult{}, err
+	}
+	session := domain.BrowserSession{ID: newID("session"), UserID: user.ID, ExpiresAt: t.Add(30 * 24 * time.Hour)}
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return SessionResult{}, err
+	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `UPDATE users SET last_login_at=? WHERE id=?`, ts(t), user.ID); err != nil {
+		return SessionResult{}, err
+	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO browser_sessions(id,user_id,token_hash,csrf_hash,expires_at,last_seen_at,created_at) VALUES(?,?,?,?,?,?,?)`, session.ID, session.UserID, hashToken(sessionToken), hashToken(csrfToken), ts(session.ExpiresAt), ts(t), ts(t)); err != nil {
 		return SessionResult{}, err
 	}
@@ -710,7 +857,7 @@ func (s *Store) ClaimOutbox(ctx context.Context, limit int) ([]OutboxMessage, er
 	if limit <= 0 || limit > 50 {
 		limit = 20
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT id,recipient,template,payload_ciphertext FROM email_outbox WHERE sent_at IS NULL AND next_attempt_at<=? ORDER BY created_at LIMIT ?`, ts(now()), limit)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,recipient,template,payload_ciphertext FROM email_outbox WHERE sent_at IS NULL AND datetime(next_attempt_at)<=datetime(?) ORDER BY created_at LIMIT ?`, ts(now()), limit)
 	if err != nil {
 		return nil, err
 	}

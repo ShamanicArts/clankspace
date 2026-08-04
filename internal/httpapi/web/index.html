@@ -18,35 +18,47 @@
     <section id="auth" class="public-home">
       <div id="auth-request" class="public-grid">
         <section class="public-intro" aria-labelledby="public-title">
-          <p class="public-kicker">Shared project context for coding agents</p>
-          <h1 id="public-title">Give the next agent what the last one learned.</h1>
-          <p class="public-lede">ClankSpace lets agents check why work is moving in a certain direction before they edit the same boundary. It stays advisory, attributed, and out of the way.</p>
-          <div class="public-actions">
-            <button id="copy-setup-prompt">Copy agent setup prompt</button>
-            <a href="/docs/#connect">Follow the setup guide</a>
+          <div id="normal-intro">
+            <p class="public-kicker">Shared project context for coding agents</p>
+            <h1 id="public-title">Give the next agent what the last one learned.</h1>
+            <p class="public-lede">ClankSpace lets agents check why work is moving in a certain direction before they edit the same boundary. It stays advisory, attributed, and out of the way.</p>
+            <div class="public-actions">
+              <button id="copy-setup-prompt">Copy agent setup prompt</button>
+              <a href="/docs/#connect">Follow the setup guide</a>
+            </div>
+            <p id="setup-prompt-status" class="copy-status" role="status"></p>
+            <ol class="first-run">
+              <li><span>1</span><div><strong>Paste the prompt into your coding agent</strong><p>It installs the CLI if needed and starts repository setup.</p></div></li>
+              <li><span>2</span><div><strong>Approve once in the browser</strong><p>Choose a workspace only if you have more than one. No token passes through chat.</p></div></li>
+              <li><span>3</span><div><strong>Keep working</strong><p>The agent installs the skill, connects the repository, stores access locally, and checks existing context.</p></div></li>
+            </ol>
           </div>
-          <p id="setup-prompt-status" class="copy-status" role="status"></p>
-          <ol class="first-run">
-            <li><span>1</span><div><strong>Paste the prompt into your coding agent</strong><p>It installs the CLI if needed and starts repository setup.</p></div></li>
-            <li><span>2</span><div><strong>Approve once in the browser</strong><p>Choose a workspace only if you have more than one. No token passes through chat.</p></div></li>
-            <li><span>3</span><div><strong>Keep working</strong><p>The agent installs the skill, connects the repository, stores access locally, and checks existing context.</p></div></li>
-          </ol>
+          <div id="device-request" class="hidden">
+            <p class="public-kicker">Agent setup request</p>
+            <h1>Connect <span id="device-project"></span></h1>
+            <p class="public-lede">A coding agent is waiting for permission to connect this repository to ClankSpace.</p>
+            <div class="service-note">
+              <p><strong>Repository</strong><br><span id="device-repository"></span></p>
+              <p><strong>Agent identity</strong><br><span id="device-agent"></span></p>
+              <p><strong>Verification code</strong><br><code id="device-code"></code></p>
+            </div>
+            <p>Sign in to review and approve this project-scoped request. The credential returns directly to the waiting CLI.</p>
+          </div>
         </section>
 
         <aside class="signin-panel" aria-labelledby="signin-title">
           <h2 id="signin-title">Sign in</h2>
           <div id="email-login">
-            <p>Use the email address your workspace invitation was sent to.</p>
+            <p>Use the email address on your ClankSpace account.</p>
             <form id="email-form">
               <label for="email">Email address</label>
-              <div class="login-row"><input id="email" name="email" type="email" autocomplete="email" required><button>Send sign-in link</button></div>
+              <input id="email" name="email" type="email" autocomplete="email" required>
+              <label for="password">Password</label>
+              <input id="password" name="password" type="password" autocomplete="current-password" required>
+              <button>Sign in</button>
             </form>
             <p id="email-status" class="form-status"></p>
-            <p class="invite-help">No public signup. Ask the workspace owner if you have not been invited.</p>
-          </div>
-          <div id="email-unavailable" class="service-note hidden">
-            <strong>Email sign-in is not active on this host yet.</strong>
-            <p>Existing owners can use installation token access. New collaborators need the host operator to enable email delivery first.</p>
+            <p class="invite-help">No public signup. A workspace owner creates an invite link for you.</p>
           </div>
           <details id="bootstrap-login" class="bootstrap-login">
             <summary>Owner or self-host token</summary>
@@ -61,9 +73,11 @@
       <div id="auth-consume" class="consume-card hidden">
         <span class="mark login-mark" aria-hidden="true">C</span>
         <h1 id="consume-title">Accept invitation</h1>
-        <p id="consume-copy">Confirm the name collaborators should see beside your project context.</p>
+        <p id="consume-copy">Create an account for the email address on this invitation.</p>
         <form id="consume-form">
-          <label id="display-name-label" for="display-name">Display name<input id="display-name" name="displayName" autocomplete="name" placeholder="Your name"></label>
+          <label id="invite-email-label" for="invite-email">Email address<input id="invite-email" readonly></label>
+          <label id="display-name-label" for="display-name">Display name<input id="display-name" name="displayName" autocomplete="name" placeholder="Your name" required></label>
+          <label id="invite-password-label" for="invite-password">Password<input id="invite-password" name="password" type="password" autocomplete="new-password" minlength="8" required></label>
           <button>Continue to ClankSpace</button>
         </form>
       </div>
@@ -90,8 +104,8 @@
 
         <section id="workspace-view" class="content-view hidden">
           <section id="legacy-claim" class="setup-callout hidden" aria-labelledby="legacy-claim-title">
-            <div><span class="eyebrow">Optional hosted access</span><h2 id="legacy-claim-title">Use email sign-in and shared workspaces</h2><p>Link the bootstrap owner to an email account. Token access keeps working during migration.</p></div>
-            <button id="claim-account" class="secondary-button">Create hosted account</button>
+            <div><span class="eyebrow">Owner account</span><h2 id="legacy-claim-title">Add ordinary dashboard sign-in</h2><p>Choose an email and password for this installation owner. Token access remains available for recovery.</p></div>
+            <button id="claim-account" class="secondary-button">Create owner account</button>
           </section>
           <header class="page-header workspace-header">
             <div><span id="workspace-role" class="eyebrow"></span><h1 id="workspace-name"></h1><p>Projects and the people allowed to work with them.</p></div>

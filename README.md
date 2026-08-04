@@ -10,12 +10,12 @@ ClankSpace is an **invite-only trusted-collaborator release candidate**, not a p
 
 The original single-workspace pilot is implemented and validated. The deployed build adds the next product boundary:
 
-- passwordless email sign-in and workspace invitations;
+- local email-and-password accounts created from owner-generated invite links;
 - one-prompt repository setup with a short-lived browser approval and no token in chat;
 - one human account across several workspaces;
 - quiet people, agent-key, repository, export, and replica controls around the append log;
 - project-scoped agent identities with read/write/management scopes, expiry, and revocation;
-- standalone self-hosting without email;
+- standalone self-hosting with no mail service dependency;
 - signed workspace snapshots and append-only events between explicitly paired instances;
 - offline local writes, preserved concurrent supersessions, and replica revocation;
 - self-host authority with an optional cloud mirror;
@@ -47,9 +47,9 @@ If the retrieved work is compatible, the agent absorbs it and continues without 
 
 ## Hosted pilot
 
-The hosted service is deliberately invite-only. The first operator claims the existing bootstrap workspace. After that, owners invite collaborators by email; invited users can create their own separate workspaces as well as join shared ones. Repository setup automatically creates a separate project identity for each approved agent group. Distinct identities let ClankSpace distinguish an incumbent's active work from a later collaborator entering the same boundary.
+The hosted service is deliberately invite-only. The first operator claims the existing bootstrap workspace with an email address and password. After that, owners create one-time invitation links in the dashboard or with `clank workspace invite --email person@example.com`; they share those links through whatever channel they already use. ClankSpace sends no email. The invited person chooses a password, and the email on the link becomes their account identifier. Invited users can create their own separate workspaces as well as join shared ones.
 
-The current exe.dev deployment keeps bootstrap authentication active until an SMTP sender is configured. The invitation, session, and multi-workspace code is already deployed; enabling `hybrid` or `email` authentication after SMTP acceptance requires configuration, not another build.
+Repository setup automatically creates a separate project identity for each approved agent group. The setup URL shows the repository, project, agent identity, and verification code before login; after login, the same request is presented for approval. Distinct identities let ClankSpace distinguish an incumbent's active work from a later collaborator entering the same boundary.
 
 There is no public registration, billing, password database, private GitHub integration, or claim of end-to-end encryption in this milestone. A hosting operator can technically read managed workspace content. Self-hosting remains fully useful without the cloud.
 
@@ -146,7 +146,7 @@ export CLANKSPACE_SYNC_ENABLED=true
 export CLANKSPACE_REPLICA_NAME="Studio laptop"
 ```
 
-To run the invite-only hosted surface, use `CLANKSPACE_AUTH_MODE=hybrid` during migration or `email` after bootstrap-token login is no longer needed. Configure SMTP for real mail. `CLANKSPACE_MAIL_DIR` is a development-only file sink.
+The first-pass hosted surface does not require SMTP. Keep bootstrap token access available for installation recovery; human collaborators use local email-and-password accounts created by direct invitation links. The older mail outbox and magic-link endpoints remain for compatibility but are not part of the normal onboarding path.
 
 Create a project and attach a public repository:
 
@@ -195,7 +195,7 @@ The pilot is for a small trusted collaborator group.
 - Natural-language fields are bounded, common credential shapes are rejected, and retrieved/imported prose is untrusted advisory data.
 - Public repository configuration grants no authority.
 
-This is not yet a public internet signup product. Private repository OAuth, billing, project-private human ACLs, transitive mesh federation, end-to-end encrypted cloud relay, account recovery, and automated transactional-email operations are deferred explicitly.
+This is not yet a public internet signup product. Password reset/account recovery, private repository OAuth, billing, project-private human ACLs, transitive mesh federation, and end-to-end encrypted cloud relay are deferred explicitly. Operators can recover an account with the installation owner token in this trusted-collaborator phase.
 
 Do not publish project tokens, place them in repository configuration, or send them through ordinary chat. Use a one-time secret or password manager.
 

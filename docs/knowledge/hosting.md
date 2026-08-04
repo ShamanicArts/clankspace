@@ -40,13 +40,13 @@ The service uses one process and one SQLite writer. Never run multiple replicas 
 
 The service runs as the unprivileged `clankspace` user. systemd owns startup and restart behavior; exe.dev terminates TLS and proxies the stable custom domain to port 8000.
 
-Production has the durable installation secret and signed installation identity. The current
-bootstrap auth mode preserves the existing trusted pilot while SMTP remains unconfigured.
-Invitation and magic-link code is deployed but must not be enabled with `hybrid` or `email`
-until a real SMTP sender is configured and accepted. The installation secret encrypts the
-local replica signing key, mail outbox bodies, and stored replica credentials. It must be
-backed up separately from the database and restored with it. A file mail sink is for local
-E2E testing only.
+Production has the durable installation secret and signed installation identity. Bootstrap
+token access remains available for installation recovery. Ordinary human access uses local
+passwords and direct owner-generated invitation links, so it needs no SMTP service. Legacy
+magic-link code remains available for compatibility; do not make it an advertised path
+without a real sender. The installation secret encrypts the local replica signing key, mail
+outbox bodies, and stored replica credentials. It must be backed up separately from the
+database and restored with it. A file mail sink is for local E2E testing only.
 
 ## Replication boundary
 

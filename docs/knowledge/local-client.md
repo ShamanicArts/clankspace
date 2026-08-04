@@ -45,9 +45,15 @@ The credential directory is mode `0700` and the atomic credential file is mode `
 
 The stdio MCP bridge uses the same resolution, so harness configuration can be only `clank mcp` when it starts inside a connected repository.
 
-## Human email session
+## Human account and invitations
 
-`clank auth login --email you@example.com` asks the selected server to send a one-time browser link. Browser sessions and agent credentials are deliberately separate. The CLI never converts a browser cookie into an all-project agent key.
+Human dashboard sessions use an email address and password. There is no public signup and ClankSpace does not send email. A workspace owner creates a one-time link in **People & access**, or from an owner-token CLI:
+
+```sh
+clank workspace invite --email you@example.com --role member
+```
+
+The owner shares the returned link directly. Opening it shows the workspace and fixed email address, then asks for a display name and password. Browser sessions and agent credentials remain deliberately separate.
 
 ## Replica commands
 
