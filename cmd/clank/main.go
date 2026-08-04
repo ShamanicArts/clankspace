@@ -680,7 +680,20 @@ project pointer, skill, AGENTS.md instruction, and project-scoped local credenti
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stdout, "Approve this repository once:\n%s\n\nCode: %s\nWaiting for human approval…\n\nStop here. The server resolves or creates the workspace after the human signs in. Do not access the server host, inspect deployment files, search for a workspace, or ask for a token.\n", started.VerificationURL, started.UserCode)
+	fmt.Fprintf(os.Stdout, `Human handoff required:
+%s
+
+Verification code: %s
+
+Give the human that URL and code. They are short-lived handoff artifacts and are safe to show to the intended human.
+
+Account branches:
+- Existing account: ask the human to sign in with email and password, review the repository request, and approve it.
+- Invited collaborator without an account: ask a workspace owner to create a one-time invite URL in People & access or with "clank workspace invite"; give that URL to the intended human, then return to this approval URL.
+- First installation owner: an operator or agent that already holds the installation credential locally runs "clank auth bootstrap-owner --email <email> --name <name>" and gives only the returned inviteUrl to the human.
+
+Keep this process running while the human completes those steps. The server resolves, offers, or creates the workspace during approval. Do not inspect the service host or deployment files. Never print or paste installation, workspace, or project bearer tokens; after approval the project token returns directly to this CLI and is stored locally.
+`, started.VerificationURL, started.UserCode)
 	if !*noBrowser {
 		_ = openBrowser(started.VerificationURL)
 	}

@@ -29,7 +29,7 @@
             <p id="setup-prompt-status" class="copy-status" role="status"></p>
             <ol class="first-run">
               <li><span>1</span><div><strong>Paste the prompt into your coding agent</strong><p>It installs the CLI if needed and starts repository setup.</p></div></li>
-              <li><span>2</span><div><strong>Approve once in the browser</strong><p>Choose a workspace only if you have more than one. No token passes through chat.</p></div></li>
+              <li><span>2</span><div><strong>Sign in or accept an invite</strong><p>The agent gives you the short-lived setup or invite link. Long-lived bearer tokens stay local.</p></div></li>
               <li><span>3</span><div><strong>Keep working</strong><p>The agent installs the skill, connects the repository, stores access locally, and checks existing context.</p></div></li>
             </ol>
           </div>
@@ -42,7 +42,7 @@
               <p><strong>Agent identity</strong><br><span id="device-agent"></span></p>
               <p><strong>Verification code</strong><br><code id="device-code"></code></p>
             </div>
-            <p>Sign in to review and approve this project-scoped request. The credential returns directly to the waiting CLI.</p>
+            <p>Sign in to review and approve this project-scoped request. If you do not have an account, ask the waiting agent or a workspace owner for your one-time invite link, complete it, then return here. The project credential returns directly to the waiting CLI.</p>
           </div>
         </section>
 
@@ -58,7 +58,7 @@
               <button>Sign in</button>
             </form>
             <p id="email-status" class="form-status"></p>
-            <p class="invite-help">No public signup. A workspace owner creates an invite link for you.</p>
+            <p class="invite-help">No public signup. Ask your agent or workspace owner for your one-time account link.</p>
           </div>
           <details id="bootstrap-login" class="bootstrap-login">
             <summary>Owner or self-host token</summary>
