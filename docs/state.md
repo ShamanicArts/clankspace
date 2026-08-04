@@ -10,7 +10,7 @@ updated: 2026-08-04
 
 ## Current focus
 
-Prepare the deployed hosted-replication candidate for real trusted-collaborator use. The code, living docs, and recorded proof are public; the next operational dependency is selecting an SMTP sender before changing production from bootstrap authentication to hybrid invitation/email authentication. The next product signal should come from real Shuv/Shamanic use, not a larger synthetic campaign.
+Prepare the deployed hosted-replication candidate for real trusted-collaborator use. Human onboarding now uses local passwords and direct owner-generated invite links, removing SMTP as an operational dependency. The next product signal should come from real Shuv/Shamanic use, not a larger synthetic campaign.
 
 PR #24 replaced manual first-run workspace plumbing with `clank setup`: the agent infers the Git repository and project, opens a short-lived browser request, and waits for one human approval. The server creates or reuses the project, links a supported public GitHub remote, and returns a project-only credential directly to the CLI. The CLI stores it outside the repository, installs the skill and pointer, adds one lean agent instruction, and verifies access. A fresh `go-chi/chi` checkout passed the complete browser-to-terminal flow without a token entering chat.
 

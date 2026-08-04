@@ -39,7 +39,7 @@ primary product.
 
 The hosted service is deliberately a **small-network SaaS**, not a SaaS business stack:
 
-- invitation and email login, but no passwords or public registration;
+- invitation links and local password login, but no public registration or email delivery dependency;
 - multiple workspaces, but no enterprise organization hierarchy;
 - owners and members, but no custom role builder;
 - project-scoped agent credentials, but no universal agent token;
@@ -79,17 +79,20 @@ The governing product promise is:
 
 ### 4.1 Hosted registration
 
-**Pick:** Invitation-only accounts with one-time email magic links.
+**Current pick:** Invitation-only local accounts with owner-generated one-time links.
 
-An invitation to an unknown email address is both a platform invitation and a workspace
-invitation. After accepting the first invitation, that user may create workspaces and
-invite collaborators into workspaces they own.
+An invitation fixes the account email and workspace role. The owner shares the returned
+link through an existing trusted channel; ClankSpace sends no email. The invited person
+chooses a password while accepting the first invitation. After that, the email is their
+sign-in name and the account may participate in several workspaces.
 
 **Why not public signup:** It creates abuse, support, rate-limit, and policy work before
 the collaborator product is proven.
 
-**Why not passwords:** Password storage, reset, credential stuffing, and MFA policy add
-security surface without improving the small-network use case.
+**Why passwords in the pilot:** Requiring SMTP made ordinary sign-in depend on unrelated
+delivery infrastructure. For the initial trusted network, Argon2id password storage,
+rate-limited login, and owner-token recovery are smaller and more understandable than a
+mail service. Self-service reset and MFA remain deferred.
 
 **Why not social OAuth first:** It introduces provider configuration and identity-linking
 complexity while excluding self-hosters who only have SMTP.
@@ -377,28 +380,31 @@ prefixes remain display-only; raw tokens are shown once and stored only as hashe
 
 ## 8. Hosted authentication and invitation flows
 
-### 8.1 Request login
+### 8.1 Create and share an invitation
 
-1. The browser submits an email to `POST /api/v1/auth/magic-link`.
-2. The response is identical whether or not the address is eligible.
-3. Only an active user or unexpired invited address receives mail.
-4. The service stores a hash of a 256-bit token with a 15-minute expiry.
-5. The email outbox commits with the challenge; a bounded worker sends and retries it.
-6. Request limits apply per normalized email hash and source fingerprint.
+1. A workspace owner enters an email and role in the dashboard or runs
+   `clank workspace invite --email person@example.com` with an owner token.
+2. The server stores only a hash of the 256-bit one-time token and returns the complete
+   link once. It does not enqueue or send email.
+3. The owner shares the link through an existing trusted channel.
+4. A public preview endpoint reveals only the email, workspace name, role, and expiry to
+   a caller who already possesses the high-entropy link.
 
-### 8.2 Consume login or invitation
+### 8.2 Accept an invitation and sign in
 
-1. The email link opens a same-origin confirmation page. `GET` performs no consumption,
-   because email-security scanners commonly pre-open links.
-2. A same-origin `POST /api/v1/auth/consume` submits the token once. Request logging
-   redacts auth query/body values, the page loads no third-party assets, and browser
-   history is replaced immediately after success.
-3. The transaction marks the token consumed before creating the browser session.
-4. An invitation creates or finds the user, creates the workspace human principal and
-   membership, and marks the invite accepted atomically.
-5. The response sets an opaque random cookie with `Secure`, `HttpOnly`, `SameSite=Lax`,
-   a narrow path, and an explicit expiry.
-6. The browser redirects to the account home without retaining the token in history.
+1. Opening the link performs no mutation. The browser shows the fixed email, workspace,
+   and role, then asks for a display name and password.
+2. `POST /api/v1/auth/invites/accept` consumes the token once, creates or finds the user,
+   verifies any existing account password, creates the workspace principal and
+   membership, and creates the browser session in one transaction.
+3. Passwords are stored with Argon2id and never returned. Login attempts are bounded by
+   normalized-email and source-fingerprint rate limits.
+4. `POST /api/v1/auth/password` sets an opaque 30-day session cookie plus a session-bound
+   CSRF cookie. The error does not reveal whether the email exists.
+5. Browser history is replaced after invitation acceptance so the raw link is not kept
+   in the address bar.
+6. The older magic-link endpoints and outbox remain compatibility surfaces, not the
+   normal pilot path.
 
 ### 8.3 Browser writes
 

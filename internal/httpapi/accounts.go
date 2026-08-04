@@ -73,8 +73,13 @@ func (s *Server) claimBootstrapOwner(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Email       string `json:"email"`
 		DisplayName string `json:"displayName"`
+		Password    string `json:"password"`
 	}
 	if !decode(w, r, &in) {
+		return
+	}
+	if err := store.ValidatePassword(in.Password); err != nil {
+		writeError(w, err)
 		return
 	}
 	user, membership, err := s.Store.ClaimBootstrapOwner(r.Context(), principal(r).ID, in.Email, in.DisplayName)
@@ -82,7 +87,68 @@ func (s *Server) claimBootstrapOwner(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
+	if err = s.Store.SetUserPassword(r.Context(), user.ID, in.Password); err != nil {
+		writeError(w, err)
+		return
+	}
 	writeJSON(w, http.StatusCreated, map[string]any{"user": user, "membership": membership})
+}
+
+func requestFingerprint(r *http.Request) string {
+	source := r.RemoteAddr
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		source = host
+	}
+	return source + "|" + r.UserAgent()
+}
+
+func (s *Server) setSessionCookies(w http.ResponseWriter, result store.SessionResult) {
+	http.SetCookie(w, &http.Cookie{Name: sessionCookieName, Value: result.SessionToken, Path: "/", Expires: result.Session.ExpiresAt, MaxAge: 30 * 24 * 60 * 60, HttpOnly: true, Secure: s.cookieSecure(), SameSite: http.SameSiteLaxMode})
+	http.SetCookie(w, &http.Cookie{Name: csrfCookieName, Value: result.CSRFToken, Path: "/", Expires: result.Session.ExpiresAt, MaxAge: 30 * 24 * 60 * 60, HttpOnly: false, Secure: s.cookieSecure(), SameSite: http.SameSiteLaxMode})
+}
+
+func (s *Server) passwordLogin(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	result, err := s.Store.AuthenticatePassword(r.Context(), in.Email, in.Password, requestFingerprint(r))
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "email or password is incorrect"})
+		return
+	}
+	s.setSessionCookies(w, result)
+	writeJSON(w, http.StatusOK, map[string]any{"user": result.User, "expiresAt": result.Session.ExpiresAt})
+}
+
+func (s *Server) invitePreview(w http.ResponseWriter, r *http.Request) {
+	preview, err := s.Store.WorkspaceInvitePreview(r.Context(), r.PathValue("token"))
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "invitation is invalid or expired"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"invite": preview})
+}
+
+func (s *Server) inviteAccept(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Token       string `json:"token"`
+		DisplayName string `json:"displayName"`
+		Password    string `json:"password"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	result, err := s.Store.ConsumeInviteWithPassword(r.Context(), in.Token, in.DisplayName, in.Password)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invitation is invalid, expired, or the password does not match this account"})
+		return
+	}
+	s.setSessionCookies(w, result)
+	writeJSON(w, http.StatusOK, map[string]any{"user": result.User, "expiresAt": result.Session.ExpiresAt})
 }
 
 func (s *Server) adminUsers(w http.ResponseWriter, r *http.Request) {
@@ -178,12 +244,7 @@ func (s *Server) magicLink(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	source := r.RemoteAddr
-	if host, _, splitErr := net.SplitHostPort(r.RemoteAddr); splitErr == nil {
-		source = host
-	}
-	fingerprint := source + "|" + r.UserAgent()
-	if err := s.Store.RequestMagicLink(r.Context(), in.Email, fingerprint, s.BaseURL); err != nil {
+	if err := s.Store.RequestMagicLink(r.Context(), in.Email, requestFingerprint(r), s.BaseURL); err != nil {
 		writeError(w, err)
 		return
 	}
@@ -207,8 +268,7 @@ func (s *Server) consumeAuth(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "link is invalid or expired"})
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: sessionCookieName, Value: result.SessionToken, Path: "/", Expires: result.Session.ExpiresAt, MaxAge: 30 * 24 * 60 * 60, HttpOnly: true, Secure: s.cookieSecure(), SameSite: http.SameSiteLaxMode})
-	http.SetCookie(w, &http.Cookie{Name: csrfCookieName, Value: result.CSRFToken, Path: "/", Expires: result.Session.ExpiresAt, MaxAge: 30 * 24 * 60 * 60, HttpOnly: false, Secure: s.cookieSecure(), SameSite: http.SameSiteLaxMode})
+	s.setSessionCookies(w, result)
 	writeJSON(w, http.StatusOK, map[string]any{"user": result.User, "expiresAt": result.Session.ExpiresAt})
 }
 
@@ -351,12 +411,45 @@ func (s *Server) accountInvites(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	invite, err := s.Store.CreateWorkspaceInvite(r.Context(), membership, in.Email, in.Role, s.BaseURL)
+	invite, err := s.Store.CreateWorkspaceInviteLink(r.Context(), membership, in.Email, in.Role, s.BaseURL)
 	if err != nil {
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]any{"invite": invite})
+	writeJSON(w, http.StatusCreated, invite)
+}
+
+func (s *Server) createInviteLink(w http.ResponseWriter, r *http.Request) {
+	if !requireScope(w, r, "workspace:manage") {
+		return
+	}
+	if principal(r).Kind != "human" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "human workspace owner access is required to create invite links"})
+		return
+	}
+	userID, err := s.Store.UserIDForPrincipal(r.Context(), principal(r).ID)
+	if errors.Is(err, store.ErrNotFound) {
+		userID, err = s.Store.EnsureLocalUserForPrincipal(r.Context(), principal(r))
+	}
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	membership, err := s.Store.Membership(r.Context(), userID, principal(r).WorkspaceID)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	var in struct{ Email, Role string }
+	if !decode(w, r, &in) {
+		return
+	}
+	invite, err := s.Store.CreateWorkspaceInviteLink(r.Context(), membership, in.Email, in.Role, s.BaseURL)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, invite)
 }
 
 func (s *Server) accountInviteRevoke(w http.ResponseWriter, r *http.Request) {

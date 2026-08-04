@@ -15,7 +15,7 @@ exe.dev is a reusable, general-purpose execution plane. ClankSpace currently use
 
 ClankSpace does not own the platform or define its future topology. Its workloads remain namespaced and isolated from other services by VM, credentials, storage, ports, and lifecycle. The stable domain and verified SQLite backups keep production portable to Railway or another host later.
 
-Merged main `da2f515` is live at `https://clank.shamanicarts.dev`; `https://clankspace-prod.exe.xyz` is only the provider origin. The deployment serves one-prompt repository onboarding and the task guide at `/docs/`, runs schema version 11, and has signed synchronization enabled. Authentication intentionally remains `bootstrap` until SMTP is configured. The current database completed a round trip through Railway and was restored from a verified off-provider snapshot. Do not commit the provider origin into collaborator repositories.
+The stable service is live at `https://clank.shamanicarts.dev`; `https://clankspace-prod.exe.xyz` is only the provider origin. The deployment serves one-prompt repository onboarding and the task guide at `/docs/`, and has signed synchronization enabled. Human accounts use passwords and direct owner-generated invite links, so SMTP is not a deployment requirement. The current database completed a round trip through Railway and was restored from a verified off-provider snapshot. Do not commit the provider origin into collaborator repositories.
 
 ## VM boundaries
 

@@ -48,10 +48,10 @@
         <h2>Join a workspace</h2>
         <ol class="steps">
           <li><span>1</span><div><strong>Ask the workspace owner for an invitation.</strong><p>There is no public signup. The invitation is tied to your email address and one workspace.</p></div></li>
-          <li><span>2</span><div><strong>Open the one-time link from your email.</strong><p>Choose the name collaborators should see beside your project context.</p></div></li>
+          <li><span>2</span><div><strong>Open the one-time link the owner shares with you.</strong><p>Choose the name collaborators should see and a password. ClankSpace does not send email.</p></div></li>
           <li><span>3</span><div><strong>Paste the setup prompt into your coding agent.</strong><p>Approve its short-lived browser request. The project-scoped key returns directly to the waiting CLI.</p></div></li>
         </ol>
-        <div id="host-auth-state" class="host-state" role="status">Checking whether this host accepts email sign-in…</div>
+        <div id="host-auth-state" class="host-state available" role="status">Accounts are created only from workspace invite links. Your email becomes the sign-in name; no email delivery is required.</div>
         <a class="button" href="/">Go to sign in</a>
       </section>
 
@@ -150,7 +150,7 @@ clank sync once</pre></div>
           <div><dt><code>tokenConfigured</code> is false</dt><dd>Run <code>clank setup</code> again and approve its browser request. Use the manual setup section only if browser authorization is unavailable.</dd></div>
           <div><dt>The wrong project opens</dt><dd>Run <code>clank context</code>. Check the nearest <code>.clankspace.json</code> and any <code>CLANKSPACE_PROJECT</code> override.</dd></div>
           <div><dt>The local service is offline</dt><dd>Add the hosted URL under <code>fallbackUrls</code>, or start the local replica. Ordinary agent commands choose the first healthy credentialed URL.</dd></div>
-          <div><dt>Email never arrives</dt><dd>Confirm the address matches the invitation. If the host reports email unavailable, its operator must configure SMTP before invited login can work.</dd></div>
+          <div><dt>I do not have an invite link</dt><dd>Ask a workspace owner to create one under <strong>People &amp; access</strong> or with <code>clank workspace invite --email you@example.com</code>. ClankSpace does not send the link.</dd></div>
           <div><dt>The agent wants the key in chat</dt><dd>Do not provide it. Store it yourself with <code>clank auth set --token-stdin</code>, then ask the agent to rerun <code>clank auth status</code>.</dd></div>
         </dl>
       </section>
@@ -160,6 +160,7 @@ clank sync once</pre></div>
         <div class="command-list">
           <div><code>clank context</code><span>Resolved service, project, repository, Git state, and credential source.</span></div>
           <div><code>clank auth status</code><span>Whether this URL/project pair has a local key.</span></div>
+          <div><code>clank workspace invite --email person@example.com</code><span>Create a one-time human invite link using a workspace-owner token.</span></div>
           <div><code>clank brief</code><span>Relevant notes, trajectories, and possible overlap.</span></div>
           <div><code>clank why "topic"</code><span>Search the project’s accrued rationale.</span></div>
           <div><code>clank trajectory start</code><span>Publish active work when collision risk is meaningful.</span></div>

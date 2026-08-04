@@ -130,7 +130,7 @@ func run(ctx context.Context, args []string) error {
 
 func workspaceCommand(ctx context.Context, c *client.Client, args []string) error {
 	if len(args) == 0 || isHelp(args[0]) {
-		return errors.New("usage: clank workspace list|create")
+		return errors.New("usage: clank workspace list|create|invite")
 	}
 	switch args[0] {
 	case "list":
@@ -151,8 +151,23 @@ func workspaceCommand(ctx context.Context, c *client.Client, args []string) erro
 			printJSON(item)
 		}
 		return err
+	case "invite":
+		flags := flag.NewFlagSet("workspace invite", flag.ContinueOnError)
+		email := flags.String("email", "", "email address to match to the account")
+		role := flags.String("role", "member", "workspace role: member or owner")
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*email) == "" {
+			return errors.New("email is required")
+		}
+		item, err := c.CreateWorkspaceInvite(ctx, *email, *role)
+		if err == nil {
+			printJSON(item)
+		}
+		return err
 	default:
-		return errors.New("usage: clank workspace list|create")
+		return errors.New("usage: clank workspace list|create|invite")
 	}
 }
 
@@ -261,9 +276,6 @@ func serve(ctx context.Context) error {
 		sender = mailer.File{Dir: cfg.MailDir}
 	} else if cfg.SMTPAddr != "" {
 		sender = mailer.SMTP{Addr: cfg.SMTPAddr, User: cfg.SMTPUser, Password: cfg.SMTPPassword, From: cfg.SMTPFrom}
-	}
-	if (cfg.AuthMode == "email" || cfg.AuthMode == "hybrid") && sender == nil {
-		return errors.New("email or hybrid auth requires CLANKSPACE_MAIL_DIR or SMTP configuration")
 	}
 	if sender != nil {
 		go func() {

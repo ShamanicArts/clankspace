@@ -60,18 +60,6 @@ document.querySelectorAll('[data-copy]').forEach((button) => button.addEventList
   }
 }))
 
-fetch('/api/v1/meta').then((response) => response.json()).then((meta) => {
-  const state = byId('host-auth-state')
-  if (meta.authMode === 'bootstrap') {
-    state.textContent = 'This host currently uses owner token access. Email invitations are not active until its operator configures SMTP.'
-  } else {
-    state.textContent = 'Email sign-in is active on this host. Use the address from your workspace invitation.'
-    state.classList.add('available')
-  }
-}).catch(() => {
-  byId('host-auth-state').textContent = 'Could not read this host’s sign-in status. Try the sign-in page or contact the workspace owner.'
-})
-
 const nav = document.querySelector('.docs-nav')
 const links = [...nav.querySelectorAll('a')]
 const sections = links.map((link) => ({ link, element: document.querySelector(link.getAttribute('href')) })).filter((item) => item.element)

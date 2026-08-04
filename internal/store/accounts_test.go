@@ -26,6 +26,68 @@ func authTokenFromBody(t *testing.T, body string) string {
 	return decoded
 }
 
+func inviteTokenFromURL(t *testing.T, address string) string {
+	t.Helper()
+	parsed, err := url.Parse(address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token := parsed.Query().Get("invite")
+	if token == "" {
+		t.Fatalf("invite token missing from %q", address)
+	}
+	return token
+}
+
+func TestDirectInviteAndPasswordLoginDoNotNeedEmail(t *testing.T) {
+	ctx := context.Background()
+	db, err := OpenWithSecret(filepath.Join(t.TempDir(), "clankspace.db"), "direct-invite-secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	ownerPrincipal, err := db.EnsureBootstrap(ctx, "bootstrap-token", "Shared Studio", "Shamanic")
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner, membership, err := db.ClaimBootstrapOwner(ctx, ownerPrincipal.ID, "owner@example.test", "Owner")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = db.SetUserPassword(ctx, owner.ID, "correct horse battery staple"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.AuthenticatePassword(ctx, owner.Email, "wrong password", "test-source"); err == nil {
+		t.Fatal("wrong password was accepted")
+	}
+	ownerSession, err := db.AuthenticatePassword(ctx, owner.Email, "correct horse battery staple", "test-source")
+	if err != nil || ownerSession.SessionToken == "" {
+		t.Fatalf("owner password login = %#v, %v", ownerSession, err)
+	}
+	link, err := db.CreateWorkspaceInviteLink(ctx, membership, "friend@example.test", "member", "https://clank.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if messages, claimErr := db.ClaimOutbox(ctx, 10); claimErr != nil || len(messages) != 0 {
+		t.Fatalf("direct invite queued email: %#v, %v", messages, claimErr)
+	}
+	token := inviteTokenFromURL(t, link.URL)
+	preview, err := db.WorkspaceInvitePreview(ctx, token)
+	if err != nil || preview.Email != "friend@example.test" || preview.WorkspaceName != "Shared Studio" {
+		t.Fatalf("invite preview = %#v, %v", preview, err)
+	}
+	accepted, err := db.ConsumeInviteWithPassword(ctx, token, "Friend", "friend password")
+	if err != nil || accepted.User.Email != "friend@example.test" {
+		t.Fatalf("accept invite = %#v, %v", accepted, err)
+	}
+	if _, err = db.ConsumeInviteWithPassword(ctx, token, "Friend", "friend password"); err == nil {
+		t.Fatal("one-time direct invite was accepted twice")
+	}
+	if _, err = db.AuthenticatePassword(ctx, "friend@example.test", "friend password", "friend-source"); err != nil {
+		t.Fatalf("invited user password login: %v", err)
+	}
+}
+
 func TestHostedInviteLoginAndMultiWorkspaceFlow(t *testing.T) {
 	ctx := context.Background()
 	db, err := OpenWithSecret(filepath.Join(t.TempDir(), "clankspace.db"), "test-installation-secret")

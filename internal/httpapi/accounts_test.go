@@ -167,3 +167,70 @@ func TestHostedHTTPInviteSessionAndWorkspaceFlow(t *testing.T) {
 		t.Fatalf("invited account leaked workspaces: %#v", account)
 	}
 }
+
+func TestPasswordLoginAndDashboardInviteLinkFlow(t *testing.T) {
+	ctx := t.Context()
+	db, err := store.OpenWithSecret(filepath.Join(t.TempDir(), "clankspace.db"), "password-http-secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	ownerPrincipal, err := db.EnsureBootstrap(ctx, "bootstrap-token", "Shared", "Owner")
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner, membership, err := db.ClaimBootstrapOwner(ctx, ownerPrincipal.ID, "owner@example.test", "Owner")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = db.SetUserPassword(ctx, owner.ID, "owner password"); err != nil {
+		t.Fatal(err)
+	}
+	serverConfig := &httpapi.Server{Store: db, Core: service.New(db), GitHub: githubsync.New(""), Log: slog.Default(), AuthMode: "bootstrap"}
+	server := httptest.NewServer(serverConfig.Handler())
+	defer server.Close()
+	serverConfig.BaseURL = server.URL
+
+	ownerJar, _ := cookiejar.New(nil)
+	ownerClient := &http.Client{Jar: ownerJar}
+	response, body := jsonRequest(t, ownerClient, http.MethodPost, server.URL+"/api/v1/auth/password", map[string]string{"email": owner.Email, "password": "owner password"}, "", "")
+	if response.StatusCode != http.StatusOK || body["user"].(map[string]any)["email"] != owner.Email {
+		t.Fatalf("password login = %d %#v", response.StatusCode, body)
+	}
+	csrf := csrfFromJar(t, ownerJar, server.URL)
+	response, body = jsonRequest(t, ownerClient, http.MethodPost, server.URL+"/api/v1/account/workspaces/"+membership.WorkspaceID+"/invites", map[string]string{"email": "friend@example.test", "role": "member"}, server.URL, csrf)
+	if response.StatusCode != http.StatusCreated || !strings.Contains(body["inviteUrl"].(string), "?invite=") {
+		t.Fatalf("create invite link = %d %#v", response.StatusCode, body)
+	}
+	if messages, claimErr := db.ClaimOutbox(ctx, 10); claimErr != nil || len(messages) != 0 {
+		t.Fatalf("dashboard invite queued email: %#v, %v", messages, claimErr)
+	}
+	inviteURL, _ := url.Parse(body["inviteUrl"].(string))
+	token := inviteURL.Query().Get("invite")
+	request, _ := http.NewRequest(http.MethodGet, server.URL+"/api/v1/auth/invites/"+url.PathEscape(token), nil)
+	response, err = http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var preview map[string]any
+	_ = json.NewDecoder(response.Body).Decode(&preview)
+	response.Body.Close()
+	if response.StatusCode != http.StatusOK || preview["invite"].(map[string]any)["email"] != "friend@example.test" {
+		t.Fatalf("invite preview = %d %#v", response.StatusCode, preview)
+	}
+	friendJar, _ := cookiejar.New(nil)
+	friendClient := &http.Client{Jar: friendJar}
+	response, body = jsonRequest(t, friendClient, http.MethodPost, server.URL+"/api/v1/auth/invites/accept", map[string]string{"token": token, "displayName": "Friend", "password": "friend password"}, "", "")
+	if response.StatusCode != http.StatusOK || body["user"].(map[string]any)["displayName"] != "Friend" {
+		t.Fatalf("accept invite = %d %#v", response.StatusCode, body)
+	}
+	request, _ = http.NewRequest(http.MethodGet, server.URL+"/api/v1/account", nil)
+	response, err = friendClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("invited session account = %d", response.StatusCode)
+	}
+	response.Body.Close()
+}

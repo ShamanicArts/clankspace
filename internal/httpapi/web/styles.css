@@ -95,6 +95,8 @@ label { display: grid; gap: 6px; color: var(--muted); font-size: 0.76rem; font-w
 .signin-panel h2 { margin: 0 0 8px; font-size: 1.25rem; letter-spacing: -0.025em; }
 .signin-panel p { margin: 0 0 22px; color: var(--muted); font-size: 0.8rem; line-height: 1.55; }
 .signin-panel .invite-help { margin: 12px 0 0; font-size: 0.72rem; }
+#email-form { display: grid; gap: 10px; }
+#email-form button { margin-top: 4px; }
 .service-note { margin-top: 17px; padding: 15px; border: 1px solid var(--line); background: var(--canvas); }
 .service-note strong { font-size: 0.82rem; }
 .service-note p { margin: 5px 0 0; }
