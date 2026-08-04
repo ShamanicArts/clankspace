@@ -18,7 +18,7 @@ Future-tense constraints stay passive even when they name an important subsystem
 Start this workflow only once the human explicitly asks you to inspect, plan, implement, review, or otherwise act on the project:
 
 1. Run `clank context` from the repository. Confirm the expected project and `tokenConfigured: true`.
-2. If authentication is absent, stop and ask the human to perform the one-time `clank auth set --token-stdin`. Do not search for or expose credentials.
+2. If repository setup or authentication is absent, run `clank setup` from the repository root. Let it open the short-lived browser approval and keep waiting while the human approves; never ask the human to paste a project token into chat. Use `clank auth set --token-stdin` only as the documented manual fallback when browser authorization is unavailable. Do not search for or expose credentials.
 3. Start a run with `clank run start --objective "<current material task>"`. The harness supplies known agent, provider, model, reasoning, role, worktree, and instruction provenance as defaults; add or override flags only when you have direct evidence that a default is incomplete. Run `clank run --help` only if the command fails or you need an optional field. Never guess unavailable metadata.
 4. Save the returned run ID for subsequent commands.
 5. Before planning material work, run `clank brief --run <id> --objective "..." --paths "..."`.

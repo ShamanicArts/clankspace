@@ -25,6 +25,9 @@ func New(token string) *Client {
 
 func ParseRepository(raw string) (domain.Repository, error) {
 	raw = strings.TrimSpace(raw)
+	if strings.HasPrefix(raw, "git@github.com:") {
+		raw = "https://github.com/" + strings.TrimPrefix(raw, "git@github.com:")
+	}
 	if !strings.Contains(raw, "://") {
 		raw = "https://" + raw
 	}

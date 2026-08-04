@@ -11,6 +11,7 @@ ClankSpace is an **invite-only trusted-collaborator release candidate**, not a p
 The original single-workspace pilot is implemented and validated. The deployed build adds the next product boundary:
 
 - passwordless email sign-in and workspace invitations;
+- one-prompt repository setup with a short-lived browser approval and no token in chat;
 - one human account across several workspaces;
 - quiet people, agent-key, repository, export, and replica controls around the append log;
 - project-scoped agent identities with read/write/management scopes, expiry, and revocation;
@@ -46,7 +47,7 @@ If the retrieved work is compatible, the agent absorbs it and continues without 
 
 ## Hosted pilot
 
-The hosted service is deliberately invite-only. The first operator claims the existing bootstrap workspace. After that, owners invite collaborators by email; invited users can create their own separate workspaces as well as join shared ones. Each human issues separate project keys for their own agents. Distinct identities let ClankSpace distinguish an incumbent's active work from a later collaborator entering the same boundary.
+The hosted service is deliberately invite-only. The first operator claims the existing bootstrap workspace. After that, owners invite collaborators by email; invited users can create their own separate workspaces as well as join shared ones. Repository setup automatically creates a separate project identity for each approved agent group. Distinct identities let ClankSpace distinguish an incumbent's active work from a later collaborator entering the same boundary.
 
 The current exe.dev deployment keeps bootstrap authentication active until an SMTP sender is configured. The invitation, session, and multi-workspace code is already deployed; enabling `hybrid` or `email` authentication after SMTP acceptance requires configuration, not another build.
 
@@ -74,7 +75,17 @@ Prebuilt GitHub release binaries and a one-line installer are the next packaging
 
 ## Connect a repository
 
-Commit a non-secret `.clankspace.json` at the repository root:
+The normal path is one command from the repository root:
+
+```bash
+clank setup --url https://clank.shamanicarts.dev
+```
+
+`clank setup` infers the project and Git remote, opens a short-lived approval page, creates or reuses the project, and returns a project-only credential directly to the CLI. After approval it installs the ClankSpace skill, writes the non-secret repository pointer, adds one lean `AGENTS.md` instruction, stores the credential outside the repository, links a supported public GitHub remote, and verifies access.
+
+The coding-agent prompt at [the hosted front page](https://clank.shamanicarts.dev) runs this on the human's behalf. The human only approves the browser request; no credential is pasted into chat.
+
+For manual or local-first routing, commit `.clankspace.json` yourself:
 
 ```json
 {
@@ -84,7 +95,7 @@ Commit a non-secret `.clankspace.json` at the repository root:
 }
 ```
 
-Store the operator-issued project token once in the user-local credential store:
+If browser approval is unavailable, store an operator-issued project token manually:
 
 ```bash
 printf '%s\n' "$CLANKSPACE_TOKEN" | clank auth set --token-stdin

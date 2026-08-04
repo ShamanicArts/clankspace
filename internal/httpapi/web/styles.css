@@ -77,15 +77,37 @@ label { display: grid; gap: 6px; color: var(--muted); font-size: 0.76rem; font-w
 .docs-link { color: var(--muted); font-size: 0.75rem; text-decoration: none; }
 .docs-link:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
 
-.login { width: min(430px, calc(100% - 32px)); margin: 14vh auto 0; }
+.public-home { min-height: calc(100vh - 56px); }
+.public-grid { width: min(1080px, calc(100% - 40px)); margin: 0 auto; padding: 80px 0 96px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(330px, 0.75fr); gap: clamp(56px, 9vw, 112px); align-items: start; }
+.public-intro { min-width: 0; }
+.public-kicker { margin: 0 0 16px; color: var(--accent); font-size: 0.72rem; font-weight: 720; letter-spacing: 0.055em; text-transform: uppercase; }
+.public-intro h1 { max-width: 15ch; margin: 0; font-size: clamp(2.45rem, 5vw, 4.1rem); line-height: 1.02; letter-spacing: -0.055em; }
+.public-lede { max-width: 61ch; margin: 24px 0 0; color: var(--muted); font-size: 1.02rem; line-height: 1.65; }
+.public-actions { display: flex; align-items: center; gap: 18px; margin-top: 30px; }
+.public-actions a { color: var(--ink); font-size: 0.84rem; font-weight: 620; text-underline-offset: 4px; }
+.copy-status { min-height: 1.4em; margin: 10px 0 0; color: var(--accent); font-size: 0.76rem; }
+.first-run { margin: 54px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line-strong); }
+.first-run li { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; padding: 17px 0; border-bottom: 1px solid var(--line); }
+.first-run li > span { color: var(--accent); font: 650 0.74rem/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.first-run strong { font-size: 0.86rem; }
+.first-run p { margin: 3px 0 0; color: var(--muted); font-size: 0.78rem; line-height: 1.5; }
+.signin-panel { padding: 28px; border: 1px solid var(--line-strong); background: var(--surface); }
+.signin-panel h2 { margin: 0 0 8px; font-size: 1.25rem; letter-spacing: -0.025em; }
+.signin-panel p { margin: 0 0 22px; color: var(--muted); font-size: 0.8rem; line-height: 1.55; }
+.signin-panel .invite-help { margin: 12px 0 0; font-size: 0.72rem; }
+.service-note { margin-top: 17px; padding: 15px; border: 1px solid var(--line); background: var(--canvas); }
+.service-note strong { font-size: 0.82rem; }
+.service-note p { margin: 5px 0 0; }
+.consume-card { width: min(430px, calc(100% - 32px)); margin: 12vh auto 0; }
 .login-mark { margin-bottom: 28px; width: 32px; height: 32px; }
-.login h1 { margin: 0; font-size: 1.65rem; line-height: 1.2; letter-spacing: -0.025em; }
-.login p { margin: 9px 0 28px; color: var(--muted); font-size: 0.88rem; line-height: 1.55; }
+.consume-card h1 { margin: 0; font-size: 1.65rem; line-height: 1.2; letter-spacing: -0.025em; }
+.consume-card > p { margin: 9px 0 28px; color: var(--muted); font-size: 0.88rem; line-height: 1.55; }
 .login-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
 .form-status { min-height: 1.4em; margin-top: 12px !important; color: var(--accent) !important; }
-.bootstrap-login { margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--line); }
+.bootstrap-login { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
 .bootstrap-login summary { color: var(--muted); cursor: pointer; font-size: 0.76rem; }
 .bootstrap-login form, #consume-form { display: grid; gap: 14px; margin-top: 18px; }
+.bootstrap-login > p { margin: 12px 0 0; font-size: 0.7rem; }
 
 #app { display: grid; grid-template-columns: 214px minmax(0, 1fr); min-height: calc(100vh - 56px); }
 .project-rail { padding: 22px 12px; border-right: 1px solid var(--line); background: color-mix(in oklch, var(--canvas) 72%, var(--surface)); }
@@ -213,6 +235,9 @@ dialog::backdrop { background: oklch(20% 0.01 120 / 0.48); }
 
 @media (max-width: 760px) {
   .product-note { display: none; }
+  .public-grid { padding: 48px 0 70px; grid-template-columns: 1fr; gap: 48px; }
+  .public-intro h1 { font-size: 2.75rem; }
+  .signin-panel { padding: 22px; }
   #app { grid-template-columns: 1fr; }
   .project-rail { padding: 10px 14px; border-right: 0; border-bottom: 1px solid var(--line); }
   .rail-heading { padding: 0 2px 6px; }
@@ -230,6 +255,9 @@ dialog::backdrop { background: oklch(20% 0.01 120 / 0.48); }
 
 @media (max-width: 500px) {
   .topbar { padding: 0 15px; }
+  .public-grid { width: min(100% - 30px, 1080px); padding-top: 38px; }
+  .public-intro h1 { font-size: 2.28rem; }
+  .public-actions { align-items: flex-start; flex-direction: column; gap: 13px; }
   .login-row { grid-template-columns: 1fr; }
   .project-header { display: block; }
   .workspace-header, .section-heading { align-items: flex-start; }

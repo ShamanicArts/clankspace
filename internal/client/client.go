@@ -19,6 +19,19 @@ type Client struct {
 	HTTP           *http.Client
 }
 
+type SetupStart struct {
+	DeviceCode      string    `json:"deviceCode"`
+	UserCode        string    `json:"userCode"`
+	VerificationURL string    `json:"verificationUrl"`
+	ExpiresAt       time.Time `json:"expiresAt"`
+}
+
+type SetupExchange struct {
+	Status  string         `json:"status"`
+	Project domain.Project `json:"project"`
+	Token   string         `json:"token"`
+}
+
 func New(baseURL, token string) *Client {
 	return &Client{BaseURL: strings.TrimRight(baseURL, "/"), Token: token, HTTP: &http.Client{Timeout: 20 * time.Second}}
 }
@@ -34,6 +47,21 @@ func (c *Client) Do(ctx context.Context, method, path string, in, out any) error
 func (c *Client) RequestMagicLink(ctx context.Context, email string) error {
 	var out map[string]string
 	return c.Do(ctx, http.MethodPost, "/auth/magic-link", map[string]string{"email": email}, &out)
+}
+
+func (c *Client) StartSetup(ctx context.Context, challenge, projectSlug, projectName, repositoryURL, agentName string) (SetupStart, error) {
+	var out SetupStart
+	err := c.Do(ctx, http.MethodPost, "/setup/start", map[string]string{
+		"challenge": challenge, "projectSlug": projectSlug, "projectName": projectName,
+		"repositoryUrl": repositoryURL, "agentName": agentName,
+	}, &out)
+	return out, err
+}
+
+func (c *Client) ExchangeSetup(ctx context.Context, deviceCode, verifier string) (SetupExchange, error) {
+	var out SetupExchange
+	err := c.Do(ctx, http.MethodPost, "/setup/exchange", map[string]string{"deviceCode": deviceCode, "verifier": verifier}, &out)
+	return out, err
 }
 
 func (c *Client) DoWithKey(ctx context.Context, method, path, idempotencyKey string, in, out any) error {
@@ -173,6 +201,14 @@ func (c *Client) AttachRepository(ctx context.Context, project, url string) (dom
 	}
 	err := c.Do(ctx, "POST", "/projects/"+project+"/repositories", map[string]string{"url": url}, &o)
 	return o.Repository, err
+}
+
+func (c *Client) ListRepositories(ctx context.Context, project string) ([]domain.Repository, error) {
+	var out struct {
+		Repositories []domain.Repository `json:"repositories"`
+	}
+	err := c.Do(ctx, http.MethodGet, "/projects/"+project+"/repositories", nil, &out)
+	return out.Repositories, err
 }
 
 func (c *Client) JoinReplica(ctx context.Context, remoteURL, code string) (domain.Workspace, error) {

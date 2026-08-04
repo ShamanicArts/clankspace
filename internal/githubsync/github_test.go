@@ -40,6 +40,16 @@ func TestParseAndSyncPublicRepository(t *testing.T) {
 	}
 }
 
+func TestParseRepositoryAcceptsGitSSHRemote(t *testing.T) {
+	repo, err := githubsync.ParseRepository("git@github.com:ShamanicArts/clankspace.git")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if repo.URL != "https://github.com/ShamanicArts/clankspace" {
+		t.Fatalf("unexpected canonical URL %q", repo.URL)
+	}
+}
+
 func TestRejectsNonGitHubAndPrivateShape(t *testing.T) {
 	if _, err := githubsync.ParseRepository("https://example.com/a/b"); err == nil {
 		t.Fatal("accepted non-GitHub URL")

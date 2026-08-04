@@ -2,8 +2,59 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/ShamanicArts/clankspace/internal/domain"
 )
+
+func TestSetupInstallsRepositoryIntegrationAfterApproval(t *testing.T) {
+	mux := http.NewServeMux()
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	mux.HandleFunc("POST /api/v1/setup/start", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"deviceCode": "device", "userCode": "ABCD-EFGH", "verificationUrl": server.URL + "/?setup=ABCD-EFGH", "expiresAt": time.Now().Add(time.Minute)})
+	})
+	mux.HandleFunc("POST /api/v1/setup/exchange", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"status": "approved", "project": domain.Project{ID: "project-1", Slug: "sample-repo", Name: "Sample Repo"}, "token": "project-token"})
+	})
+	mux.HandleFunc("GET /clankspace-skill.md", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("---\nname: clankspace\n---\n\n# Test skill\n"))
+	})
+	repository := t.TempDir()
+	config := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", config)
+	previous, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Chdir(repository); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(previous) })
+	if err = setup(t.Context(), []string{"--url", server.URL, "--project", "sample-repo", "--no-browser"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{".clankspace.json", ".agents/skills/clankspace/SKILL.md", "AGENTS.md"} {
+		if _, err = os.Stat(filepath.Join(repository, path)); err != nil {
+			t.Fatalf("%s was not installed: %v", path, err)
+		}
+	}
+	agents, err := os.ReadFile(filepath.Join(repository, "AGENTS.md"))
+	if err != nil || !strings.Contains(string(agents), "Use the ClankSpace skill for material work") {
+		t.Fatalf("AGENTS.md instruction missing: %v %s", err, agents)
+	}
+	credentials, err := os.ReadFile(filepath.Join(config, "clankspace", "credentials.json"))
+	if err != nil || !strings.Contains(string(credentials), "project-token") {
+		t.Fatalf("project credential was not stored: %v", err)
+	}
+}
 
 func TestTopLevelHelpDoesNotRequireConfiguration(t *testing.T) {
 	if err := run(context.Background(), []string{"--help"}); err != nil {
