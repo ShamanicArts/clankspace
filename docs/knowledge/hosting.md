@@ -3,9 +3,9 @@ type: knowledge
 keywords: [railway, exe.dev, hosting, domain, sqlite, backup, rollback, clank.shamanicarts.dev]
 related: [docs/design/spec.md, docs/deployment/railway.md, docs/deployment/exe.md]
 summary: Current hosted pilot, standalone self-hosting, and the signed replica boundary between them.
-last_verified: 2026-08-03
+last_verified: 2026-08-04
 note_created: 2026-08-02
-updated: 2026-08-03
+updated: 2026-08-04
 ---
 
 # Hosting
@@ -32,7 +32,7 @@ one VM
 one clank process
 /var/lib/clankspace/clankspace.db
 CLANKSPACE_BASE_URL=https://clank.shamanicarts.dev
-CLANKSPACE_AUTH_MODE=hybrid
+CLANKSPACE_AUTH_MODE=bootstrap
 CLANKSPACE_SYNC_ENABLED=true
 ```
 
@@ -40,7 +40,13 @@ The service uses one process and one SQLite writer. Never run multiple replicas 
 
 The service runs as the unprivileged `clankspace` user. systemd owns startup and restart behavior; exe.dev terminates TLS and proxies the stable custom domain to port 8000.
 
-Hosted mode also needs a durable installation secret and an SMTP sender. The installation secret encrypts the local replica signing key, mail outbox bodies, and stored replica credentials. It must be backed up separately from the database and restored with it. A file mail sink is for local E2E testing only.
+Production has the durable installation secret and signed installation identity. The current
+bootstrap auth mode preserves the existing trusted pilot while SMTP remains unconfigured.
+Invitation and magic-link code is deployed but must not be enabled with `hybrid` or `email`
+until a real SMTP sender is configured and accepted. The installation secret encrypts the
+local replica signing key, mail outbox bodies, and stored replica credentials. It must be
+backed up separately from the database and restored with it. A file mail sink is for local
+E2E testing only.
 
 ## Replication boundary
 

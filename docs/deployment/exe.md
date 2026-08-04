@@ -4,7 +4,7 @@ summary: Current small production deployment plus disposable, on-demand evaluati
 keywords: [exe.dev, agents, compute, deployment, sqlite, systemd, evaluation, runner, migration]
 related: [../knowledge/hosting.md, railway.md]
 note_created: 2026-08-02
-updated: 2026-08-03
+updated: 2026-08-04
 ---
 
 # exe.dev agent infrastructure
@@ -15,7 +15,7 @@ exe.dev is a reusable, general-purpose execution plane. ClankSpace currently use
 
 ClankSpace does not own the platform or define its future topology. Its workloads remain namespaced and isolated from other services by VM, credentials, storage, ports, and lifecycle. The stable domain and verified SQLite backups keep production portable to Railway or another host later.
 
-The validated build is live at `https://clank.shamanicarts.dev`; `https://clankspace-prod.exe.xyz` is only the provider origin. The current database completed a round trip through Railway and was restored from a verified off-provider snapshot. Do not commit the provider origin into collaborator repositories.
+Merged main `66faea4` is live at `https://clank.shamanicarts.dev`; `https://clankspace-prod.exe.xyz` is only the provider origin. The deployment serves the interactive guide at `/docs/`, runs schema version 10, and has signed synchronization enabled. Authentication intentionally remains `bootstrap` until SMTP is configured. The current database completed a round trip through Railway and was restored from a verified off-provider snapshot. Do not commit the provider origin into collaborator repositories.
 
 ## VM boundaries
 

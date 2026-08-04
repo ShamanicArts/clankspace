@@ -10,7 +10,7 @@ updated: 2026-08-03
 
 ## Overview
 
-The smallest trustworthy ambient coordination layer is implemented and validated. Hosted accounts, multi-workspace membership, project-scoped agent keys, signed replication, offline writes, cloud mirrors, and self-hosted authority are now implemented on `feat/hosted-replication`. The next milestone is packaging that candidate for real trusted-collaborator use. Research remains in service of normal product use.
+The smallest trustworthy ambient coordination layer is implemented and validated. Hosted accounts, multi-workspace membership, project-scoped agent keys, signed replication, offline writes, cloud mirrors, self-hosted authority, and interactive agent onboarding are merged and deployed. The next milestone is packaging and real trusted-collaborator use. Research remains in service of normal product use.
 
 ## Architecture principles
 
@@ -32,7 +32,7 @@ The smallest trustworthy ambient coordination layer is implemented and validated
 | 4 | Railway migration and portability proof | **Complete** | [railway.md](deployment/railway.md) |
 | 5 | Trusted collaborator onboarding and packaging | **Next** | [pilot-onboarding.md](pilot-onboarding.md) |
 | 6 | Matched controls and retrieval iteration | Planned | [training-loop.md](evals/training-loop.md) |
-| 7 | Hosted accounts and workspace replication | **Complete on feature branch** | [hosted-replication-spec.md](design/hosted-replication-spec.md) |
+| 7 | Hosted accounts and workspace replication | **Complete and deployed** | [hosted-replication-spec.md](design/hosted-replication-spec.md) |
 | 8 | Private repositories and wider public hardening | Deferred | Prove the invited multi-workspace service first |
 
 ## Phase 0: Project setup — complete
@@ -89,7 +89,7 @@ That exercise validated the application, isolation boundaries, and migration mec
 
 Measure time, token, tool-call, interruption, false-pause, and useful-conflict deltas against matched no-Clank runs. Expand repository/model/seed coverage before introducing embeddings. Add semantic retrieval only when deterministic lexical baselines and failure cases are frozen.
 
-## Phase 7: hosted accounts and workspace replication — complete on feature branch
+## Phase 7: hosted accounts and workspace replication — complete and deployed
 
 The approved extension in
 [`docs/design/hosted-replication-spec.md`](design/hosted-replication-spec.md) is implemented:
@@ -102,6 +102,10 @@ replica, a standalone self-hosted authority, a cloud mirror, a third imported pe
 offline conflicting decision, reconciliation, and revocation. The browser and PTY evidence,
 including the defect found and fixed during the run, is indexed in
 [`docs/research_results/2026-08-03-hosted-replication-e2e.md`](research_results/2026-08-03-hosted-replication-e2e.md).
+
+PR #21 merged the candidate and its living `/docs/` guide. Production runs the merged main
+binary with signed replication enabled. Authentication remains in bootstrap mode until an
+SMTP sender is chosen; switching to hybrid/email mode is configuration-only.
 
 ## Research backlog
 
