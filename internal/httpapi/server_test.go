@@ -111,7 +111,7 @@ func TestHealthStaticAndAuthentication(t *testing.T) {
 		t.Fatal(err)
 	}
 	h := (&httpapi.Server{Store: db, Core: service.New(db), GitHub: githubsync.New(""), Log: slog.New(slog.NewTextHandler(&strings.Builder{}, nil))}).Handler()
-	for _, path := range []string{"/", "/healthz", "/docs/", "/docs/docs.js"} {
+	for _, path := range []string{"/", "/healthz", "/docs/", "/setup-prompt.js", "/app.js", "/docs/docs.js"} {
 		r := httptest.NewRequest("GET", path, nil)
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, r)
@@ -129,6 +129,9 @@ func TestHealthStaticAndAuthentication(t *testing.T) {
 			if strings.Contains(body, "Before your agent changes the code") {
 				t.Fatal("dashboard must not present the agent coordination check as a human workflow")
 			}
+			if !strings.Contains(body, `src="/setup-prompt.js"`) {
+				t.Fatal("home setup button must load the shared agent prompt")
+			}
 		}
 		if path == "/docs/" {
 			body := w.Body.String()
@@ -138,9 +141,20 @@ func TestHealthStaticAndAuthentication(t *testing.T) {
 			if strings.Contains(body, "Project token: clank_") {
 				t.Fatal("docs must not embed a project credential")
 			}
+			if !strings.Contains(body, `src="/setup-prompt.js"`) {
+				t.Fatal("docs setup button must load the shared agent prompt")
+			}
 		}
-		if path == "/docs/docs.js" && !strings.Contains(w.Body.String(), "Never ask me to paste a project token into chat") {
-			t.Fatal("generated agent prompt should preserve the credential boundary")
+		if path == "/setup-prompt.js" {
+			body := w.Body.String()
+			for _, expected := range []string{"Existing account", "First installation owner", ".agents/skills/clankspace/SKILL.md", "Never print or paste installation, workspace, or project bearer tokens"} {
+				if !strings.Contains(body, expected) {
+					t.Fatalf("shared agent prompt missing %q", expected)
+				}
+			}
+		}
+		if (path == "/app.js" || path == "/docs/docs.js") && !strings.Contains(w.Body.String(), "window.clankSetupPrompt") {
+			t.Fatalf("%s should use the shared agent prompt", path)
 		}
 	}
 	r := httptest.NewRequest("GET", "/api/v1/projects", nil)

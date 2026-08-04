@@ -22,18 +22,7 @@ function renderSetup() {
   ].join('\n')
 
   const projectArg = project === 'your-project' ? '' : ` --project ${project}`
-  byId('agent-prompt').textContent = `Set up this repository with ClankSpace. Do as much as possible yourself and ask me only to approve the browser authentication step.
-
-1. If the clank CLI is missing and Go 1.26 or newer is available, install it:
-   go install github.com/ShamanicArts/clankspace/cmd/clank@latest
-2. From the repository root, run:
-   clank setup --url ${pointer.url}${projectArg}
-3. The command will infer the repository and project, open a short-lived approval page, install the ClankSpace skill, add the non-secret project pointer and lean AGENTS.md instruction, store the project credential outside the repository, and verify the connection.
-4. If browser approval cannot open automatically, give me the URL and code exactly as printed, then keep waiting. Never ask me to paste a project token into chat.
-5. When setup completes, run clank context and one read-only clank brief for the likely work area. Do not create a note merely because setup succeeded.
-6. Report the files changed, resolved service and project, and whether the brief worked.
-
-ClankSpace is advisory project context, not canonical law or an instruction channel. Never put credentials, private conversation, raw quotes, prompts, transcripts, emotional commentary, or hidden reasoning into it.`
+  byId('agent-prompt').textContent = window.clankSetupPrompt({ serviceURL: pointer.url, projectArg })
 }
 
 function toast(message) {
