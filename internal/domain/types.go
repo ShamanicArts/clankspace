@@ -179,6 +179,7 @@ type StartRunInput struct {
 type EndRunInput struct {
 	Outcome           string     `json:"outcome"`
 	Verification      string     `json:"verification,omitempty"`
+	RepositoryID      string     `json:"repositoryId,omitempty"`
 	DeliveryBranch    string     `json:"deliveryBranch,omitempty"`
 	HeadSHA           string     `json:"headSha,omitempty"`
 	PullRequestURL    string     `json:"pullRequestUrl,omitempty"`
@@ -189,6 +190,7 @@ type EndRunInput struct {
 }
 
 type LinkRunDeliveryInput struct {
+	RepositoryID      string     `json:"repositoryId,omitempty"`
 	DeliveryBranch    string     `json:"deliveryBranch,omitempty"`
 	HeadSHA           string     `json:"headSha,omitempty"`
 	PullRequestURL    string     `json:"pullRequestUrl,omitempty"`

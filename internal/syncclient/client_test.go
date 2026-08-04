@@ -117,7 +117,7 @@ func TestTwoInstancesPairPullPushAndRevoke(t *testing.T) {
 		t.Fatal(err)
 	}
 	replicaCore := service.New(replicaDB)
-	run, _, err := replicaCore.StartRun(ctx, replicaPrincipal, "replica-run", domain.StartRunInput{ProjectID: project.ID, RepositoryID: repository.ID, AgentName: "Local agent", Harness: "codex", Provider: "openai", Model: "test-model", Reasoning: "high", Role: "primary", RunType: "interactive", Branch: "offline/provenance", BaseSHA: "1111111111111111111111111111111111111111", HeadSHA: "1111111111111111111111111111111111111111", Objective: "Record offline context"})
+	run, _, err := replicaCore.StartRun(ctx, replicaPrincipal, "replica-run", domain.StartRunInput{ProjectID: project.ID, AgentName: "Local agent", Harness: "codex", Provider: "openai", Model: "test-model", Reasoning: "high", Role: "primary", RunType: "interactive", Branch: "offline/provenance", BaseSHA: "1111111111111111111111111111111111111111", HeadSHA: "1111111111111111111111111111111111111111", Objective: "Record offline context"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,10 @@ func TestTwoInstancesPairPullPushAndRevoke(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err = replicaDB.EndRun(ctx, replicaPrincipal, "replica-run-end", run.ID, domain.EndRunInput{Outcome: "completed", HeadSHA: "2222222222222222222222222222222222222222", PullRequestURL: "https://github.com/example/repo/pull/7", PullRequestNumber: 7, PullRequestState: "open"}); err != nil {
+	if _, _, err = replicaDB.LinkRunDelivery(ctx, replicaPrincipal, "replica-run-open", run.ID, domain.LinkRunDeliveryInput{RepositoryID: repository.ID, DeliveryBranch: "offline/provenance", HeadSHA: "2222222222222222222222222222222222222222", PullRequestURL: "https://github.com/example/repo/pull/7", PullRequestNumber: 7, PullRequestState: "open"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = replicaDB.EndRun(ctx, replicaPrincipal, "replica-run-end", run.ID, domain.EndRunInput{Outcome: "completed"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err = replicaDB.LinkRunDelivery(ctx, replicaPrincipal, "replica-run-merged", run.ID, domain.LinkRunDeliveryInput{PullRequestState: "merged", MergeCommitSHA: "3333333333333333333333333333333333333333"}); err != nil {
@@ -146,7 +149,7 @@ func TestTwoInstancesPairPullPushAndRevoke(t *testing.T) {
 		t.Fatalf("pushed note missing: %#v", authorityNotes)
 	}
 	for _, note := range authorityNotes {
-		if note.ID == offline.ID && (note.Run == nil || note.Run.PullRequestNumber != 7 || note.Run.PullRequestState != "merged" || note.Run.MergeCommitSHA == "") {
+		if note.ID == offline.ID && (note.Run == nil || note.Run.RepositoryID != repository.ID || note.Run.PullRequestNumber != 7 || note.Run.PullRequestState != "merged" || note.Run.MergeCommitSHA == "") {
 			t.Fatalf("delivery provenance did not converge: %#v", note.Run)
 		}
 	}

@@ -935,7 +935,7 @@ func validateEventEnvelopeTx(ctx context.Context, tx *sql.Tx, event domain.Domai
 			if err := runInProjectTx(ctx, tx, item.ID, event.ProjectID); err != nil {
 				return err
 			}
-			if err := validateRunDeliveryTx(ctx, tx, item.ID, item.PrincipalID, domain.LinkRunDeliveryInput{DeliveryBranch: item.DeliveryBranch, HeadSHA: item.HeadSHA, PullRequestURL: item.PullRequestURL, PullRequestNumber: item.PullRequestNumber, PullRequestState: item.PullRequestState, MergeCommitSHA: item.MergeCommitSHA, MergedAt: item.MergedAt}); err != nil {
+			if err := validateRunDeliveryTx(ctx, tx, item.ID, item.PrincipalID, domain.LinkRunDeliveryInput{RepositoryID: item.RepositoryID, DeliveryBranch: item.DeliveryBranch, HeadSHA: item.HeadSHA, PullRequestURL: item.PullRequestURL, PullRequestNumber: item.PullRequestNumber, PullRequestState: item.PullRequestState, MergeCommitSHA: item.MergeCommitSHA, MergedAt: item.MergedAt}); err != nil {
 				return err
 			}
 		}
@@ -1156,6 +1156,9 @@ func (s *Store) projectDomainEventTx(ctx context.Context, tx *sql.Tx, event doma
 		}
 		profile, _ := json.Marshal(item.InstructionProfile)
 		_, err := tx.ExecContext(ctx, `INSERT INTO runs(id,project_id,agent_id,principal_id,harness,harness_version,provider,model,reasoning,role,parent_run_id,root_run_id,run_type,permission_mode,interaction_mode,repository_id,branch,worktree,base_sha,head_sha,delivery_branch,pull_request_url,pull_request_number,pull_request_state,merge_commit_sha,merged_at,objective,instruction_profile_json,started_at,ended_at,outcome,verification) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET head_sha=CASE WHEN excluded.head_sha='' THEN runs.head_sha ELSE excluded.head_sha END,delivery_branch=CASE WHEN excluded.delivery_branch='' THEN runs.delivery_branch ELSE excluded.delivery_branch END,pull_request_url=CASE WHEN excluded.pull_request_url='' THEN runs.pull_request_url ELSE excluded.pull_request_url END,pull_request_number=CASE WHEN excluded.pull_request_number=0 THEN runs.pull_request_number ELSE excluded.pull_request_number END,pull_request_state=CASE WHEN excluded.pull_request_state='' THEN runs.pull_request_state ELSE excluded.pull_request_state END,merge_commit_sha=CASE WHEN excluded.merge_commit_sha='' THEN runs.merge_commit_sha ELSE excluded.merge_commit_sha END,merged_at=COALESCE(excluded.merged_at,runs.merged_at),ended_at=COALESCE(excluded.ended_at,runs.ended_at),outcome=CASE WHEN excluded.outcome='' THEN runs.outcome ELSE excluded.outcome END,verification=CASE WHEN excluded.verification='' THEN runs.verification ELSE excluded.verification END`, item.ID, item.ProjectID, item.AgentID, actor.PrincipalID, item.Harness, item.HarnessVersion, item.Provider, item.Model, item.Reasoning, item.Role, nullable(item.ParentRunID), nullable(item.RootRunID), item.RunType, item.PermissionMode, item.InteractionMode, nullable(item.RepositoryID), item.Branch, item.Worktree, item.BaseSHA, item.HeadSHA, item.DeliveryBranch, item.PullRequestURL, item.PullRequestNumber, item.PullRequestState, item.MergeCommitSHA, nullableTime(item.MergedAt), item.Objective, string(profile), ts(item.StartedAt), nullableTime(item.EndedAt), item.Outcome, item.Verification)
+		if err == nil && item.RepositoryID != "" {
+			_, err = tx.ExecContext(ctx, `UPDATE runs SET repository_id=? WHERE id=? AND repository_id IS NULL`, item.RepositoryID, item.ID)
+		}
 		if err == nil && event.Type == "run.ended" {
 			_, err = tx.ExecContext(ctx, `UPDATE trajectories SET status='closed',updated_at=? WHERE run_id=? AND status='active'`, ts(event.OccurredAt), item.ID)
 		}
@@ -1392,6 +1395,11 @@ func (s *Store) ImportWorkspaceSnapshot(ctx context.Context, snapshot domain.Wor
 			profile, _ := json.Marshal(run.InstructionProfile)
 			if _, err = tx.ExecContext(ctx, `INSERT INTO runs(id,project_id,agent_id,principal_id,harness,harness_version,provider,model,reasoning,role,parent_run_id,root_run_id,run_type,permission_mode,interaction_mode,repository_id,branch,worktree,base_sha,head_sha,delivery_branch,pull_request_url,pull_request_number,pull_request_state,merge_commit_sha,merged_at,objective,instruction_profile_json,started_at,ended_at,outcome,verification) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET head_sha=CASE WHEN excluded.head_sha='' THEN runs.head_sha ELSE excluded.head_sha END,delivery_branch=CASE WHEN excluded.delivery_branch='' THEN runs.delivery_branch ELSE excluded.delivery_branch END,pull_request_url=CASE WHEN excluded.pull_request_url='' THEN runs.pull_request_url ELSE excluded.pull_request_url END,pull_request_number=CASE WHEN excluded.pull_request_number=0 THEN runs.pull_request_number ELSE excluded.pull_request_number END,pull_request_state=CASE WHEN excluded.pull_request_state='' THEN runs.pull_request_state ELSE excluded.pull_request_state END,merge_commit_sha=CASE WHEN excluded.merge_commit_sha='' THEN runs.merge_commit_sha ELSE excluded.merge_commit_sha END,merged_at=COALESCE(excluded.merged_at,runs.merged_at),ended_at=COALESCE(excluded.ended_at,runs.ended_at),outcome=CASE WHEN excluded.outcome='' THEN runs.outcome ELSE excluded.outcome END,verification=CASE WHEN excluded.verification='' THEN runs.verification ELSE excluded.verification END`, run.ID, project.ID, run.AgentID, run.PrincipalID, run.Harness, run.HarnessVersion, run.Provider, run.Model, run.Reasoning, run.Role, nullable(run.ParentRunID), nullable(run.RootRunID), run.RunType, run.PermissionMode, run.InteractionMode, nullable(run.RepositoryID), run.Branch, run.Worktree, run.BaseSHA, run.HeadSHA, run.DeliveryBranch, run.PullRequestURL, run.PullRequestNumber, run.PullRequestState, run.MergeCommitSHA, nullableTime(run.MergedAt), run.Objective, string(profile), ts(run.StartedAt), nullableTime(run.EndedAt), run.Outcome, run.Verification); err != nil {
 				return err
+			}
+			if run.RepositoryID != "" {
+				if _, err = tx.ExecContext(ctx, `UPDATE runs SET repository_id=? WHERE id=? AND repository_id IS NULL`, run.RepositoryID, run.ID); err != nil {
+					return err
+				}
 			}
 		}
 		for _, note := range projectSnapshot.Notes {
