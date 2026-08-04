@@ -1,6 +1,9 @@
 package httpapi_test
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -16,6 +19,87 @@ import (
 	"github.com/ShamanicArts/clankspace/internal/service"
 	"github.com/ShamanicArts/clankspace/internal/store"
 )
+
+func TestSetupApprovalReturnsProjectCredentialOnce(t *testing.T) {
+	db, err := store.Open(filepath.Join(t.TempDir(), "db.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err = db.EnsureBootstrap(t.Context(), "owner-token", "Workspace", "Owner"); err != nil {
+		t.Fatal(err)
+	}
+	h := (&httpapi.Server{Store: db, Core: service.New(db), GitHub: githubsync.New(""), BaseURL: "https://clank.example", Log: slog.New(slog.NewTextHandler(&strings.Builder{}, nil))}).Handler()
+	verifier := "this-is-a-random-looking-test-verifier"
+	digest := sha256.Sum256([]byte(verifier))
+	startBody, _ := json.Marshal(map[string]string{
+		"challenge": hex.EncodeToString(digest[:]), "projectSlug": "example-repo", "projectName": "Example Repo",
+		"repositoryUrl": "https://github.com/example/repo", "agentName": "Example agents",
+	})
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/setup/start", bytes.NewReader(startBody))
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("start returned %d: %s", w.Code, w.Body.String())
+	}
+	var started struct {
+		DeviceCode      string `json:"deviceCode"`
+		UserCode        string `json:"userCode"`
+		VerificationURL string `json:"verificationUrl"`
+	}
+	if err = json.NewDecoder(w.Body).Decode(&started); err != nil {
+		t.Fatal(err)
+	}
+	if started.DeviceCode == "" || started.UserCode == "" || !strings.Contains(started.VerificationURL, started.UserCode) {
+		t.Fatalf("incomplete setup start: %#v", started)
+	}
+	approveBody, _ := json.Marshal(map[string]string{"userCode": started.UserCode})
+	r = httptest.NewRequest(http.MethodPost, "/api/v1/setup/approve", bytes.NewReader(approveBody))
+	r.Header.Set("Authorization", "Bearer owner-token")
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("approve returned %d: %s", w.Code, w.Body.String())
+	}
+	exchangeBody, _ := json.Marshal(map[string]string{"deviceCode": started.DeviceCode, "verifier": verifier})
+	r = httptest.NewRequest(http.MethodPost, "/api/v1/setup/exchange", bytes.NewReader(exchangeBody))
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("exchange returned %d: %s", w.Code, w.Body.String())
+	}
+	var exchanged struct {
+		Status  string         `json:"status"`
+		Project domain.Project `json:"project"`
+		Token   string         `json:"token"`
+	}
+	if err = json.NewDecoder(w.Body).Decode(&exchanged); err != nil {
+		t.Fatal(err)
+	}
+	if exchanged.Status != "approved" || exchanged.Project.Slug != "example-repo" || exchanged.Token == "" {
+		t.Fatalf("unexpected exchange: %#v", exchanged)
+	}
+	r = httptest.NewRequest(http.MethodGet, "/api/v1/whoami", nil)
+	r.Header.Set("Authorization", "Bearer "+exchanged.Token)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("issued token is unusable: %d %s", w.Code, w.Body.String())
+	}
+	r = httptest.NewRequest(http.MethodGet, "/api/v1/projects/example-repo/repositories", nil)
+	r.Header.Set("Authorization", "Bearer "+exchanged.Token)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "https://github.com/example/repo") {
+		t.Fatalf("setup did not link the inferred repository: %d %s", w.Code, w.Body.String())
+	}
+	r = httptest.NewRequest(http.MethodPost, "/api/v1/setup/exchange", bytes.NewReader(exchangeBody))
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("credential should only be returned once, got %d", w.Code)
+	}
+}
 
 func TestHealthStaticAndAuthentication(t *testing.T) {
 	db, err := store.Open(filepath.Join(t.TempDir(), "db.sqlite"))
@@ -39,14 +123,17 @@ func TestHealthStaticAndAuthentication(t *testing.T) {
 			if !strings.Contains(body, "Project log") {
 				t.Fatal("dashboard should open around the project append log")
 			}
+			if !strings.Contains(body, "Copy agent setup prompt") || !strings.Contains(body, "Sign in") {
+				t.Fatal("unauthenticated home should offer agent setup and a clear sign-in path")
+			}
 			if strings.Contains(body, "Before your agent changes the code") {
 				t.Fatal("dashboard must not present the agent coordination check as a human workflow")
 			}
 		}
 		if path == "/docs/" {
 			body := w.Body.String()
-			if !strings.Contains(body, "Generate the safe repository setup") || !strings.Contains(body, "data-copy=\"agent-prompt\"") {
-				t.Fatal("docs should include the interactive, credential-safe agent onboarding guide")
+			if !strings.Contains(body, "Connect a repository") || !strings.Contains(body, "Give an agent access") || !strings.Contains(body, "data-copy=\"agent-prompt\"") {
+				t.Fatal("docs should lead humans through access, repository connection, and agent onboarding")
 			}
 			if strings.Contains(body, "Project token: clank_") {
 				t.Fatal("docs must not embed a project credential")

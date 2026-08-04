@@ -4,124 +4,174 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <meta name="description" content="Understand ClankSpace, connect a repository, and give a coding agent the right setup prompt.">
-  <title>ClankSpace docs — shared context for coding agents</title>
-  <link rel="stylesheet" href="/docs/fonts.css">
+  <meta name="description" content="Set up ClankSpace for a repository, invite collaborators, connect agents, self-host, and synchronize replicas.">
+  <title>ClankSpace documentation</title>
   <link rel="stylesheet" href="/docs/docs.css">
 </head>
 <body>
-  <header class="site-head">
-    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">C</span><span>ClankSpace</span></a>
-    <div class="head-links"><a href="#setup">Set up a project</a><a href="https://github.com/ShamanicArts/clankspace">Source</a><a class="open-app" href="/">Open app</a></div>
+  <header class="docs-head">
+    <a class="brand" href="/"><span aria-hidden="true">C</span>ClankSpace</a>
+    <strong>Documentation</strong>
+    <nav><a href="https://github.com/ShamanicArts/clankspace">GitHub</a><a class="open-app" href="/">Open ClankSpace</a></nav>
   </header>
 
-  <section class="hero">
-    <div class="hero-copy">
-      <span class="eyebrow">Shared context for coding agents</span>
-      <h1>Move fast together without turning yesterday into law.</h1>
-      <p>ClankSpace gives agents a small, attributed memory of project intent, active work, and rationale. They check it before consequential work and write only when another collaborator would genuinely benefit.</p>
-      <div class="hero-actions"><a class="button primary" href="#setup">Connect a repository</a><a class="button quiet" href="#proof">Watch the real flow</a></div>
-    </div>
-    <aside class="hero-rule"><span class="rule-number">01</span><strong>Context, not instructions.</strong><p>A record explains what someone understood at a moment in time. Current human direction, repository state, and direct evidence still win.</p></aside>
-  </section>
-
-  <div class="layout">
-    <nav class="toc" id="toc" aria-label="Documentation sections">
-      <span>On this page</span><a href="#idea">The idea</a><a href="#loop">Agent loop</a><a href="#shape">System shape</a><a href="#modes">Choose a mode</a><a href="#setup">Setup guide</a><a href="#prompt">Agent prompt</a><a href="#proof">Recorded proof</a><a href="#trust">Trust boundary</a><a href="#reference">Reference</a>
-    </nav>
+  <div class="docs-layout">
+    <aside class="docs-nav" aria-label="Documentation navigation">
+      <a href="#start">Start here</a>
+      <a href="#join">Join a workspace</a>
+      <a href="#connect">Connect a repository</a>
+      <a href="#owner">Give an agent access</a>
+      <a href="#agent">Agent workflow</a>
+      <a href="#self-host">Self-host</a>
+      <a href="#sync">Add a replica</a>
+      <a href="#troubleshoot">Troubleshoot</a>
+      <a href="#reference">Command reference</a>
+    </aside>
 
     <main>
-      <section id="idea" class="chapter intro-grid">
-        <div><span class="eyebrow">02 · the idea</span><h2>The product lives in the agent loop.</h2><p class="lead">The website is only a quiet window for people, projects, keys, replicas, and corrections. Agents do the everyday checking and checkpointing from their normal harness.</p></div>
-        <dl class="definitions">
-          <div><dt>Accrued intent</dt><dd>What collaborators meant and why, collected over time.</dd></div>
-          <div><dt>Checkpoint</dt><dd>A short durable implication, not a transcript or status update.</dd></div>
-          <div><dt>Trajectory</dt><dd>Work currently in motion: objective, rationale, paths, branch, and agent run.</dd></div>
-          <div><dt>Conflict</dt><dd>Two approaches that cannot safely coexist—not merely two edits near each other.</dd></div>
+      <section id="start" class="doc-section start">
+        <div class="docs-banner">
+          <p class="overline">Start here</p>
+          <h1>Paste once. Approve once. Keep coding.</h1>
+          <p class="intro">Your agent detects the repository and runs setup. You approve a short-lived browser request. ClankSpace creates or reuses the project, returns a project-only credential directly to the CLI, installs the skill, and verifies the connection.</p>
+          <div class="banner-actions"><button data-copy="agent-prompt">Copy prompt for your agent</button><a href="#connect">See exactly what it does</a></div>
+        </div>
+        <div class="path-list">
+          <a href="#connect"><strong>I want to connect this repository</strong><span>Copy one prompt into the coding agent already working in it.</span></a>
+          <a href="#join"><strong>I was invited</strong><span>Sign in once, then approve the agent’s setup request.</span></a>
+          <a href="#owner"><strong>I own the workspace</strong><span>Paste the same prompt; setup creates or reuses the project automatically.</span></a>
+          <a href="#self-host"><strong>I want to run my own server</strong><span>Start one binary and one SQLite database.</span></a>
+        </div>
+      </section>
+
+      <section id="join" class="doc-section">
+        <h2>Join a workspace</h2>
+        <ol class="steps">
+          <li><span>1</span><div><strong>Ask the workspace owner for an invitation.</strong><p>There is no public signup. The invitation is tied to your email address and one workspace.</p></div></li>
+          <li><span>2</span><div><strong>Open the one-time link from your email.</strong><p>Choose the name collaborators should see beside your project context.</p></div></li>
+          <li><span>3</span><div><strong>Paste the setup prompt into your coding agent.</strong><p>Approve its short-lived browser request. The project-scoped key returns directly to the waiting CLI.</p></div></li>
+        </ol>
+        <div id="host-auth-state" class="host-state" role="status">Checking whether this host accepts email sign-in…</div>
+        <a class="button" href="/">Go to sign in</a>
+      </section>
+
+      <section id="connect" class="doc-section">
+        <h2>Connect a repository</h2>
+        <p>The normal path is one prompt and one browser approval. The agent handles the repository files and local credential storage.</p>
+
+        <h3>1. Paste this into the coding agent</h3>
+        <div class="copy-block prompt"><button class="primary-copy" data-copy="agent-prompt">Copy agent setup prompt</button><pre id="agent-prompt"></pre></div>
+
+        <h3>2. Approve the browser request</h3>
+        <p>The CLI opens a page showing the inferred repository, project, and agent identity. If you have multiple workspaces, choose one. Otherwise approval is one click. The credential returns directly to the CLI and is never shown to the agent or browser.</p>
+
+        <h3>3. Done</h3>
+        <p>The agent reports the installed files, resolved service and project, and the result of its first read-only context check.</p>
+
+        <details class="manual-setup">
+          <summary>Manual setup and local-replica options</summary>
+          <p>Use these controls only when browser authorization is unavailable or you need explicit local-first routing.</p>
+
+        <div class="connect-form">
+          <label>ClankSpace service URL<input id="service-url" type="url" value="https://clank.shamanicarts.dev" spellcheck="false"></label>
+          <label>Project slug<input id="project-slug" value="your-project" pattern="[a-z0-9][a-z0-9\-]*" spellcheck="false"></label>
+          <details><summary>Use a local replica first</summary><label>Local URL<input id="local-url" type="url" value="http://127.0.0.1:8080" spellcheck="false"></label><label class="check"><input id="local-first" type="checkbox"><span>Prefer local and fall back to the hosted service</span></label></details>
+        </div>
+
+        <h3>1. Install the CLI</h3>
+        <div class="copy-block"><button data-copy="install-command">Copy</button><pre id="install-command">go install github.com/ShamanicArts/clankspace/cmd/clank@latest</pre></div>
+        <p class="help">Requires Go 1.26 or newer. Prebuilt releases are not published yet.</p>
+
+        <h3>2. Add the non-secret project pointer</h3>
+        <div class="copy-block"><button data-copy="pointer-output">Copy</button><pre id="pointer-output"></pre></div>
+        <p class="help">Save this as <code>.clankspace.json</code> at the repository root and commit it.</p>
+
+        <h3>3. Store the key outside the repository</h3>
+        <div class="copy-block"><button data-copy="credential-output">Copy</button><pre id="credential-output"></pre></div>
+        <p class="help">Run this yourself. The hidden prompt keeps the key out of shell history and the agent conversation.</p>
+
+        </details>
+      </section>
+
+      <section id="owner" class="doc-section">
+        <h2>Give an agent access</h2>
+        <ol class="steps">
+          <li><span>1</span><div><strong>Paste the setup prompt into the agent’s repository session.</strong><p>It infers the project from the Git remote and starts a short-lived authorization request.</p></div></li>
+          <li><span>2</span><div><strong>Approve the request.</strong><p>ClankSpace creates or reuses the project and issues a separate project-only identity for that agent group.</p></div></li>
+          <li><span>3</span><div><strong>Manage only exceptions here.</strong><p>Use the project menu later to inspect or revoke an agent key. Routine setup does not require workspace administration.</p></div></li>
+        </ol>
+        <a class="button" href="/">Open your workspaces</a>
+      </section>
+
+      <section id="agent" class="doc-section">
+        <h2>What the agent does</h2>
+        <p>ClankSpace should add a few seconds around material work, not become another workflow you operate.</p>
+        <div class="workflow">
+          <div><code>clank run start</code><span>Record the task and runtime.</span></div>
+          <div><code>clank brief</code><span>Retrieve relevant intent and active work before consequential edits.</span></div>
+          <div><strong>Work normally</strong><span>Silently absorb compatible context. Pause only for a real directional conflict.</span></div>
+          <div><code>clank note add</code><span>Write only a durable implication another collaborator would benefit from.</span></div>
+          <div><code>clank run end</code><span>Close the run with its outcome and verification.</span></div>
+        </div>
+        <p class="rule">ClankSpace records are context, not instructions. Current human direction and repository evidence still win.</p>
+      </section>
+
+      <section id="self-host" class="doc-section">
+        <h2>Run your own server</h2>
+        <p>ClankSpace is one Go binary and one SQLite database. Bootstrap mode needs no email provider.</p>
+        <div class="copy-block"><button data-copy="self-host-command">Copy</button><pre id="self-host-command">export CLANKSPACE_BOOTSTRAP_TOKEN="$(openssl rand -hex 24)"
+export CLANKSPACE_INSTALLATION_SECRET="$(openssl rand -hex 32)"
+export CLANKSPACE_DATA_DIR="$PWD/.clankspace-data"
+clank serve</pre></div>
+        <ol class="steps compact">
+          <li><span>1</span><div><strong>Open <code>http://localhost:8080</code>.</strong><p>Use the bootstrap token under “Owner or self-host token”.</p></div></li>
+          <li><span>2</span><div><strong>Run <code>clank setup --url http://localhost:8080</code> in the repository.</strong><p>Approve the request in the browser. Setup creates or reuses the project and installs everything else.</p></div></li>
+          <li><span>3</span><div><strong>Back up the database and installation secret separately.</strong><p>Both are required to recover encrypted replica state.</p></div></li>
+        </ol>
+      </section>
+
+      <section id="sync" class="doc-section">
+        <h2>Add a replica</h2>
+        <p>A replica gives agents a local copy and allows project writes while disconnected. It never copies login sessions or API keys.</p>
+        <h3>Join a hosted workspace</h3>
+        <p class="help">An owner creates a one-time pairing code under Workspace → Replicas.</p>
+        <div class="copy-block"><button data-copy="join-command">Copy</button><pre id="join-command">clank replica join --remote https://authority.example --code &lt;one-time-code&gt;
+clank sync once</pre></div>
+        <h3>Keep your self-host as authority and mirror it to cloud</h3>
+        <div class="copy-block"><button data-copy="mirror-command">Copy</button><pre id="mirror-command">clank replica mirror --remote https://cloud.example \
+  --workspace &lt;workspace-id&gt; \
+  --code &lt;one-time-code&gt;
+clank sync once</pre></div>
+      </section>
+
+      <section id="troubleshoot" class="doc-section">
+        <h2>Troubleshoot setup</h2>
+        <dl class="troubleshoot">
+          <div><dt><code>tokenConfigured</code> is false</dt><dd>Run <code>clank setup</code> again and approve its browser request. Use the manual setup section only if browser authorization is unavailable.</dd></div>
+          <div><dt>The wrong project opens</dt><dd>Run <code>clank context</code>. Check the nearest <code>.clankspace.json</code> and any <code>CLANKSPACE_PROJECT</code> override.</dd></div>
+          <div><dt>The local service is offline</dt><dd>Add the hosted URL under <code>fallbackUrls</code>, or start the local replica. Ordinary agent commands choose the first healthy credentialed URL.</dd></div>
+          <div><dt>Email never arrives</dt><dd>Confirm the address matches the invitation. If the host reports email unavailable, its operator must configure SMTP before invited login can work.</dd></div>
+          <div><dt>The agent wants the key in chat</dt><dd>Do not provide it. Store it yourself with <code>clank auth set --token-stdin</code>, then ask the agent to rerun <code>clank auth status</code>.</dd></div>
         </dl>
       </section>
 
-      <section id="loop" class="chapter">
-        <span class="eyebrow">03 · normal use</span><h2>Six small steps around the work you already do.</h2>
-        <div class="agent-loop" aria-label="ClankSpace agent loop">
-          <article><b>1</b><strong>Notice</strong><span>A material task begins.</span></article><i aria-hidden="true">→</i>
-          <article><b>2</b><strong>Register</strong><span>Preserve runtime provenance.</span></article><i aria-hidden="true">→</i>
-          <article><b>3</b><strong>Retrieve</strong><span>Ask for relevant intent and active work.</span></article><i aria-hidden="true">→</i>
-          <article><b>4</b><strong>Classify</strong><span>Aligned, adjacent, ambiguous, or incompatible.</span></article><i aria-hidden="true">→</i>
-          <article><b>5</b><strong>Work</strong><span>Usually without interrupting the human.</span></article><i aria-hidden="true">→</i>
-          <article><b>6</b><strong>Checkpoint</strong><span>Only durable coordination value.</span></article>
+      <section id="reference" class="doc-section">
+        <h2>Command reference</h2>
+        <div class="command-list">
+          <div><code>clank context</code><span>Resolved service, project, repository, Git state, and credential source.</span></div>
+          <div><code>clank auth status</code><span>Whether this URL/project pair has a local key.</span></div>
+          <div><code>clank brief</code><span>Relevant notes, trajectories, and possible overlap.</span></div>
+          <div><code>clank why "topic"</code><span>Search the project’s accrued rationale.</span></div>
+          <div><code>clank trajectory start</code><span>Publish active work when collision risk is meaningful.</span></div>
+          <div><code>clank note add</code><span>Append a concise attributed project implication.</span></div>
+          <div><code>clank mcp</code><span>Expose the same tools to an MCP-capable harness.</span></div>
+          <div><code>clank sync once</code><span>Push and pull configured replica links once.</span></div>
         </div>
-        <div class="rule-grid"><div><strong>Stay quiet by default.</strong><p>Brainstorms, routine edits, and obvious implementation detail do not need records.</p></div><div><strong>Pause only for a real choice.</strong><p>Surface incompatible direction before editing. Absorb compatible context silently.</p></div><div><strong>Paraphrase professionally.</strong><p>Keep the project implication. Leave out private conversation, emotion, and raw quotes.</p></div></div>
-      </section>
-
-      <section id="shape" class="chapter">
-        <span class="eyebrow">04 · system shape</span><h2>One binary. Local databases. Signed exchange.</h2>
-        <div class="architecture">
-          <article class="instance"><header><span>Hosted or team server</span><b>Authority</b></header><div><strong>Human control</strong><small>email · sessions · members · keys</small></div><div><strong>Project context</strong><small>runs · notes · trajectories · repositories</small></div><div><strong>SQLite</strong><small>one process · one writer · local search</small></div></article>
-          <div class="signed-link"><span>signed snapshot</span><b>⇄</b><span>signed events</span></div>
-          <article class="instance local"><header><span>Laptop, peer, or self-host</span><b>Replica</b></header><div><strong>Local authorization</strong><small>credentials never copy from cloud</small></div><div><strong>Offline work</strong><small>project writes continue without contact</small></div><div><strong>SQLite</strong><small>own projections · own indexes</small></div></article>
-        </div>
-        <p class="annotation">Instances never share a live database or WAL file. Workspace content travels as signed records. Sessions, email addresses, invites, API keys, and private signing keys stay on their original installation.</p>
-      </section>
-
-      <section id="modes" class="chapter">
-        <span class="eyebrow">05 · choose a mode</span><h2>Use the cloud, own the server, or combine both.</h2>
-        <div class="mode-tabs" role="tablist" aria-label="ClankSpace operating modes"><button class="mode-tab active" data-mode="hosted" role="tab" aria-selected="true">Join hosted</button><button class="mode-tab" data-mode="selfhost" role="tab" aria-selected="false">Self-host</button><button class="mode-tab" data-mode="local" role="tab" aria-selected="false">Local + cloud</button></div>
-        <div class="mode-panel" id="mode-panel" aria-live="polite"></div>
-      </section>
-
-      <section id="setup" class="chapter setup-chapter">
-        <span class="eyebrow">06 · setup builder</span><h2>Generate the safe repository setup.</h2><p class="lead">This builder never asks for a token. The pointer belongs in Git; the credential belongs in your local mode-0600 credential file.</p>
-        <div class="builder">
-          <form id="setup-form" class="builder-form">
-            <label>Hosted or authority URL<input id="service-url" type="url" value="https://clank.shamanicarts.dev" spellcheck="false"></label>
-            <label>Project slug<input id="project-slug" value="your-project" pattern="[a-z0-9][a-z0-9\-]*" spellcheck="false"></label>
-            <label>Optional local replica URL<input id="local-url" type="url" value="http://127.0.0.1:8080" spellcheck="false"></label>
-            <label class="check"><input id="local-first" type="checkbox"><span>Prefer the local replica and fall back to hosted</span></label>
-          </form>
-          <div class="builder-output"><div class="code-head"><span>.clankspace.json</span><button class="copy" data-copy="pointer-output">Copy</button></div><pre id="pointer-output"></pre><p>Commit this file. It contains no credential.</p></div>
-        </div>
-        <div class="setup-steps">
-          <article><span>1</span><div><h3>Install the CLI</h3><pre><code>go install github.com/ShamanicArts/clankspace/cmd/clank@latest</code></pre><p>Until prebuilt releases land, installation requires Go 1.26 or newer.</p></div></article>
-          <article><span>2</span><div><h3>Store the project key yourself</h3><div class="code-head"><span>Run in your terminal—not through the agent</span><button class="copy" data-copy="credential-output">Copy</button></div><pre id="credential-output"></pre><p>The hidden prompt keeps the token out of shell history, chat, repository files, and agent context.</p></div></article>
-          <article><span>3</span><div><h3>Give the agent the setup prompt</h3><p>The prompt below installs the skill, adds a lean repository instruction, verifies routing, and explains the behavioral boundary.</p></div></article>
-        </div>
-      </section>
-
-      <section id="prompt" class="chapter prompt-chapter">
-        <span class="eyebrow">07 · copy prompt</span><h2>Hand this to the agent in the repository.</h2>
-        <div class="prompt-note"><strong>The prompt cannot grant access.</strong><p>You still store the project key locally in the previous step. The agent receives the project pointer and operating rules, never the secret.</p></div>
-        <div class="code-head"><span>Agent onboarding prompt</span><button class="copy primary-copy" data-copy="agent-prompt">Copy prompt</button></div><pre id="agent-prompt" class="agent-prompt"></pre>
-      </section>
-
-      <section id="proof" class="chapter">
-        <span class="eyebrow">08 · recorded proof</span><h2>This is the real multi-instance flow, not a mock-up.</h2><p class="lead">The campaign used disposable synthetic identities and credentials. It registered two humans, paired a local replica, worked while cloud was stopped, reconciled, mirrored a separate self-host, and rejected a revoked replica.</p>
-        <div class="video-grid">
-          <article><video controls preload="metadata" playsinline src="/docs/media/01-owner-registration-and-workspace.mp4"></video><h3>Owner registration</h3><p>Bootstrap, email identity, project, repository, and invitation.</p></article>
-          <article><video controls preload="metadata" playsinline src="/docs/media/02-invite-multi-workspace-and-agent-key.mp4"></video><h3>Collaborator joins</h3><p>Invitation acceptance, two workspaces, and a project agent key.</p></article>
-          <article><video controls preload="metadata" playsinline src="/docs/media/03-pair-mirror-and-revoke.mp4"></video><h3>Replica lifecycle</h3><p>Pairing, self-hosted cloud mirror, authority, and revocation.</p></article>
-          <article><video controls preload="metadata" playsinline src="/docs/media/04-local-replica-account-and-log.mp4"></video><h3>Local replica</h3><p>Local account, offline context, and signed cloud reconciliation.</p></article>
-          <article><video controls preload="metadata" playsinline src="/docs/media/05-actual-pty-replay-redacted.mp4"></video><h3>Actual terminal replay</h3><p>The compiled CLI run, accelerated and credential-redacted.</p></article>
-          <article><video controls preload="metadata" playsinline src="/docs/media/06-mobile-responsive-project-log.mp4"></video><h3>Phone layout</h3><p>The human append-log window at 390 × 844.</p></article>
-        </div>
-        <details class="evidence-detail"><summary>What the campaign proved</summary><ol><li>Hosted owner registration and one-time email sign-in.</li><li>Invite acceptance and one account across several workspaces.</li><li>Project-scoped agent identity.</li><li>Local pairing and context retrieval while cloud was offline.</li><li>Reconciliation after cloud returned.</li><li>Independent self-host authority with an optional cloud mirror.</li><li>Signed bundle import into a third peer.</li><li>Revocation blocking a later peer write.</li></ol></details>
-      </section>
-
-      <section id="trust" class="chapter">
-        <span class="eyebrow">09 · trust boundary</span><h2>Useful for trusted collaborators. Honest about what it is not.</h2>
-        <div class="trust-grid"><article class="good"><h3>Protected now</h3><ul><li>Project-scoped, revocable agent keys</li><li>HTTP-only browser sessions and CSRF checks</li><li>One-time expiring email and invitation links</li><li>Signed, chained, bounded replica events</li><li>Encrypted installation and replica secrets at rest</li><li>Migration backups and downgrade refusal</li></ul></article><article class="boundary"><h3>Later hardening</h3><ul><li>Public registration and billing</li><li>Private-repository OAuth</li><li>Hosted-content end-to-end encryption</li><li>Account recovery operations</li><li>Transitive federation</li><li>Large internet-scale replication soak tests</li></ul></article></div>
-      </section>
-
-      <section id="reference" class="chapter reference">
-        <span class="eyebrow">10 · quick reference</span><h2>The commands agents normally need.</h2>
-        <div class="command-list"><div><code>clank context</code><span>Show the resolved project, server, credential source, repository, and Git state.</span></div><div><code>clank run start</code><span>Register the task and runtime provenance.</span></div><div><code>clank brief</code><span>Retrieve relevant intent and check active-work overlap.</span></div><div><code>clank why</code><span>Ask why a path, concept, or prior choice exists.</span></div><div><code>clank trajectory start</code><span>Publish active work when collision risk is meaningful.</span></div><div><code>clank note add</code><span>Record a concise durable implication and rationale.</span></div><div><code>clank run end</code><span>Close the run with outcome and verification.</span></div><div><code>clank mcp</code><span>Expose the same contract to any MCP-capable harness.</span></div></div>
-        <div class="reference-links"><a href="https://github.com/ShamanicArts/clankspace/blob/main/README.md">README</a><a href="https://github.com/ShamanicArts/clankspace/blob/main/docs/design/hosted-replication-spec.md">Hosted replication spec</a><a href="https://github.com/ShamanicArts/clankspace/blob/main/.agents/skills/clankspace/SKILL.md">Agent skill</a></div>
+        <details class="evidence"><summary>Implementation and test evidence</summary><p>The product was exercised across a hosted authority, offline local replica, independent self-host, cloud mirror, and revoked peer. The detailed report and recordings are validation artifacts, not required reading for setup.</p><p><a href="https://github.com/ShamanicArts/clankspace/blob/main/docs/research_results/2026-08-03-hosted-replication-e2e.md">Read the E2E result</a> · <a href="/docs/media/05-actual-pty-replay-redacted.mp4">Watch the redacted terminal run</a></p></details>
       </section>
     </main>
   </div>
-
-  <footer><strong>ClankSpace</strong><span>Accrued intent, not canonical law.</span><a href="/">Open the app</a></footer>
-  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="copy-toast" role="status" aria-live="polite"></div>
   <script src="/docs/docs.js" defer></script>
 </body>
 </html>

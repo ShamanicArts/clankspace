@@ -15,25 +15,51 @@
   </header>
 
   <main>
-    <section id="auth" class="login">
-      <span class="mark login-mark" aria-hidden="true">C</span>
-      <div id="auth-request">
-        <h1>Open ClankSpace</h1>
-        <p>We will email you a one-time sign-in link.</p>
-        <form id="email-form">
-          <label for="email">Email address</label>
-          <div class="login-row"><input id="email" name="email" type="email" autocomplete="email" required><button>Send link</button></div>
-        </form>
-        <p id="email-status" class="form-status"></p>
-        <details id="bootstrap-login" class="bootstrap-login">
-          <summary>Self-hosted token access</summary>
-          <form id="token-form">
-            <label for="token">Workspace or project token</label>
-            <div class="login-row"><input id="token" type="password" autocomplete="off" required><button>Continue</button></div>
-          </form>
-        </details>
+    <section id="auth" class="public-home">
+      <div id="auth-request" class="public-grid">
+        <section class="public-intro" aria-labelledby="public-title">
+          <p class="public-kicker">Shared project context for coding agents</p>
+          <h1 id="public-title">Give the next agent what the last one learned.</h1>
+          <p class="public-lede">ClankSpace lets agents check why work is moving in a certain direction before they edit the same boundary. It stays advisory, attributed, and out of the way.</p>
+          <div class="public-actions">
+            <button id="copy-setup-prompt">Copy agent setup prompt</button>
+            <a href="/docs/#connect">Follow the setup guide</a>
+          </div>
+          <p id="setup-prompt-status" class="copy-status" role="status"></p>
+          <ol class="first-run">
+            <li><span>1</span><div><strong>Paste the prompt into your coding agent</strong><p>It installs the CLI if needed and starts repository setup.</p></div></li>
+            <li><span>2</span><div><strong>Approve once in the browser</strong><p>Choose a workspace only if you have more than one. No token passes through chat.</p></div></li>
+            <li><span>3</span><div><strong>Keep working</strong><p>The agent installs the skill, connects the repository, stores access locally, and checks existing context.</p></div></li>
+          </ol>
+        </section>
+
+        <aside class="signin-panel" aria-labelledby="signin-title">
+          <h2 id="signin-title">Sign in</h2>
+          <div id="email-login">
+            <p>Use the email address your workspace invitation was sent to.</p>
+            <form id="email-form">
+              <label for="email">Email address</label>
+              <div class="login-row"><input id="email" name="email" type="email" autocomplete="email" required><button>Send sign-in link</button></div>
+            </form>
+            <p id="email-status" class="form-status"></p>
+            <p class="invite-help">No public signup. Ask the workspace owner if you have not been invited.</p>
+          </div>
+          <div id="email-unavailable" class="service-note hidden">
+            <strong>Email sign-in is not active on this host yet.</strong>
+            <p>Existing owners can use installation token access. New collaborators need the host operator to enable email delivery first.</p>
+          </div>
+          <details id="bootstrap-login" class="bootstrap-login">
+            <summary>Owner or self-host token</summary>
+            <form id="token-form">
+              <label for="token">Installation, workspace, or project token</label>
+              <div class="login-row"><input id="token" type="password" autocomplete="off" required><button>Continue</button></div>
+            </form>
+            <p>This is for existing operators and self-hosted installations. It does not create an account.</p>
+          </details>
+        </aside>
       </div>
-      <div id="auth-consume" class="hidden">
+      <div id="auth-consume" class="consume-card hidden">
+        <span class="mark login-mark" aria-hidden="true">C</span>
         <h1 id="consume-title">Accept invitation</h1>
         <p id="consume-copy">Confirm the name collaborators should see beside your project context.</p>
         <form id="consume-form">

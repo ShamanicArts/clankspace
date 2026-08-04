@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const latestSchemaVersion = 10
+const latestSchemaVersion = 11
 
 const hostedReplicationSchema = `
 ALTER TABLE workspaces ADD COLUMN slug TEXT NOT NULL DEFAULT '';
@@ -263,6 +263,27 @@ CREATE TABLE projection_blockers (
 CREATE INDEX idx_projection_blockers_workspace ON projection_blockers(workspace_id, created_at);
 `
 
+const setupRequestsSchema = `
+CREATE TABLE setup_requests (
+  id TEXT PRIMARY KEY,
+  device_code_hash TEXT NOT NULL UNIQUE,
+  user_code_hash TEXT NOT NULL UNIQUE,
+  code_challenge TEXT NOT NULL,
+  project_slug TEXT NOT NULL,
+  project_name TEXT NOT NULL,
+  repository_url TEXT NOT NULL DEFAULT '',
+  agent_name TEXT NOT NULL,
+  membership_id TEXT REFERENCES workspace_memberships(id),
+  project_id TEXT REFERENCES projects(id),
+  credential_ciphertext BLOB,
+  approved_at TEXT,
+  consumed_at TEXT,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX idx_setup_requests_expires ON setup_requests(expires_at, consumed_at);
+`
+
 func applyMigrations(db *sql.DB) error {
 	tx, err := db.Begin()
 	if err != nil {
@@ -351,6 +372,14 @@ func applyMigrations(db *sql.DB) error {
 			return fmt.Errorf("migration 10 projection blockers: %w", err)
 		}
 		if _, err = tx.Exec(`INSERT INTO schema_migrations(version,applied_at) VALUES(10,strftime('%Y-%m-%dT%H:%M:%fZ','now'))`); err != nil {
+			return err
+		}
+	}
+	if version < 11 {
+		if _, err = tx.Exec(setupRequestsSchema); err != nil {
+			return fmt.Errorf("migration 11 setup requests: %w", err)
+		}
+		if _, err = tx.Exec(`INSERT INTO schema_migrations(version,applied_at) VALUES(11,strftime('%Y-%m-%dT%H:%M:%fZ','now'))`); err != nil {
 			return err
 		}
 	}

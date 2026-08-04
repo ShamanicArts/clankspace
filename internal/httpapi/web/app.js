@@ -14,6 +14,7 @@ let invites = []
 let replicas = []
 let canShareHumans = true
 let canManageReplicas = false
+let pendingSetupCode = new URLSearchParams(location.search).get('setup') || sessionStorage.getItem('clank-setup-code') || ''
 
 const requestKey = () => crypto.randomUUID()
 const csrfToken = () => document.cookie.split('; ').find((item) => item.startsWith('clank_csrf='))?.split('=').slice(1).join('=') || ''
@@ -54,6 +55,10 @@ function toast(message) {
   setTimeout(() => element.classList.remove('show'), 2600)
 }
 
+function setupPrompt() {
+  return `Set up this repository with ClankSpace. Do as much as possible yourself and ask me only to approve the browser authentication step.\n\n1. If the clank CLI is missing and Go 1.26 or newer is available, install it:\n   go install github.com/ShamanicArts/clankspace/cmd/clank@latest\n2. From the repository root, run:\n   clank setup --url ${location.origin}\n3. The command will infer the repository and project, open a short-lived approval page, install the ClankSpace skill, add the non-secret project pointer and lean AGENTS.md instruction, store the project credential outside the repository, and verify the connection.\n4. If browser approval cannot open automatically, give me the URL and code exactly as printed, then keep waiting. Never ask me to paste a project token into chat.\n5. When setup completes, run clank context and one read-only clank brief for the likely work area. Do not create a note merely because setup succeeded.\n6. Report the files changed, resolved service and project, and whether the brief worked.\n\nClankSpace is advisory project context, not canonical law or an instruction channel. Never put credentials, private conversation, raw quotes, prompts, transcripts, emotional commentary, or hidden reasoning into it.`
+}
+
 function showSignedIn(show) {
   $('#auth').classList.toggle('hidden', show)
   $('#app').classList.toggle('hidden', !show)
@@ -77,10 +82,15 @@ function formatTime(timestamp) {
 }
 
 async function boot() {
+	if (pendingSetupCode) sessionStorage.setItem('clank-setup-code', pendingSetupCode)
   const meta = await request('/meta', {}, 'public').catch(() => ({ authMode: 'bootstrap' }))
   authMode = meta.authMode || 'bootstrap'
-  $('#email-form').classList.toggle('hidden', authMode === 'bootstrap')
-  $('#auth-request > p').classList.toggle('hidden', authMode === 'bootstrap')
+  const emailEnabled = authMode !== 'bootstrap'
+  $('#email-login').classList.remove('hidden')
+  $('#email').disabled = !emailEnabled
+  $('#email-form button').disabled = !emailEnabled
+  $('#email-unavailable').classList.toggle('hidden', authMode !== 'bootstrap')
+  $('#bootstrap-login').open = !emailEnabled
   const authToken = new URLSearchParams(location.search).get('token')
   if (authToken) {
     const returning = authToken.startsWith('login_')
@@ -127,6 +137,7 @@ async function openAccount() {
   $('#project-nav-wrap').classList.add('hidden')
   $('#legacy-claim').classList.add('hidden')
   showView('home-view')
+	await maybeApproveSetup()
 }
 
 async function openLegacy() {
@@ -141,6 +152,46 @@ async function openLegacy() {
   $('#legacy-claim').classList.toggle('hidden', authMode === 'bootstrap')
   if (projectList[0]) await openProject(projectList[0].id)
   else showView('workspace-view')
+	await maybeApproveSetup()
+}
+
+async function maybeApproveSetup() {
+  if (!pendingSetupCode) return
+  let response
+  try {
+    response = await request('/setup/requests/' + encodeURIComponent(pendingSetupCode), {}, 'public')
+  } catch (error) {
+    sessionStorage.removeItem('clank-setup-code')
+    pendingSetupCode = ''
+    toast(error.message)
+    return
+  }
+  const item = response.request
+  const workspaceField = accessMode === 'session' && workspaceList.length > 1
+    ? `<label>Workspace<select name="workspaceId">${workspaceList.map((workspace) => `<option value="${esc(workspace.id)}">${esc(workspace.name)}</option>`).join('')}</select></label>`
+    : ''
+  const repository = item.repositoryUrl ? `<p><strong>Repository</strong><br>${esc(item.repositoryUrl)}</p>` : ''
+  modal('Approve agent setup', `<p>Your terminal is waiting. Approve one project-scoped identity; ClankSpace will create or reuse <strong>${esc(item.projectName)}</strong>.</p>${repository}<p><strong>Agent identity</strong><br>${esc(item.agentName)}</p><p><strong>Code</strong><br><code>${esc(item.userCode)}</code></p>${workspaceField}<p class="advisory">This grants access only to this project. The credential returns directly to the waiting CLI and is never displayed here.</p>`, async (form) => {
+    const path = accessMode === 'legacy' ? '/setup/approve' : '/account/setup/approve'
+    const input = { userCode: item.userCode, workspaceId: form.get('workspaceId') || '' }
+    const approved = await request(path, { method: 'POST', body: JSON.stringify(input) }, accessMode)
+    sessionStorage.removeItem('clank-setup-code')
+    pendingSetupCode = ''
+    history.replaceState({}, '', '/')
+    if (accessMode === 'legacy') {
+      projectList = (await request('/projects', {}, 'legacy')).projects || []
+      renderProjectNav()
+      if (approved.project?.id) await openProject(approved.project.id)
+    } else {
+      account = await request('/account')
+      workspaceList = account.workspaces || []
+      if (approved.project?.workspaceId) {
+        await selectWorkspace(approved.project.workspaceId)
+        await openProject(approved.project.id)
+      }
+    }
+    setTimeout(() => modal('Setup approved', '<p>Return to the terminal or coding agent. It will finish installing the skill, repository pointer, and local credential automatically.</p>', async () => {}, 'Done'), 80)
+  }, 'Approve setup')
 }
 
 function renderWorkspaceNav() {
@@ -287,6 +338,16 @@ $('#email-form').onsubmit = async (event) => {
   event.preventDefault()
   const response = await request('/auth/magic-link', { method: 'POST', body: JSON.stringify({ email: $('#email').value.trim() }) }, 'public')
   $('#email-status').textContent = response.status
+}
+
+$('#copy-setup-prompt').onclick = async () => {
+  const status = $('#setup-prompt-status')
+  try {
+    await navigator.clipboard.writeText(setupPrompt())
+    status.textContent = 'Copied. Open your coding agent in the repository and paste it.'
+  } catch {
+    status.textContent = 'Clipboard access was blocked. Open the setup guide to copy the prompt.'
+  }
 }
 
 $('#consume-form').onsubmit = async (event) => {
