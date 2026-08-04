@@ -67,7 +67,7 @@
         <p>Setup URLs, verification codes, and intended-human invite URLs may be shared with that human. Installation, workspace, and project bearer tokens must not enter chat. With one workspace, the server uses it automatically; with none, it creates one during approval. The project token returns directly to the waiting CLI and is stored locally.</p>
 
         <h3>3. Done</h3>
-        <p>The agent reports the installed files, resolved service and project, and the result of its first read-only context check.</p>
+        <p>The agent must open and read the newly installed <code>.agents/skills/clankspace/SKILL.md</code> before running another ClankSpace command or continuing project work. It then follows the skill's startup workflow and reports the installed files, resolved service/project, and first read-only context result.</p>
 
         <details class="manual-setup">
           <summary>Manual setup and local-replica options</summary>
