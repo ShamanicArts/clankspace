@@ -393,6 +393,7 @@ func runCommand(ctx context.Context, c *client.Client, args []string) error {
 		f.StringVar(&id, "run", id, "run ID (alias for --id)")
 		outcome := f.String("outcome", "completed", "outcome")
 		verification := f.String("verification", "", "verification summary")
+		repository := f.String("repository", "", "attached repository ID (fills legacy runs only)")
 		branch := f.String("branch", "", "delivered git branch")
 		head := f.String("head", "", "delivered commit SHA")
 		pullRequest := f.String("pr", "", "pull request URL")
@@ -405,6 +406,10 @@ func runCommand(ctx context.Context, c *client.Client, args []string) error {
 		}
 		cwd, _ := os.Getwd()
 		delivery := detectRunDelivery(ctx, cwd)
+		if *repository == "" {
+			*repository = matchingRepositoryID(ctx, c, os.Getenv("CLANKSPACE_PROJECT"), gitOutput(cwd, "remote", "get-url", "origin"))
+		}
+		delivery.RepositoryID = *repository
 		if *branch != "" {
 			delivery.DeliveryBranch = *branch
 		}
@@ -435,7 +440,7 @@ func runCommand(ctx context.Context, c *client.Client, args []string) error {
 		if command == "link" {
 			o, e = c.LinkRunDelivery(ctx, id, delivery)
 		} else {
-			o, e = c.EndRun(ctx, id, domain.EndRunInput{Outcome: *outcome, Verification: *verification, DeliveryBranch: delivery.DeliveryBranch, HeadSHA: delivery.HeadSHA, PullRequestURL: delivery.PullRequestURL, PullRequestNumber: delivery.PullRequestNumber, PullRequestState: delivery.PullRequestState, MergeCommitSHA: delivery.MergeCommitSHA, MergedAt: delivery.MergedAt})
+			o, e = c.EndRun(ctx, id, domain.EndRunInput{Outcome: *outcome, Verification: *verification, RepositoryID: delivery.RepositoryID, DeliveryBranch: delivery.DeliveryBranch, HeadSHA: delivery.HeadSHA, PullRequestURL: delivery.PullRequestURL, PullRequestNumber: delivery.PullRequestNumber, PullRequestState: delivery.PullRequestState, MergeCommitSHA: delivery.MergeCommitSHA, MergedAt: delivery.MergedAt})
 		}
 		if e == nil {
 			printJSON(o)
@@ -832,6 +837,9 @@ func gitOutput(dir string, args ...string) string {
 }
 
 func matchingRepositoryID(ctx context.Context, c *client.Client, project, remote string) string {
+	if strings.TrimSpace(project) == "" {
+		return ""
+	}
 	local, err := githubsync.ParseRepository(remote)
 	if err != nil {
 		return ""
@@ -1050,7 +1058,7 @@ clank run link --id <run-id>
   Both commands detect the delivered branch and HEAD. With an installed, authenticated
   GitHub CLI they also detect the current pull request. Use link again after a pull request
   is opened or merged. Explicit overrides:
-  --branch <branch> --head <sha> --pr <url> --pr-number <n> --pr-state <state>
+  --repository <id> --branch <branch> --head <sha> --pr <url> --pr-number <n> --pr-state <state>
   --merge-commit <sha> --merged-at <RFC3339>
   --run is accepted as an alias for --id`)
 }

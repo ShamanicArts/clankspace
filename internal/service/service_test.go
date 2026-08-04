@@ -191,6 +191,21 @@ func TestRunDeliveryPreservesEvidenceAndRejectsForeignRepository(t *testing.T) {
 	if _, _, err = db.LinkRunDelivery(ctx, principal, "malformed-pr", run.ID, domain.LinkRunDeliveryInput{PullRequestURL: "%", PullRequestNumber: 9, PullRequestState: "open"}); err == nil {
 		t.Fatal("run accepted a malformed pull request URL")
 	}
+	legacy, _, err := svc.StartRun(ctx, principal, "legacy-run", domain.StartRunInput{ProjectID: project.ID, AgentName: "Legacy agent", Branch: "main"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	backfilled, _, err := db.LinkRunDelivery(ctx, principal, "legacy-backfill", legacy.ID, domain.LinkRunDeliveryInput{RepositoryID: repository.ID, DeliveryBranch: "feature/legacy", HeadSHA: "4444444444444444444444444444444444444444", PullRequestURL: "https://github.com/example/repo/pull/10", PullRequestNumber: 10, PullRequestState: "open"})
+	if err != nil || backfilled.RepositoryID != repository.ID || backfilled.PullRequestNumber != 10 {
+		t.Fatalf("legacy repository backfill = %#v, %v", backfilled, err)
+	}
+	other, _, err := db.UpsertRepository(ctx, principal, project.ID, "other-repository", domain.Repository{URL: "https://github.com/example/other", Host: "github.com", Owner: "example", Name: "other", Visibility: "public"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = db.LinkRunDelivery(ctx, principal, "replace-repository", legacy.ID, domain.LinkRunDeliveryInput{RepositoryID: other.ID}); err == nil {
+		t.Fatal("legacy repository backfill replaced an existing repository")
+	}
 }
 
 func TestProjectAgentIdentityIsScoped(t *testing.T) {

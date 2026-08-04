@@ -530,11 +530,11 @@ func (s *Store) StartRun(ctx context.Context, principal domain.Principal, key st
 
 func (s *Store) EndRun(ctx context.Context, principal domain.Principal, key, runID string, in domain.EndRunInput) (domain.Run, domain.Receipt, error) {
 	b, receipt, err := s.mutate(ctx, principal.WorkspaceID, "", principal.ID, principal.ID, runID, key, in, func(tx *sql.Tx) (string, string, any, error) {
-		if err := validateRunDeliveryTx(ctx, tx, runID, principal.ID, domain.LinkRunDeliveryInput{DeliveryBranch: in.DeliveryBranch, HeadSHA: in.HeadSHA, PullRequestURL: in.PullRequestURL, PullRequestNumber: in.PullRequestNumber, PullRequestState: in.PullRequestState, MergeCommitSHA: in.MergeCommitSHA, MergedAt: in.MergedAt}); err != nil {
+		if err := validateRunDeliveryTx(ctx, tx, runID, principal.ID, domain.LinkRunDeliveryInput{RepositoryID: in.RepositoryID, DeliveryBranch: in.DeliveryBranch, HeadSHA: in.HeadSHA, PullRequestURL: in.PullRequestURL, PullRequestNumber: in.PullRequestNumber, PullRequestState: in.PullRequestState, MergeCommitSHA: in.MergeCommitSHA, MergedAt: in.MergedAt}); err != nil {
 			return "", "", nil, err
 		}
 		t := now()
-		result, err := tx.ExecContext(ctx, `UPDATE runs SET ended_at=?,outcome=?,verification=?,delivery_branch=CASE WHEN ?='' THEN delivery_branch ELSE ? END,head_sha=CASE WHEN ?='' THEN head_sha ELSE ? END,pull_request_url=CASE WHEN ?='' THEN pull_request_url ELSE ? END,pull_request_number=CASE WHEN ?=0 THEN pull_request_number ELSE ? END,pull_request_state=CASE WHEN ?='' THEN pull_request_state ELSE ? END,merge_commit_sha=CASE WHEN ?='' THEN merge_commit_sha ELSE ? END,merged_at=COALESCE(?,merged_at) WHERE id=? AND principal_id=? AND ended_at IS NULL`, ts(t), in.Outcome, in.Verification, in.DeliveryBranch, in.DeliveryBranch, in.HeadSHA, in.HeadSHA, in.PullRequestURL, in.PullRequestURL, in.PullRequestNumber, in.PullRequestNumber, in.PullRequestState, in.PullRequestState, in.MergeCommitSHA, in.MergeCommitSHA, nullableTime(in.MergedAt), runID, principal.ID)
+		result, err := tx.ExecContext(ctx, `UPDATE runs SET ended_at=?,outcome=?,verification=?,repository_id=CASE WHEN repository_id IS NULL AND ?!='' THEN ? ELSE repository_id END,delivery_branch=CASE WHEN ?='' THEN delivery_branch ELSE ? END,head_sha=CASE WHEN ?='' THEN head_sha ELSE ? END,pull_request_url=CASE WHEN ?='' THEN pull_request_url ELSE ? END,pull_request_number=CASE WHEN ?=0 THEN pull_request_number ELSE ? END,pull_request_state=CASE WHEN ?='' THEN pull_request_state ELSE ? END,merge_commit_sha=CASE WHEN ?='' THEN merge_commit_sha ELSE ? END,merged_at=COALESCE(?,merged_at) WHERE id=? AND principal_id=? AND ended_at IS NULL`, ts(t), in.Outcome, in.Verification, in.RepositoryID, in.RepositoryID, in.DeliveryBranch, in.DeliveryBranch, in.HeadSHA, in.HeadSHA, in.PullRequestURL, in.PullRequestURL, in.PullRequestNumber, in.PullRequestNumber, in.PullRequestState, in.PullRequestState, in.MergeCommitSHA, in.MergeCommitSHA, nullableTime(in.MergedAt), runID, principal.ID)
 		if err != nil {
 			return "", "", nil, err
 		}
@@ -553,8 +553,8 @@ func (s *Store) EndRun(ctx context.Context, principal domain.Principal, key, run
 	}
 	var r domain.Run
 	err = json.Unmarshal(b, &r)
-	if err == nil && (in.DeliveryBranch != "" || in.HeadSHA != "" || in.PullRequestURL != "" || in.PullRequestNumber != 0 || in.PullRequestState != "" || in.MergeCommitSHA != "" || in.MergedAt != nil) {
-		linked, _, linkErr := s.LinkRunDelivery(ctx, principal, key+":delivery", runID, domain.LinkRunDeliveryInput{DeliveryBranch: in.DeliveryBranch, HeadSHA: in.HeadSHA, PullRequestURL: in.PullRequestURL, PullRequestNumber: in.PullRequestNumber, PullRequestState: in.PullRequestState, MergeCommitSHA: in.MergeCommitSHA, MergedAt: in.MergedAt})
+	if err == nil && (in.RepositoryID != "" || in.DeliveryBranch != "" || in.HeadSHA != "" || in.PullRequestURL != "" || in.PullRequestNumber != 0 || in.PullRequestState != "" || in.MergeCommitSHA != "" || in.MergedAt != nil) {
+		linked, _, linkErr := s.LinkRunDelivery(ctx, principal, key+":delivery", runID, domain.LinkRunDeliveryInput{RepositoryID: in.RepositoryID, DeliveryBranch: in.DeliveryBranch, HeadSHA: in.HeadSHA, PullRequestURL: in.PullRequestURL, PullRequestNumber: in.PullRequestNumber, PullRequestState: in.PullRequestState, MergeCommitSHA: in.MergeCommitSHA, MergedAt: in.MergedAt})
 		if linkErr != nil {
 			return domain.Run{}, receipt, linkErr
 		}
@@ -568,7 +568,7 @@ func (s *Store) LinkRunDelivery(ctx context.Context, principal domain.Principal,
 		if err := validateRunDeliveryTx(ctx, tx, runID, principal.ID, in); err != nil {
 			return "", "", nil, err
 		}
-		result, err := tx.ExecContext(ctx, `UPDATE runs SET delivery_branch=CASE WHEN ?='' THEN delivery_branch ELSE ? END,head_sha=CASE WHEN ?='' THEN head_sha ELSE ? END,pull_request_url=CASE WHEN ?='' THEN pull_request_url ELSE ? END,pull_request_number=CASE WHEN ?=0 THEN pull_request_number ELSE ? END,pull_request_state=CASE WHEN ?='' THEN pull_request_state ELSE ? END,merge_commit_sha=CASE WHEN ?='' THEN merge_commit_sha ELSE ? END,merged_at=COALESCE(?,merged_at) WHERE id=? AND principal_id=?`, in.DeliveryBranch, in.DeliveryBranch, in.HeadSHA, in.HeadSHA, in.PullRequestURL, in.PullRequestURL, in.PullRequestNumber, in.PullRequestNumber, in.PullRequestState, in.PullRequestState, in.MergeCommitSHA, in.MergeCommitSHA, nullableTime(in.MergedAt), runID, principal.ID)
+		result, err := tx.ExecContext(ctx, `UPDATE runs SET repository_id=CASE WHEN repository_id IS NULL AND ?!='' THEN ? ELSE repository_id END,delivery_branch=CASE WHEN ?='' THEN delivery_branch ELSE ? END,head_sha=CASE WHEN ?='' THEN head_sha ELSE ? END,pull_request_url=CASE WHEN ?='' THEN pull_request_url ELSE ? END,pull_request_number=CASE WHEN ?=0 THEN pull_request_number ELSE ? END,pull_request_state=CASE WHEN ?='' THEN pull_request_state ELSE ? END,merge_commit_sha=CASE WHEN ?='' THEN merge_commit_sha ELSE ? END,merged_at=COALESCE(?,merged_at) WHERE id=? AND principal_id=?`, in.RepositoryID, in.RepositoryID, in.DeliveryBranch, in.DeliveryBranch, in.HeadSHA, in.HeadSHA, in.PullRequestURL, in.PullRequestURL, in.PullRequestNumber, in.PullRequestNumber, in.PullRequestState, in.PullRequestState, in.MergeCommitSHA, in.MergeCommitSHA, nullableTime(in.MergedAt), runID, principal.ID)
 		if err != nil {
 			return "", "", nil, err
 		}
@@ -601,14 +601,28 @@ func validateRunDeliveryTx(ctx context.Context, tx *sql.Tx, runID, principalID s
 	if in.PullRequestState != "" && in.PullRequestState != "open" && in.PullRequestState != "closed" && in.PullRequestState != "merged" {
 		return errors.New("pull request state must be open, closed, or merged")
 	}
-	var repositoryID, host, owner, name, currentURL, currentState string
+	var projectID, repositoryID, currentURL, currentState string
 	var currentNumber int
-	err := tx.QueryRowContext(ctx, `SELECT COALESCE(r.repository_id,''),COALESCE(repo.host,''),COALESCE(repo.owner,''),COALESCE(repo.name,''),r.pull_request_url,r.pull_request_number,r.pull_request_state FROM runs r LEFT JOIN repositories repo ON repo.id=r.repository_id WHERE r.id=? AND r.principal_id=?`, runID, principalID).Scan(&repositoryID, &host, &owner, &name, &currentURL, &currentNumber, &currentState)
+	err := tx.QueryRowContext(ctx, `SELECT r.project_id,COALESCE(r.repository_id,''),r.pull_request_url,r.pull_request_number,r.pull_request_state FROM runs r WHERE r.id=? AND r.principal_id=?`, runID, principalID).Scan(&projectID, &repositoryID, &currentURL, &currentNumber, &currentState)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrNotFound
 	}
 	if err != nil {
 		return err
+	}
+	if in.RepositoryID != "" {
+		if repositoryID != "" && repositoryID != in.RepositoryID {
+			return errors.New("run repository cannot be replaced")
+		}
+		repositoryID = in.RepositoryID
+	}
+	var host, owner, name string
+	if repositoryID != "" {
+		if err = tx.QueryRowContext(ctx, `SELECT r.host,r.owner,r.name FROM repositories r JOIN project_repositories pr ON pr.repository_id=r.id WHERE r.id=? AND pr.project_id=?`, repositoryID, projectID).Scan(&host, &owner, &name); errors.Is(err, sql.ErrNoRows) {
+			return errors.New("repository is not attached to this project")
+		} else if err != nil {
+			return err
+		}
 	}
 	pullURL := in.PullRequestURL
 	if pullURL == "" {

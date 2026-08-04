@@ -39,6 +39,7 @@ Finish the password/direct-invite onboarding campaign, then fix the deeper dogfo
 - Three-way code/spec/test audit completed.
 - Authority and invite-rate-limit gaps fixed.
 - Schema v13, API, CLI, MCP, replication, snapshot, and dashboard support for delivery provenance implemented locally.
+- Migrated runs may backfill a missing repository during `run link` only when that repository is already attached to the same project; an existing run repository can never be replaced.
 - Focused origin/delivery inheritance and replica-convergence tests added.
 - Agent skill and active onboarding/design docs updated around automatic provenance and direct invitation links.
 
