@@ -16,6 +16,11 @@ It is not a canonical decision authority. A note records what an actor understoo
 
 The core specification is implemented and RC-009 validated the intended passive, proceed, conflict-pause, provenance, and incumbent/later-entrant behavior. The validated build is hosted on exe.dev behind the stable domain. A completed Railway round trip proved hosting portability; real collaborator onboarding, wider population measurement, and multi-tenant hardening remain outside the completed core.
 
+The approved next-stage contract for invite-only hosted accounts, multi-workspace use,
+self-hosting, and cloud/peer replication is
+[`hosted-replication-spec.md`](hosted-replication-spec.md). It extends this core without
+changing its advisory-memory semantics or agent-first product hierarchy.
+
 ## 2. Initial problem
 
 Shuv’s apparent voice work was actually groundwork for provider-neutral control of any session from any other session. Shamanic’s agents encountered permission, interruption, mobile, and startup regressions and reasonably considered reversing them without knowing the broader trajectory. Direct human synchronization becomes the bottleneck when both maintainers use agents at high speed.
@@ -266,3 +271,4 @@ The current exe.dev service stores SQLite under `/var/lib/clankspace` and runs o
 - [ ] Migrate the validated candidate to one persistent Railway service and rehearse recovery.
 - [ ] Route `clank.shamanicarts.dev` to Railway and retire the temporary exe.dev candidate after its rollback window.
 - [ ] Publish prebuilt pilot release binaries and onboard the first external collaborator project.
+- [ ] Implement and validate the approved hosted-account and workspace-replication extension.

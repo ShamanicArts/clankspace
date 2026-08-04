@@ -2,6 +2,8 @@ package localconfig
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,7 +32,7 @@ func TestResolveProjectAndStoredCredential(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.URL != "http://127.0.0.1:8091/" || got.Project != "demo" || got.Token != "project-token" {
+	if got.URL != "http://127.0.0.1:8091" || got.Project != "demo" || got.Token != "project-token" {
 		t.Fatalf("unexpected resolution: %#v", got)
 	}
 	if got.TokenSource != "credential_store" || got.ProjectFilePath != filepath.Join(root, ".clankspace.json") {
@@ -42,6 +44,42 @@ func TestResolveProjectAndStoredCredential(t *testing.T) {
 	}
 	if info.Mode().Perm() != 0600 {
 		t.Fatalf("credential mode is %o", info.Mode().Perm())
+	}
+}
+
+func TestSelectReachableUsesCredentialedFallback(t *testing.T) {
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { http.Error(w, "down", http.StatusServiceUnavailable) }))
+	defer primary.Close()
+	fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/readyz" {
+			t.Fatalf("path = %s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer fallback.Close()
+	root := t.TempDir()
+	body, _ := json.Marshal(ProjectFile{URL: primary.URL, FallbackURLs: []string{fallback.URL}, Project: "demo"})
+	if err := os.WriteFile(filepath.Join(root, ".clankspace.json"), body, 0600); err != nil {
+		t.Fatal(err)
+	}
+	credentials := filepath.Join(t.TempDir(), "credentials.json")
+	t.Setenv("CLANKSPACE_CREDENTIALS_FILE", credentials)
+	t.Setenv("CLANKSPACE_URL", "")
+	t.Setenv("CLANKSPACE_PROJECT", "")
+	t.Setenv("CLANKSPACE_TOKEN", "")
+	if err := StoreCredential(credentials, primary.URL, "demo", "primary-token"); err != nil {
+		t.Fatal(err)
+	}
+	if err := StoreCredential(credentials, fallback.URL, "demo", "fallback-token"); err != nil {
+		t.Fatal(err)
+	}
+	resolved, err := Resolve(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolved = SelectReachable(t.Context(), resolved)
+	if resolved.URL != fallback.URL || resolved.Token != "fallback-token" {
+		t.Fatalf("fallback resolution = %#v", resolved)
 	}
 }
 

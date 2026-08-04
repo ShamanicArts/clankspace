@@ -24,6 +24,8 @@ Start this workflow only once the human explicitly asks you to inspect, plan, im
 5. Before planning material work, run `clank brief --run <id> --objective "..." --paths "..."`.
 6. After alignment and before substantial or collision-prone edits, publish the active objective, rationale, and path scope with `clank trajectory start`.
 
+Repository routing may select a healthy local replica or a configured cloud fallback. Treat that choice as transport, not as a change in project meaning. Do not run `clank sync once` before every command: normal writes are local and synchronization is an installation concern. If a command reports a replica gap, revocation, or unavailable authority operation, surface that exact condition rather than bypassing it or silently choosing a different workspace.
+
 ## Handle conflicting context
 
 Classify retrieved context before deciding whether to interrupt the human. Use two separate axes:
@@ -74,6 +76,8 @@ Append only when another competent collaborator might change, pause, or reinterp
 Paraphrase the minimum professional project implication. Preserve who led it, its basis, the run, paths, repository/PR/commit evidence, and verification state when available.
 
 Never record routine narration, full diffs, raw messages, transcripts, exact quotes, prompts, chain-of-thought, credentials, private affairs, insults, emotion, or speculative motives.
+
+Replication does not make a record more authoritative. A note copied from another instance is still attributed, time-bound, advisory evidence. Concurrent successors may leave an older note marked `contested`; preserve both rationales and ask the human only when the current task actually depends on choosing between them.
 
 ## Finish
 

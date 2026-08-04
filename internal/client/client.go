@@ -31,6 +31,11 @@ func (c *Client) Do(ctx context.Context, method, path string, in, out any) error
 	return c.DoWithKey(ctx, method, path, key, in, out)
 }
 
+func (c *Client) RequestMagicLink(ctx context.Context, email string) error {
+	var out map[string]string
+	return c.Do(ctx, http.MethodPost, "/auth/magic-link", map[string]string{"email": email}, &out)
+}
+
 func (c *Client) DoWithKey(ctx context.Context, method, path, idempotencyKey string, in, out any) error {
 	var body io.Reader
 	if in != nil {
@@ -79,6 +84,22 @@ func (c *Client) ListProjects(ctx context.Context) ([]domain.Project, error) {
 	}
 	err := c.Do(ctx, "GET", "/projects", nil, &o)
 	return o.Projects, err
+}
+
+func (c *Client) ListWorkspaces(ctx context.Context) ([]domain.Workspace, error) {
+	var out struct {
+		Workspaces []domain.Workspace `json:"workspaces"`
+	}
+	err := c.Do(ctx, http.MethodGet, "/admin/workspaces", nil, &out)
+	return out.Workspaces, err
+}
+
+func (c *Client) CreateWorkspace(ctx context.Context, slug, name string) (domain.Workspace, error) {
+	var out struct {
+		Workspace domain.Workspace `json:"workspace"`
+	}
+	err := c.Do(ctx, http.MethodPost, "/admin/workspaces", map[string]string{"slug": slug, "name": name}, &out)
+	return out.Workspace, err
 }
 func (c *Client) CreateProject(ctx context.Context, slug, name, description string) (domain.Project, error) {
 	var o struct {
@@ -152,4 +173,39 @@ func (c *Client) AttachRepository(ctx context.Context, project, url string) (dom
 	}
 	err := c.Do(ctx, "POST", "/projects/"+project+"/repositories", map[string]string{"url": url}, &o)
 	return o.Repository, err
+}
+
+func (c *Client) JoinReplica(ctx context.Context, remoteURL, code string) (domain.Workspace, error) {
+	var out struct {
+		Workspace domain.Workspace `json:"workspace"`
+	}
+	err := c.Do(ctx, http.MethodPost, "/admin/replica/join", map[string]string{"remoteUrl": remoteURL, "code": code}, &out)
+	return out.Workspace, err
+}
+
+func (c *Client) MirrorReplica(ctx context.Context, workspaceID, remoteURL, code string) (domain.Workspace, error) {
+	var out struct {
+		Workspace domain.Workspace `json:"workspace"`
+	}
+	err := c.Do(ctx, http.MethodPost, "/admin/replica/mirror", map[string]string{"workspaceId": workspaceID, "remoteUrl": remoteURL, "code": code}, &out)
+	return out.Workspace, err
+}
+
+func (c *Client) SyncOnce(ctx context.Context) error {
+	var out map[string]string
+	return c.Do(ctx, http.MethodPost, "/admin/sync", map[string]string{}, &out)
+}
+
+func (c *Client) ExportWorkspaceBundle(ctx context.Context, workspaceID string) (domain.WorkspaceBundle, error) {
+	var out domain.WorkspaceBundle
+	err := c.Do(ctx, http.MethodGet, "/admin/workspaces/"+workspaceID+"/bundle", nil, &out)
+	return out, err
+}
+
+func (c *Client) ImportWorkspaceBundle(ctx context.Context, bundle domain.WorkspaceBundle) (domain.Workspace, error) {
+	var out struct {
+		Workspace domain.Workspace `json:"workspace"`
+	}
+	err := c.Do(ctx, http.MethodPost, "/admin/bundles/import", bundle, &out)
+	return out.Workspace, err
 }

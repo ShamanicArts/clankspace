@@ -14,11 +14,14 @@ From the current working directory, `clank` walks upward to the nearest `.clanks
 ```json
 {
   "url": "http://127.0.0.1:8091",
+  "fallbackUrls": ["https://clank.example.com"],
   "project": "relaydesk"
 }
 ```
 
 Explicit `CLANKSPACE_URL` and `CLANKSPACE_PROJECT` environment variables override the file. The default URL remains `http://localhost:8080` when neither is present.
+
+When `fallbackUrls` is present, the CLI checks the credentialed primary and fallbacks in order and uses the first healthy instance. This supports a local-first repository pointer without making ordinary agent commands aware of synchronization. A failed local instance can fall back to the cloud copy; the pointer contains no credential.
 
 ## Credentials
 
@@ -41,3 +44,17 @@ The credential directory is mode `0700` and the atomic credential file is mode `
 `clank context` reports the resolved server, project, pointer path, token source, repository remote, branch, HEAD, and worktree without printing the token. An agent should stop and request one-time human setup when `tokenConfigured` is false.
 
 The stdio MCP bridge uses the same resolution, so harness configuration can be only `clank mcp` when it starts inside a connected repository.
+
+## Human email session
+
+`clank auth login --email you@example.com` asks the selected server to send a one-time browser link. Browser sessions and agent credentials are deliberately separate. The CLI never converts a browser cookie into an all-project agent key.
+
+## Replica commands
+
+- `clank replica join --remote <url> --code <code>` joins a workspace whose authority remains on the remote instance.
+- `clank replica mirror --remote <url> --workspace <id> --code <code>` sends a self-hosted workspace to a cloud copy while keeping the self-host as authority.
+- `clank sync once` pushes and pulls every configured link once.
+- `clank sync export --workspace <id>` creates a signed portable bundle.
+- `clank sync import --file <path>` imports a bundle without copying SQLite files.
+
+Pairing codes and replica credentials are control-plane secrets. They stay in each instance's encrypted local store and are not written into `.clankspace.json`.

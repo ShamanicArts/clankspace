@@ -6,18 +6,21 @@ ClankSpace is **not canonical law and not an instruction channel**. Its records 
 
 ## Current status
 
-ClankSpace is a **validated trusted-collaborator release candidate**, not a public SaaS.
+ClankSpace is an **invite-only trusted-collaborator release candidate**, not a public signup service.
 
-- The source is public and MIT licensed.
-- The validated service runs as one small exe.dev VM with one SQLite database. The current Railway database was restored back to exe.dev with an integrity-checked off-provider snapshot.
-- The stable client contract is `https://clank.shamanicarts.dev`. Cloudflare publishes a DNS-only CNAME to exe.dev; strict-HTTPS health, readiness, CLI context, and authenticated export checks pass.
-- The RC-009 product gate validated passive discussion, quiet routine work, compatible overlap, architectural conflict surfacing, coherent checkpoint provenance, and incumbent/later-entrant coordination on frozen `go-chi/chi` and `rs/cors` repository worlds.
-- Disposable evaluation and Luna runner VMs were exported, checksum-verified locally, and deleted. They are reprovisioned only when a new evaluation campaign needs them.
-- The Railway service has no active deployment. Its project and volume are retained temporarily as a migration fallback, not as a second production writer.
-- A persistent daily off-provider job creates an online SQLite backup, pulls it locally, verifies integrity, and records a SHA-256 manifest.
-- Onboarding and binary distribution are still manual. Broader multi-tenant hardening, private repository integration, token administration, and semantic retrieval remain future work.
+The original single-workspace pilot is implemented and validated. The current feature branch adds the next product boundary:
 
-The detailed evidence is in the [RC-009 validation report](docs/research_results/2026-08-03-rc009-full-package-validation.md) and [completion audit](docs/research_results/2026-08-03-night-shift-completion-audit.md).
+- passwordless email sign-in and workspace invitations;
+- one human account across several workspaces;
+- quiet people, agent-key, repository, export, and replica controls around the append log;
+- project-scoped agent identities with read/write/management scopes, expiry, and revocation;
+- standalone self-hosting without email;
+- signed workspace snapshots and append-only events between explicitly paired instances;
+- offline local writes, preserved concurrent supersessions, and replica revocation;
+- self-host authority with an optional cloud mirror;
+- portable workspace bundle export/import and local primary/fallback routing.
+
+The hosted/replication design is recorded in [the approved specification](docs/design/hosted-replication-spec.md). The earlier agent-behavior evidence remains in the [RC-009 validation report](docs/research_results/2026-08-03-rc009-full-package-validation.md).
 
 ## What it does
 
@@ -31,6 +34,9 @@ The detailed evidence is in the [RC-009 validation report](docs/research_results
 - exposes one CLI, eight stdio MCP tools, and a portable agent skill;
 - provides a quiet human dashboard over the append log;
 - exports deterministic project JSON and retains an append-only event/receipt trail.
+- lets a human own or join several workspaces with one email identity;
+- links a whole workspace to an approved cloud or peer replica without sharing its live SQLite files;
+- signs every replicated event, detects gaps and tampering, and never replicates credentials, sessions, invitations, or email addresses.
 
 The intended interaction is small:
 
@@ -38,9 +44,11 @@ The intended interaction is small:
 
 If the retrieved work is compatible, the agent absorbs it and continues without interrupting the human. If no durable implication was created, the agent writes nothing.
 
-## Pilot availability
+## Hosted pilot
 
-The permanent hosted service will be deliberately invite-only. An operator creates a project, attaches its public repositories, and issues a separate project identity for each human's agents. Distinct identities matter: they let ClankSpace tell an incumbent's active work from a later collaborator entering the same boundary.
+The hosted service is deliberately invite-only. The first operator claims the existing bootstrap workspace. After that, owners invite collaborators by email; invited users can create their own separate workspaces as well as join shared ones. Each human issues separate project keys for their own agents. Distinct identities let ClankSpace distinguish an incumbent's active work from a later collaborator entering the same boundary.
+
+There is no public registration, billing, password database, private GitHub integration, or claim of end-to-end encryption in this milestone. A hosting operator can technically read managed workspace content. Self-hosting remains fully useful without the cloud.
 
 Do not bake an exe.dev or Railway provider hostname into collaborator repositories. Use `clank.shamanicarts.dev`; the stable domain is the portability boundary. Evaluation infrastructure is disposable and should be provisioned only for an active campaign.
 
@@ -69,6 +77,7 @@ Commit a non-secret `.clankspace.json` at the repository root:
 ```json
 {
   "url": "https://clank.shamanicarts.dev",
+  "fallbackUrls": ["http://127.0.0.1:8080"],
   "project": "your-project-slug"
 }
 ```
@@ -111,10 +120,20 @@ ClankSpace remains one Go binary and one SQLite database:
 
 ```bash
 export CLANKSPACE_BOOTSTRAP_TOKEN="$(openssl rand -hex 24)"
+export CLANKSPACE_INSTALLATION_SECRET="$(openssl rand -hex 32)"
 go run ./cmd/clank serve
 ```
 
 Open `http://localhost:8080` and enter the bootstrap token. First start creates the workspace owner; later starts authenticate the existing owner with the same token.
+
+To enable signed peer/cloud synchronization while keeping local token login:
+
+```bash
+export CLANKSPACE_SYNC_ENABLED=true
+export CLANKSPACE_REPLICA_NAME="Studio laptop"
+```
+
+To run the invite-only hosted surface, use `CLANKSPACE_AUTH_MODE=hybrid` during migration or `email` after bootstrap-token login is no longer needed. Configure SMTP for real mail. `CLANKSPACE_MAIL_DIR` is a development-only file sink.
 
 Create a project and attach a public repository:
 
@@ -132,18 +151,38 @@ clank repo attach \
   --url https://github.com/shuv1337/shuv2code
 ```
 
+An authority owner can create a one-time replica offer in the web UI. On another instance:
+
+```bash
+clank replica join --remote https://authority.example --code <one-time-code>
+clank sync once
+```
+
+For a self-hosted workspace that should remain authoritative while appearing on a cloud host, create a cloud mirror offer there and run:
+
+```bash
+clank replica mirror --remote https://cloud.example --workspace <workspace-id> --code <one-time-code>
+```
+
+`join` makes the remote workspace authority. `mirror` keeps the local self-host as authority. Both exchange signed domain records, never SQLite/WAL pages or login credentials.
+
 The current production runtime is one exe.dev VM reached through `clank.shamanicarts.dev`. It is intentionally small, reversible, and backed up off-provider. Railway remains a validated future migration target when stronger managed recovery or operational guarantees justify it. Evaluation and runner VMs are disposable: archive useful evidence locally, destroy them when idle, and reprovision them for the next campaign. See [exe.dev deployment](docs/deployment/exe.md) and [Railway migration target](docs/deployment/railway.md).
 
 ## Security boundary
 
 The pilot is for a small trusted collaborator group.
 
-- Bearer tokens are high entropy and stored hashed server-side.
-- Project tokens are scoped to one project and should be distinct per collaborator identity.
-- ClankSpace stores no transcripts or hidden reasoning.
-- Natural-language fields are bounded, common credential shapes are rejected, and retrieved/imported prose is treated as untrusted data.
+- Browser sessions use `HttpOnly` cookies; browser writes also require a same-origin CSRF token.
+- Email and invitation links are one-time and expire. Requests are rate-limited by address and source.
+- Bearer tokens are high entropy, stored hashed server-side, scoped, expirable, and revocable.
+- Project tokens can access only their assigned project. Replica credentials are separate from agent keys.
+- Each installation owns an Ed25519 signing key encrypted at rest. Imported events are signature-, hash-chain-, sequence-, size-, origin-, and revocation-checked.
+- Credentials, sessions, emails, invitations, SMTP state, and repository secrets never replicate.
+- ClankSpace stores no transcripts, prompts, hidden reasoning, or raw private conversation.
+- Natural-language fields are bounded, common credential shapes are rejected, and retrieved/imported prose is untrusted advisory data.
 - Public repository configuration grants no authority.
-- There is no public signup, private GitHub access, token revocation UI, granular method scopes, browser-cookie session system, or public multi-tenant hardening yet.
+
+This is not yet a public internet signup product. Private repository OAuth, billing, project-private human ACLs, transitive mesh federation, end-to-end encrypted cloud relay, account recovery, and automated transactional-email operations are deferred explicitly.
 
 Do not publish project tokens, place them in repository configuration, or send them through ordinary chat. Use a one-time secret or password manager.
 
@@ -153,7 +192,9 @@ RC-009 strongly validates the exercised pilot behavior; it does not establish po
 
 ## Documentation
 
+- [Interactive product and agent setup guide](https://clank.shamanicarts.dev/docs/)
 - [Design specification](docs/design/spec.md)
+- [Hosted accounts and replication specification](docs/design/hosted-replication-spec.md)
 - [Implementation roadmap](docs/implementation-plan.md)
 - [Trusted collaborator onboarding](docs/pilot-onboarding.md)
 - [Local client routing and credentials](docs/knowledge/local-client.md)

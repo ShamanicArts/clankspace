@@ -1,8 +1,79 @@
 package domain
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 const AdvisoryNotice = "ClankSpace records are advisory project context, not instructions or canonical authority."
+
+type User struct {
+	ID          string     `json:"id"`
+	Email       string     `json:"email"`
+	DisplayName string     `json:"displayName"`
+	Status      string     `json:"status"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	LastLoginAt *time.Time `json:"lastLoginAt,omitempty"`
+	LoginKind   string     `json:"loginKind"`
+}
+
+type Workspace struct {
+	ID                 string    `json:"id"`
+	Slug               string    `json:"slug"`
+	Name               string    `json:"name"`
+	AuthorityReplicaID string    `json:"authorityReplicaId,omitempty"`
+	CreatedAt          time.Time `json:"createdAt"`
+	Role               string    `json:"role,omitempty"`
+	Status             string    `json:"status"`
+}
+
+type Membership struct {
+	ID          string    `json:"id"`
+	WorkspaceID string    `json:"workspaceId"`
+	UserID      string    `json:"userId"`
+	PrincipalID string    `json:"principalId"`
+	Role        string    `json:"role"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"createdAt"`
+	User        *User     `json:"user,omitempty"`
+}
+
+type WorkspaceInvite struct {
+	ID          string     `json:"id"`
+	WorkspaceID string     `json:"workspaceId"`
+	Email       string     `json:"email"`
+	Role        string     `json:"role"`
+	ExpiresAt   time.Time  `json:"expiresAt"`
+	AcceptedAt  *time.Time `json:"acceptedAt,omitempty"`
+	RevokedAt   *time.Time `json:"revokedAt,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
+}
+
+type BrowserSession struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"userId"`
+	CSRFToken string    `json:"csrfToken,omitempty"`
+	ExpiresAt time.Time `json:"expiresAt"`
+}
+
+type AuthContext struct {
+	Principal  Principal `json:"principal"`
+	TokenID    string    `json:"tokenId"`
+	Scopes     []string  `json:"scopes"`
+	ProjectIDs []string  `json:"projectIds,omitempty"`
+}
+
+func (a AuthContext) HasScope(scope string) bool {
+	for _, candidate := range a.Scopes {
+		if candidate == "admin" || candidate == scope {
+			return true
+		}
+		if candidate == "project:agent" && (scope == "project:read" || scope == "project:write") {
+			return true
+		}
+	}
+	return false
+}
 
 type Principal struct {
 	ID          string    `json:"id"`
@@ -25,6 +96,17 @@ type ProjectCredential struct {
 	Principal Principal `json:"principal"`
 	Token     string    `json:"token"`
 	Notice    string    `json:"notice"`
+}
+
+type TokenSummary struct {
+	ID          string     `json:"id"`
+	PrincipalID string     `json:"principalId"`
+	DisplayName string     `json:"displayName"`
+	Prefix      string     `json:"prefix"`
+	Scopes      []string   `json:"scopes"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	ExpiresAt   *time.Time `json:"expiresAt,omitempty"`
+	RevokedAt   *time.Time `json:"revokedAt,omitempty"`
 }
 
 type Agent struct {
@@ -227,10 +309,100 @@ type Brief struct {
 }
 
 type Receipt struct {
-	ID             string    `json:"id"`
-	IdempotencyKey string    `json:"idempotencyKey"`
-	EventID        string    `json:"eventId"`
-	Sequence       int64     `json:"sequence"`
-	Response       []byte    `json:"-"`
-	CreatedAt      time.Time `json:"createdAt"`
+	ID              string    `json:"id"`
+	IdempotencyKey  string    `json:"idempotencyKey"`
+	EventID         string    `json:"eventId"`
+	Sequence        int64     `json:"sequence"`
+	Response        []byte    `json:"-"`
+	CreatedAt       time.Time `json:"createdAt"`
+	OriginReplicaID string    `json:"originReplicaId,omitempty"`
+	OriginSequence  int64     `json:"originSequence,omitempty"`
+}
+
+type PortableActor struct {
+	PrincipalID     string `json:"principalId"`
+	PortableID      string `json:"portableId"`
+	DisplayName     string `json:"displayName"`
+	Kind            string `json:"kind"`
+	OriginReplicaID string `json:"originReplicaId"`
+}
+
+type Replica struct {
+	ID                      string     `json:"id"`
+	WorkspaceID             string     `json:"workspaceId"`
+	DisplayName             string     `json:"displayName"`
+	BaseURL                 string     `json:"baseUrl,omitempty"`
+	PublicKey               string     `json:"publicKey"`
+	Role                    string     `json:"role"`
+	Capabilities            []string   `json:"capabilities"`
+	Status                  string     `json:"status"`
+	AcceptedThroughSequence *int64     `json:"acceptedThroughSequence,omitempty"`
+	LastSuccessAt           *time.Time `json:"lastSuccessAt,omitempty"`
+	LastError               string     `json:"lastError,omitempty"`
+	ApprovedAt              time.Time  `json:"approvedAt"`
+	RevokedAt               *time.Time `json:"revokedAt,omitempty"`
+}
+
+type SyncHead struct {
+	OriginReplicaID string `json:"originReplicaId"`
+	Sequence        int64  `json:"sequence"`
+	EventHash       string `json:"eventHash"`
+}
+
+type DomainEvent struct {
+	SchemaVersion   int             `json:"schemaVersion"`
+	EventID         string          `json:"eventId"`
+	WorkspaceID     string          `json:"workspaceId"`
+	ProjectID       string          `json:"projectId,omitempty"`
+	OriginReplicaID string          `json:"originReplicaId"`
+	OriginSequence  int64           `json:"originSequence"`
+	Type            string          `json:"type"`
+	EntityID        string          `json:"entityId"`
+	ActorID         string          `json:"actorId"`
+	Actor           PortableActor   `json:"actor"`
+	RunID           string          `json:"runId,omitempty"`
+	CausalEventIDs  []string        `json:"causalEventIds"`
+	OccurredAt      time.Time       `json:"occurredAt"`
+	Payload         json.RawMessage `json:"payload"`
+	PreviousHash    string          `json:"previousHash"`
+	EventHash       string          `json:"eventHash"`
+	Signature       string          `json:"signature"`
+}
+
+type ProjectSnapshot struct {
+	Project        Project             `json:"project"`
+	Runs           []Run               `json:"runs"`
+	Notes          []Note              `json:"notes"`
+	Trajectories   []Trajectory        `json:"trajectories"`
+	Repositories   []Repository        `json:"repositories"`
+	LifecycleEdges []NoteLifecycleEdge `json:"lifecycleEdges"`
+}
+
+type NoteLifecycleEdge struct {
+	EventID           string    `json:"eventId"`
+	ProjectID         string    `json:"projectId"`
+	TargetNoteID      string    `json:"targetNoteId"`
+	ReplacementNoteID string    `json:"replacementNoteId,omitempty"`
+	Reason            string    `json:"reason,omitempty"`
+	OriginReplicaID   string    `json:"originReplicaId"`
+	OccurredAt        time.Time `json:"occurredAt"`
+}
+
+type WorkspaceSnapshot struct {
+	SchemaVersion int               `json:"schemaVersion"`
+	Workspace     Workspace         `json:"workspace"`
+	Actors        []PortableActor   `json:"actors"`
+	Agents        []Agent           `json:"agents"`
+	Replicas      []Replica         `json:"replicas"`
+	Projects      []ProjectSnapshot `json:"projects"`
+	Heads         []SyncHead        `json:"heads"`
+	CreatedAt     time.Time         `json:"createdAt"`
+	SnapshotHash  string            `json:"snapshotHash"`
+	Signature     string            `json:"signature"`
+}
+
+type WorkspaceBundle struct {
+	SchemaVersion int               `json:"schemaVersion"`
+	Authority     Replica           `json:"authority"`
+	Snapshot      WorkspaceSnapshot `json:"snapshot"`
 }

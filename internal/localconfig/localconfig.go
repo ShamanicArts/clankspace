@@ -1,19 +1,29 @@
 package localconfig
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const defaultURL = "http://localhost:8080"
 
 type ProjectFile struct {
-	URL     string `json:"url"`
-	Project string `json:"project"`
+	URL          string   `json:"url"`
+	FallbackURLs []string `json:"fallbackUrls,omitempty"`
+	Project      string   `json:"project"`
+}
+
+type Endpoint struct {
+	URL         string
+	Token       string
+	TokenSource string
 }
 
 type Resolved struct {
@@ -23,6 +33,8 @@ type Resolved struct {
 	TokenSource     string
 	ProjectFilePath string
 	CredentialsPath string
+	FallbackURLs    []string
+	Candidates      []Endpoint
 }
 
 type credential struct {
@@ -52,6 +64,7 @@ func Resolve(start string) (Resolved, error) {
 		URL:             first(os.Getenv("CLANKSPACE_URL"), projectFile.URL, defaultURL),
 		Project:         first(os.Getenv("CLANKSPACE_PROJECT"), projectFile.Project),
 		ProjectFilePath: projectFilePath,
+		FallbackURLs:    projectFile.FallbackURLs,
 	}
 	resolved.CredentialsPath, err = credentialsPath()
 	if err != nil {
@@ -60,16 +73,64 @@ func Resolve(start string) (Resolved, error) {
 	if token := strings.TrimSpace(os.Getenv("CLANKSPACE_TOKEN")); token != "" {
 		resolved.Token = token
 		resolved.TokenSource = "environment"
+		resolved.Candidates = endpointCandidates(resolved, token, "environment", credentialFile{})
 		return resolved, nil
 	}
-	resolved.Token, err = loadCredential(resolved.CredentialsPath, resolved.URL, resolved.Project)
+	file, err := readCredentials(resolved.CredentialsPath)
 	if err != nil {
 		return Resolved{}, err
 	}
-	if resolved.Token != "" {
-		resolved.TokenSource = "credential_store"
+	resolved.Candidates = endpointCandidates(resolved, "", "", file)
+	if len(resolved.Candidates) > 0 {
+		resolved.URL, resolved.Token, resolved.TokenSource = resolved.Candidates[0].URL, resolved.Candidates[0].Token, resolved.Candidates[0].TokenSource
 	}
 	return resolved, nil
+}
+
+func endpointCandidates(resolved Resolved, explicitToken, explicitSource string, file credentialFile) []Endpoint {
+	urls := append([]string{resolved.URL}, resolved.FallbackURLs...)
+	seen := map[string]bool{}
+	items := []Endpoint{}
+	for _, candidateURL := range urls {
+		candidateURL = normalizeURL(candidateURL)
+		if candidateURL == "" || seen[candidateURL] {
+			continue
+		}
+		seen[candidateURL] = true
+		token, source := explicitToken, explicitSource
+		if token == "" {
+			for _, item := range file.Credentials {
+				if normalizeURL(item.URL) == candidateURL && item.Project == resolved.Project {
+					token, source = strings.TrimSpace(item.Token), "credential_store"
+					break
+				}
+			}
+		}
+		items = append(items, Endpoint{URL: candidateURL, Token: token, TokenSource: source})
+	}
+	return items
+}
+
+func SelectReachable(ctx context.Context, resolved Resolved) Resolved {
+	client := &http.Client{Timeout: 1500 * time.Millisecond}
+	for _, endpoint := range resolved.Candidates {
+		if endpoint.Token == "" {
+			continue
+		}
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint.URL+"/readyz", nil)
+		if err != nil {
+			continue
+		}
+		response, err := client.Do(request)
+		if err == nil {
+			response.Body.Close()
+			if response.StatusCode >= 200 && response.StatusCode < 300 {
+				resolved.URL, resolved.Token, resolved.TokenSource = endpoint.URL, endpoint.Token, endpoint.TokenSource
+				return resolved
+			}
+		}
+	}
+	return resolved
 }
 
 func StoreCredential(path, url, project, token string) error {
@@ -102,6 +163,30 @@ func StoreCredential(path, url, project, token string) error {
 		file.Credentials = append(file.Credentials, credential{URL: url, Project: project, Token: token})
 	}
 	file.Version = 1
+	return writeCredentials(path, file)
+}
+
+func RemoveCredential(path, url, project string) error {
+	if path == "" {
+		var err error
+		path, err = credentialsPath()
+		if err != nil {
+			return err
+		}
+	}
+	file, err := readCredentials(path)
+	if err != nil {
+		return err
+	}
+	url = normalizeURL(url)
+	filtered := file.Credentials[:0]
+	for _, item := range file.Credentials {
+		if normalizeURL(item.URL) == url && item.Project == strings.TrimSpace(project) {
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	file.Credentials = filtered
 	return writeCredentials(path, file)
 }
 

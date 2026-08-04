@@ -9,71 +9,96 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/"><span class="mark" aria-hidden="true">C</span><span>ClankSpace</span></a>
+    <a class="brand" href="/" id="brand-home"><span class="mark" aria-hidden="true">C</span><span>ClankSpace</span></a>
     <span class="product-note">Project context for agents</span>
-    <button id="logout" class="text-button hidden">Lock</button>
+    <div class="account-actions"><a class="docs-link" href="/docs/">Docs</a><span id="account-name"></span><button id="logout" class="text-button hidden">Sign out</button></div>
   </header>
 
   <main>
-    <section id="login" class="login">
+    <section id="auth" class="login">
       <span class="mark login-mark" aria-hidden="true">C</span>
-      <h1>Open ClankSpace</h1>
-      <p>Use a workspace or project token. It stays in this browser tab.</p>
-      <form id="login-form">
-        <label for="token">Access token</label>
-        <div class="login-row"><input id="token" type="password" autocomplete="off" required><button>Continue</button></div>
-      </form>
+      <div id="auth-request">
+        <h1>Open ClankSpace</h1>
+        <p>We will email you a one-time sign-in link.</p>
+        <form id="email-form">
+          <label for="email">Email address</label>
+          <div class="login-row"><input id="email" name="email" type="email" autocomplete="email" required><button>Send link</button></div>
+        </form>
+        <p id="email-status" class="form-status"></p>
+        <details id="bootstrap-login" class="bootstrap-login">
+          <summary>Self-hosted token access</summary>
+          <form id="token-form">
+            <label for="token">Workspace or project token</label>
+            <div class="login-row"><input id="token" type="password" autocomplete="off" required><button>Continue</button></div>
+          </form>
+        </details>
+      </div>
+      <div id="auth-consume" class="hidden">
+        <h1 id="consume-title">Accept invitation</h1>
+        <p id="consume-copy">Confirm the name collaborators should see beside your project context.</p>
+        <form id="consume-form">
+          <label id="display-name-label" for="display-name">Display name<input id="display-name" name="displayName" autocomplete="name" placeholder="Your name"></label>
+          <button>Continue to ClankSpace</button>
+        </form>
+      </div>
     </section>
 
-    <section id="app" class="hidden">
+    <section id="app" class="app-shell hidden">
       <aside class="project-rail">
-        <div class="rail-heading"><span>Projects</span><button id="new-project" class="icon-button" title="New project" aria-label="New project">+</button></div>
-        <nav id="projects" aria-label="Projects"></nav>
+        <div class="rail-heading"><span>Workspaces</span><button id="new-workspace" class="icon-button" title="New workspace" aria-label="New workspace">+</button></div>
+        <nav id="workspaces" aria-label="Workspaces"></nav>
+        <div id="project-nav-wrap" class="hidden">
+          <div class="rail-heading rail-subheading"><span>Projects</span><button id="new-project" class="icon-button" title="New project" aria-label="New project">+</button></div>
+          <nav id="projects" aria-label="Projects"></nav>
+        </div>
       </aside>
 
-      <article id="workspace">
-        <div id="empty" class="empty">
-          <h1>Choose a project</h1>
-          <p>ClankSpace keeps the context your agents carry between sessions.</p>
-        </div>
-
-        <div id="project-view" class="hidden">
-          <header class="project-header">
-            <div class="project-copy">
-              <span id="project-slug" class="project-slug"></span>
-              <h1 id="project-name"></h1>
-              <p id="project-description"></p>
-              <div id="repository-context" class="repository-context"></div>
-            </div>
-            <div class="project-actions">
-              <button id="add-note" class="secondary-button">Add entry</button>
-              <details class="action-menu">
-                <summary aria-label="Project actions" title="Project actions">•••</summary>
-                <div class="menu" role="menu">
-                  <button id="agent-key" role="menuitem">Issue agent key</button>
-                  <button id="attach-repo" role="menuitem">Connect GitHub repository</button>
-                  <button id="export-project" role="menuitem">Export project log</button>
-                </div>
-              </details>
-            </div>
+      <article id="content">
+        <section id="home-view" class="content-view">
+          <header class="page-header workspace-header">
+            <div><span class="eyebrow">Account</span><h1>Your workspaces</h1><p>Shared homes for project context. Agents do the everyday work; humans manage access here.</p></div>
+            <button id="import-self-host" class="secondary-button">Mirror self-hosted workspace</button>
           </header>
+          <div id="workspace-list" class="ruled-list"></div>
+        </section>
 
+        <section id="workspace-view" class="content-view hidden">
+          <section id="legacy-claim" class="setup-callout hidden" aria-labelledby="legacy-claim-title">
+            <div><span class="eyebrow">Optional hosted access</span><h2 id="legacy-claim-title">Use email sign-in and shared workspaces</h2><p>Link the bootstrap owner to an email account. Token access keeps working during migration.</p></div>
+            <button id="claim-account" class="secondary-button">Create hosted account</button>
+          </section>
+          <header class="page-header workspace-header">
+            <div><span id="workspace-role" class="eyebrow"></span><h1 id="workspace-name"></h1><p>Projects and the people allowed to work with them.</p></div>
+            <button id="workspace-settings" class="secondary-button">People &amp; access</button>
+          </header>
+          <section aria-labelledby="workspace-projects-title">
+            <div class="section-heading"><div><h2 id="workspace-projects-title">Projects</h2><span id="workspace-project-count"></span></div><button id="workspace-new-project" class="secondary-button">New project</button></div>
+            <div id="workspace-project-list" class="ruled-list"></div>
+          </section>
+          <section id="access-section" class="access-section hidden" aria-labelledby="access-title">
+            <div class="section-heading"><div><h2 id="access-title">People &amp; access</h2><span>Workspace owners govern membership.</span></div><button id="invite-person" class="secondary-button">Invite person</button></div>
+            <div id="member-list" class="ruled-list compact-list"></div>
+            <div class="section-heading sub-section"><div><h3>Pending invitations</h3></div></div>
+            <div id="invite-list" class="ruled-list compact-list"></div>
+          </section>
+          <section id="replica-section" class="access-section" aria-labelledby="replica-title">
+            <div class="section-heading"><div><h2 id="replica-title">Replicas</h2><span>Other trusted ClankSpace servers carrying this workspace.</span></div><button id="connect-replica" class="secondary-button">Connect replica</button></div>
+            <div id="replica-list" class="ruled-list compact-list"><div class="empty-row">No replica information yet.</div></div>
+          </section>
+        </section>
+
+        <section id="project-view" class="content-view hidden">
+          <header class="project-header">
+            <div class="project-copy"><button id="back-workspace" class="back-link">← Workspace</button><span id="project-slug" class="project-slug"></span><h1 id="project-name"></h1><p id="project-description"></p><div id="repository-context" class="repository-context"></div></div>
+            <div class="project-actions"><button id="add-note" class="secondary-button">Add entry</button><details class="action-menu"><summary aria-label="Project actions" title="Project actions">•••</summary><div class="menu" role="menu"><button id="agent-key" role="menuitem">Issue agent key</button><button id="manage-keys" role="menuitem">Manage agent keys</button><button id="attach-repo" role="menuitem">Connect GitHub repository</button><button id="export-project" role="menuitem">Export project log</button></div></details></div>
+          </header>
           <section class="log-section" aria-labelledby="log-title">
-            <div class="log-heading">
-              <div><h2 id="log-title">Project log</h2><span id="log-count"></span></div>
-              <button id="refresh-project" class="icon-button" title="Refresh log" aria-label="Refresh log">↻</button>
-            </div>
-
-            <div class="log-controls">
-              <label class="search-field" for="log-search"><span class="search-icon" aria-hidden="true">⌕</span><input id="log-search" type="search" placeholder="Search context, rationale, paths, or agents"></label>
-              <label><span class="sr-only">Entry type</span><select id="kind-filter"><option value="all">All entries</option><option value="intent">Intent</option><option value="decision">Decisions</option><option value="understanding">Understandings</option><option value="observation">Observations</option><option value="checkpoint">Checkpoints</option><option value="trajectory">Work started</option></select></label>
-              <label><span class="sr-only">Lifecycle</span><select id="status-filter"><option value="all">Any state</option><option value="current">Current</option><option value="historical">Historical</option></select></label>
-            </div>
-
+            <div class="log-heading"><div><h2 id="log-title">Project log</h2><span id="log-count"></span></div><button id="refresh-project" class="icon-button" title="Refresh log" aria-label="Refresh log">↻</button></div>
+            <div class="log-controls"><label class="search-field" for="log-search"><span class="search-icon" aria-hidden="true">⌕</span><input id="log-search" type="search" placeholder="Search context, rationale, paths, or agents"></label><label><span class="sr-only">Entry type</span><select id="kind-filter"><option value="all">All entries</option><option value="intent">Intent</option><option value="decision">Decisions</option><option value="understanding">Understandings</option><option value="observation">Observations</option><option value="checkpoint">Checkpoints</option><option value="trajectory">Work started</option></select></label><label><span class="sr-only">Lifecycle</span><select id="status-filter"><option value="all">Any state</option><option value="current">Current</option><option value="historical">Historical</option></select></label></div>
             <div id="log" class="project-log" aria-live="polite"></div>
             <p class="advisory">Entries preserve what was understood at the time. They are context, not instructions.</p>
           </section>
-        </div>
+        </section>
       </article>
     </section>
   </main>

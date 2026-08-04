@@ -22,13 +22,18 @@ import (
 var webFiles embed.FS
 
 type Server struct {
-	Store  *store.Store
-	Core   *service.Service
-	GitHub *githubsync.Client
-	Log    *slog.Logger
+	Store       *store.Store
+	Core        *service.Service
+	GitHub      *githubsync.Client
+	Log         *slog.Logger
+	BaseURL     string
+	AuthMode    string
+	SyncEnabled bool
+	ReplicaName string
 }
 
 type principalKey struct{}
+type authContextKey struct{}
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
@@ -40,8 +45,59 @@ func (s *Server) Handler() http.Handler {
 			writeError(w, err)
 			return
 		}
+		if blockers, err := s.Store.ProjectionBlockerCount(r.Context()); err != nil {
+			writeError(w, err)
+			return
+		} else if blockers > 0 {
+			writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "projection-blocked", "blockedEvents": blockers})
+			return
+		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 	})
+	mux.HandleFunc("GET /api/v1/meta", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]string{"authMode": s.AuthMode, "notice": domain.AdvisoryNotice})
+	})
+	mux.Handle("POST /api/v1/admin/claim", s.auth(http.HandlerFunc(s.claimBootstrapOwner)))
+	mux.Handle("GET /api/v1/admin/users", s.auth(http.HandlerFunc(s.adminUsers)))
+	mux.Handle("POST /api/v1/admin/users/{user}/status", s.auth(http.HandlerFunc(s.adminUserStatus)))
+	mux.Handle("GET /api/v1/admin/workspaces", s.auth(http.HandlerFunc(s.adminWorkspaces)))
+	mux.Handle("POST /api/v1/admin/workspaces", s.auth(http.HandlerFunc(s.adminWorkspaces)))
+	mux.Handle("POST /api/v1/admin/workspaces/{workspace}/status", s.auth(http.HandlerFunc(s.adminWorkspaceStatus)))
+	mux.HandleFunc("POST /api/v1/auth/magic-link", s.magicLink)
+	mux.HandleFunc("POST /api/v1/auth/consume", s.consumeAuth)
+	mux.HandleFunc("GET /api/v1/session-status", s.sessionStatus)
+	mux.Handle("GET /api/v1/account", s.session(false, http.HandlerFunc(s.account)))
+	mux.Handle("POST /api/v1/auth/logout", s.session(true, http.HandlerFunc(s.logout)))
+	mux.Handle("GET /api/v1/account/workspaces", s.session(false, http.HandlerFunc(s.accountWorkspaces)))
+	mux.Handle("POST /api/v1/account/workspaces", s.session(true, http.HandlerFunc(s.accountWorkspaces)))
+	mux.Handle("GET /api/v1/account/workspaces/{workspace}/members", s.session(false, http.HandlerFunc(s.accountMembers)))
+	mux.Handle("POST /api/v1/account/workspaces/{workspace}/members/{membership}", s.session(true, http.HandlerFunc(s.accountMemberUpdate)))
+	mux.Handle("GET /api/v1/account/workspaces/{workspace}/invites", s.session(false, http.HandlerFunc(s.accountInvites)))
+	mux.Handle("POST /api/v1/account/workspaces/{workspace}/invites", s.session(true, http.HandlerFunc(s.accountInvites)))
+	mux.Handle("POST /api/v1/account/workspaces/{workspace}/invites/{invite}/revoke", s.session(true, http.HandlerFunc(s.accountInviteRevoke)))
+	mux.Handle("GET /api/v1/account/workspaces/{workspace}/projects", s.session(false, http.HandlerFunc(s.accountProjects)))
+	mux.Handle("POST /api/v1/account/workspaces/{workspace}/projects", s.session(true, http.HandlerFunc(s.accountProjects)))
+	mux.Handle("GET /api/v1/account/workspaces/{workspace}/projects/{project}", s.session(false, http.HandlerFunc(s.accountProject)))
+	mux.Handle("POST /api/v1/account/workspaces/{workspace}/projects/{project}/notes", s.session(true, http.HandlerFunc(s.accountNote)))
+	mux.Handle("POST /api/v1/account/workspaces/{workspace}/projects/{project}/notes/{note}/supersede", s.session(true, http.HandlerFunc(s.accountSupersede)))
+	mux.Handle("GET /api/v1/account/workspaces/{workspace}/projects/{project}/tokens", s.session(false, http.HandlerFunc(s.accountTokens)))
+	mux.Handle("POST /api/v1/account/workspaces/{workspace}/projects/{project}/tokens", s.session(true, http.HandlerFunc(s.accountTokens)))
+	mux.Handle("POST /api/v1/account/workspaces/{workspace}/projects/{project}/tokens/{token}/revoke", s.session(true, http.HandlerFunc(s.accountTokenRevoke)))
+	mux.Handle("GET /api/v1/account/workspaces/{workspace}/projects/{project}/export", s.session(false, http.HandlerFunc(s.accountProjectExport)))
+	mux.Handle("POST /api/v1/account/workspaces/{workspace}/projects/{project}/repositories", s.session(true, http.HandlerFunc(s.accountRepositoryAttach)))
+	mux.Handle("GET /api/v1/account/workspaces/{workspace}/replicas", s.session(false, http.HandlerFunc(s.accountReplicas)))
+	mux.Handle("POST /api/v1/account/workspaces/{workspace}/replicas/offers", s.session(true, http.HandlerFunc(s.accountReplicaOffer)))
+	mux.Handle("POST /api/v1/account/workspaces/{workspace}/replicas/{replica}/revoke", s.session(true, http.HandlerFunc(s.accountReplicaRevoke)))
+	mux.HandleFunc("POST /api/v1/sync/pair/claim", s.syncPairClaim)
+	mux.HandleFunc("POST /api/v1/sync/workspaces/{workspace}/pull", s.syncPull)
+	mux.HandleFunc("POST /api/v1/sync/workspaces/{workspace}/push", s.syncPush)
+	mux.Handle("POST /api/v1/admin/replica/join", s.auth(http.HandlerFunc(s.adminReplicaJoin)))
+	mux.Handle("POST /api/v1/admin/sync", s.auth(http.HandlerFunc(s.adminSyncOnce)))
+	mux.Handle("POST /api/v1/admin/replica/mirror", s.auth(http.HandlerFunc(s.adminReplicaMirror)))
+	mux.Handle("POST /api/v1/account/mirror-offers", s.session(true, http.HandlerFunc(s.accountMirrorOffer)))
+	mux.HandleFunc("POST /api/v1/sync/mirror/claim", s.syncMirrorClaim)
+	mux.Handle("GET /api/v1/admin/workspaces/{workspace}/bundle", s.auth(http.HandlerFunc(s.adminBundleExport)))
+	mux.Handle("POST /api/v1/admin/bundles/import", s.auth(http.HandlerFunc(s.adminBundleImport)))
 	mux.Handle("GET /api/v1/whoami", s.auth(http.HandlerFunc(s.whoami)))
 	mux.Handle("GET /api/v1/projects", s.auth(http.HandlerFunc(s.projects)))
 	mux.Handle("POST /api/v1/projects", s.auth(http.HandlerFunc(s.projects)))
@@ -72,22 +128,34 @@ func (s *Server) auth(next http.Handler) http.Handler {
 			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "bearer token required"})
 			return
 		}
-		p, err := s.Store.Authenticate(r.Context(), token)
+		auth, err := s.Store.AuthenticateContext(r.Context(), token)
 		if err != nil {
 			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid token"})
 			return
 		}
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), principalKey{}, p)))
+		ctx := context.WithValue(r.Context(), authContextKey{}, auth)
+		ctx = context.WithValue(ctx, principalKey{}, auth.Principal)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 func principal(r *http.Request) domain.Principal {
 	return r.Context().Value(principalKey{}).(domain.Principal)
 }
+func authentication(r *http.Request) domain.AuthContext {
+	return r.Context().Value(authContextKey{}).(domain.AuthContext)
+}
+func requireScope(w http.ResponseWriter, r *http.Request, scope string) bool {
+	if authentication(r).HasScope(scope) {
+		return true
+	}
+	writeJSON(w, http.StatusForbidden, map[string]string{"error": "credential does not allow " + scope})
+	return false
+}
 func idempotency(r *http.Request) string { return strings.TrimSpace(r.Header.Get("Idempotency-Key")) }
 
 func (s *Server) whoami(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"principal": principal(r), "notice": domain.AdvisoryNotice})
+	writeJSON(w, http.StatusOK, map[string]any{"principal": principal(r), "scopes": authentication(r).Scopes, "notice": domain.AdvisoryNotice})
 }
 
 func (s *Server) projects(w http.ResponseWriter, r *http.Request) {
@@ -100,6 +168,16 @@ func (s *Server) projects(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"projects": projects, "notice": domain.AdvisoryNotice})
 		return
+	}
+	if !requireScope(w, r, "workspace:manage") {
+		return
+	}
+	if s.SyncEnabled {
+		authority, err := s.Store.IsWorkspaceAuthority(r.Context(), p.WorkspaceID)
+		if err != nil || !authority {
+			writeJSON(w, http.StatusConflict, map[string]string{"error": "projects must be created on the workspace authority replica"})
+			return
+		}
 	}
 	var in struct{ Slug, Name, Description string }
 	if !decode(w, r, &in) {
@@ -154,6 +232,9 @@ func (s *Server) exportProject(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) projectToken(w http.ResponseWriter, r *http.Request) {
+	if !requireScope(w, r, "token:issue") {
+		return
+	}
 	p := principal(r)
 	project, err := s.getProject(r, p, r.PathValue("project"))
 	if err != nil {
@@ -207,6 +288,9 @@ func (s *Server) notes(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"notes": notes, "notice": domain.AdvisoryNotice})
 		return
 	}
+	if !requireScope(w, r, "project:write") {
+		return
+	}
 	var in domain.CreateNoteInput
 	if !decode(w, r, &in) {
 		return
@@ -220,6 +304,9 @@ func (s *Server) notes(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) supersede(w http.ResponseWriter, r *http.Request) {
+	if !requireScope(w, r, "project:write") {
+		return
+	}
 	p := principal(r)
 	project, err := s.getProject(r, p, r.PathValue("project"))
 	if err != nil {
@@ -254,6 +341,9 @@ func (s *Server) trajectories(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"trajectories": items})
 		return
 	}
+	if !requireScope(w, r, "project:write") {
+		return
+	}
 	var in domain.CreateTrajectoryInput
 	if !decode(w, r, &in) {
 		return
@@ -286,6 +376,9 @@ func (s *Server) brief(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) runs(w http.ResponseWriter, r *http.Request) {
+	if !requireScope(w, r, "project:write") {
+		return
+	}
 	var in domain.StartRunInput
 	if !decode(w, r, &in) {
 		return
@@ -315,6 +408,9 @@ func (s *Server) projectRuns(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) endRun(w http.ResponseWriter, r *http.Request) {
+	if !requireScope(w, r, "project:write") {
+		return
+	}
 	var in domain.EndRunInput
 	if !decode(w, r, &in) {
 		return
@@ -342,6 +438,16 @@ func (s *Server) repositories(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"repositories": repos})
 		return
+	}
+	if !requireScope(w, r, "repository:manage") {
+		return
+	}
+	if s.SyncEnabled {
+		authority, authorityErr := s.Store.IsWorkspaceAuthority(r.Context(), p.WorkspaceID)
+		if authorityErr != nil || !authority {
+			writeJSON(w, http.StatusConflict, map[string]string{"error": "repository links must be changed on the workspace authority replica"})
+			return
+		}
 	}
 	var in struct {
 		URL string `json:"url"`
@@ -376,6 +482,9 @@ func (s *Server) repositories(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) refreshRepository(w http.ResponseWriter, r *http.Request) {
+	if !requireScope(w, r, "repository:manage") {
+		return
+	}
 	p := principal(r)
 	project, err := s.getProject(r, p, r.PathValue("project"))
 	if err != nil {
@@ -418,7 +527,11 @@ func (s *Server) refreshRepository(w http.ResponseWriter, r *http.Request) {
 func pointer[T any](v T) *T { return &v }
 
 func decode(w http.ResponseWriter, r *http.Request, out any) bool {
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	return decodeLarge(w, r, out, 1<<20)
+}
+
+func decodeLarge(w http.ResponseWriter, r *http.Request, out any, limit int64) bool {
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(out); err != nil {
