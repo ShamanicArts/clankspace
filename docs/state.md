@@ -1,7 +1,7 @@
 ---
 type: state
 status: active
-summary: Hosted accounts, signed replication, and interactive onboarding docs are merged and deployed to the lean exe.dev pilot.
+summary: Hosted accounts, signed replication, and one-prompt repository onboarding are merged and deployed to the lean exe.dev pilot.
 note_created: 2026-08-02
 updated: 2026-08-04
 ---
@@ -11,6 +11,8 @@ updated: 2026-08-04
 ## Current focus
 
 Prepare the deployed hosted-replication candidate for real trusted-collaborator use. The code, living docs, and recorded proof are public; the next operational dependency is selecting an SMTP sender before changing production from bootstrap authentication to hybrid invitation/email authentication. The next product signal should come from real Shuv/Shamanic use, not a larger synthetic campaign.
+
+PR #24 replaced manual first-run workspace plumbing with `clank setup`: the agent infers the Git repository and project, opens a short-lived browser request, and waits for one human approval. The server creates or reuses the project, links a supported public GitHub remote, and returns a project-only credential directly to the CLI. The CLI stores it outside the repository, installs the skill and pointer, adds one lean agent instruction, and verifies access. A fresh `go-chi/chi` checkout passed the complete browser-to-terminal flow without a token entering chat.
 
 ## Active phase
 
@@ -33,13 +35,14 @@ implementation report and six recordings are preserved outside the repository un
 `~/.agent/diagrams/clankspace-e2e-final-2026-08-03/`; no live credentials are stored in the
 repository.
 
-Merged main `66faea4` is deployed on exe.dev. Production schema version 10 passed
+Merged main `da2f515` is deployed on exe.dev. Production schema version 11 passed
 `PRAGMA integrity_check`; the original one workspace, one project, and four notes remain.
 The service has a durable installation secret, signed-sync identity, retained prior binary,
 and an integrity-checked pre-deployment snapshot both on-host and off-host. Bootstrap login
 remains active because no SMTP sender is configured yet. The interactive guide is served at
-`https://clank.shamanicarts.dev/docs/` and includes the setup builder, copyable agent prompt,
-and six recordings.
+`https://clank.shamanicarts.dev/docs/` and leads with the one-prompt setup path. Manual token
+and local-replica controls remain available as advanced fallbacks; raw implementation evidence
+is kept out of the primary task flow.
 
 Production runs from public `main` on `clankspace-prod.exe.xyz`, published through `clank.shamanicarts.dev`. The final Railway database was downloaded quiescently, passed `PRAGMA integrity_check`, and was restored with the matching production bootstrap credential. Strict-HTTPS health/readiness, CLI context, and deterministic authenticated export pass; the project contains the expected four notes. A persistent daily local timer performs SQLite's online backup remotely, pulls the completed snapshot off-provider, verifies integrity, and writes a checksum manifest; its first live run passed. Railway has no active deployment. The runner and evaluation VM evidence was checksum-verified locally before both disposable VMs were deleted.
 
