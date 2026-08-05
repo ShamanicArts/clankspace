@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const latestSchemaVersion = 13
+const latestSchemaVersion = 14
 
 const hostedReplicationSchema = `
 ALTER TABLE workspaces ADD COLUMN slug TEXT NOT NULL DEFAULT '';
@@ -298,6 +298,23 @@ ALTER TABLE runs ADD COLUMN merged_at TEXT;
 CREATE INDEX IF NOT EXISTS idx_auth_rate_limits_window ON auth_rate_limits(window_started_at);
 `
 
+const jujutsuProvenanceSchema = `
+ALTER TABLE runs ADD COLUMN vcs TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN jj_workspace TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN jj_change_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN jj_commit_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN jj_bookmarks_json TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE runs ADD COLUMN delivery_jj_workspace TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN delivery_jj_change_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN delivery_jj_commit_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN delivery_jj_bookmarks_json TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE trajectories ADD COLUMN vcs TEXT NOT NULL DEFAULT '';
+ALTER TABLE trajectories ADD COLUMN jj_workspace TEXT NOT NULL DEFAULT '';
+ALTER TABLE trajectories ADD COLUMN jj_change_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE trajectories ADD COLUMN jj_commit_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE trajectories ADD COLUMN jj_bookmarks_json TEXT NOT NULL DEFAULT '[]';
+`
+
 func applyMigrations(db *sql.DB) error {
 	tx, err := db.Begin()
 	if err != nil {
@@ -410,6 +427,14 @@ func applyMigrations(db *sql.DB) error {
 			return fmt.Errorf("migration 13 run delivery provenance: %w", err)
 		}
 		if _, err = tx.Exec(`INSERT INTO schema_migrations(version,applied_at) VALUES(13,strftime('%Y-%m-%dT%H:%M:%fZ','now'))`); err != nil {
+			return err
+		}
+	}
+	if version < 14 {
+		if _, err = tx.Exec(jujutsuProvenanceSchema); err != nil {
+			return fmt.Errorf("migration 14 Jujutsu provenance: %w", err)
+		}
+		if _, err = tx.Exec(`INSERT INTO schema_migrations(version,applied_at) VALUES(14,strftime('%Y-%m-%dT%H:%M:%fZ','now'))`); err != nil {
 			return err
 		}
 	}

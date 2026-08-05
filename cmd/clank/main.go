@@ -17,6 +17,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -396,6 +397,11 @@ func runCommand(ctx context.Context, c *client.Client, args []string) error {
 		repository := f.String("repository", "", "attached repository ID (fills legacy runs only)")
 		branch := f.String("branch", "", "delivered git branch")
 		head := f.String("head", "", "delivered commit SHA")
+		vcs := f.String("vcs", "", "version-control system: git or jj")
+		jjWorkspace := f.String("jj-workspace", "", "delivered Jujutsu workspace")
+		jjChange := f.String("jj-change", "", "delivered full Jujutsu change ID")
+		jjCommit := f.String("jj-commit", "", "delivered full Jujutsu commit ID")
+		jjBookmarks := f.String("jj-bookmarks", "", "delivered Jujutsu bookmarks, comma separated")
 		pullRequest := f.String("pr", "", "pull request URL")
 		pullRequestNumber := f.Int("pr-number", 0, "pull request number")
 		pullRequestState := f.String("pr-state", "", "pull request state")
@@ -407,7 +413,7 @@ func runCommand(ctx context.Context, c *client.Client, args []string) error {
 		cwd, _ := os.Getwd()
 		delivery := detectRunDelivery(ctx, cwd)
 		if *repository == "" {
-			*repository = matchingRepositoryID(ctx, c, os.Getenv("CLANKSPACE_PROJECT"), gitOutput(cwd, "remote", "get-url", "origin"))
+			*repository = matchingRepositoryID(ctx, c, os.Getenv("CLANKSPACE_PROJECT"), detectVCSContext(cwd).Remote)
 		}
 		delivery.RepositoryID = *repository
 		if *branch != "" {
@@ -415,6 +421,21 @@ func runCommand(ctx context.Context, c *client.Client, args []string) error {
 		}
 		if *head != "" {
 			delivery.HeadSHA = *head
+		}
+		if *vcs != "" {
+			delivery.VCS = *vcs
+		}
+		if *jjWorkspace != "" {
+			delivery.DeliveryJJWorkspace = *jjWorkspace
+		}
+		if *jjChange != "" {
+			delivery.DeliveryJJChangeID = *jjChange
+		}
+		if *jjCommit != "" {
+			delivery.DeliveryJJCommitID = *jjCommit
+		}
+		if *jjBookmarks != "" {
+			delivery.DeliveryJJBookmarks = split(*jjBookmarks)
 		}
 		if *pullRequest != "" {
 			delivery.PullRequestURL = *pullRequest
@@ -440,9 +461,10 @@ func runCommand(ctx context.Context, c *client.Client, args []string) error {
 		if command == "link" {
 			o, e = c.LinkRunDelivery(ctx, id, delivery)
 		} else {
-			o, e = c.EndRun(ctx, id, domain.EndRunInput{Outcome: *outcome, Verification: *verification, RepositoryID: delivery.RepositoryID, DeliveryBranch: delivery.DeliveryBranch, HeadSHA: delivery.HeadSHA, PullRequestURL: delivery.PullRequestURL, PullRequestNumber: delivery.PullRequestNumber, PullRequestState: delivery.PullRequestState, MergeCommitSHA: delivery.MergeCommitSHA, MergedAt: delivery.MergedAt})
+			o, e = c.EndRun(ctx, id, domain.EndRunInput{Outcome: *outcome, Verification: *verification, RepositoryID: delivery.RepositoryID, VCS: delivery.VCS, DeliveryBranch: delivery.DeliveryBranch, HeadSHA: delivery.HeadSHA, DeliveryJJWorkspace: delivery.DeliveryJJWorkspace, DeliveryJJChangeID: delivery.DeliveryJJChangeID, DeliveryJJCommitID: delivery.DeliveryJJCommitID, DeliveryJJBookmarks: delivery.DeliveryJJBookmarks, PullRequestURL: delivery.PullRequestURL, PullRequestNumber: delivery.PullRequestNumber, PullRequestState: delivery.PullRequestState, MergeCommitSHA: delivery.MergeCommitSHA, MergedAt: delivery.MergedAt})
 		}
 		if e == nil {
+			warnUnsupportedJJ(delivery.VCS, o)
 			printJSON(o)
 		}
 		return e
@@ -464,19 +486,28 @@ func runCommand(ctx context.Context, c *client.Client, args []string) error {
 	branch := f.String("branch", value("CLANKSPACE_BRANCH", ""), "git branch")
 	worktree := f.String("worktree", value("CLANKSPACE_WORKTREE", ""), "worktree")
 	repository := f.String("repository", "", "attached repository ID")
+	vcs := f.String("vcs", value("CLANKSPACE_VCS", ""), "version-control system: git or jj")
 	base := f.String("base", "", "starting commit SHA")
 	head := f.String("head", "", "current commit SHA")
+	jjWorkspace := f.String("jj-workspace", value("CLANKSPACE_JJ_WORKSPACE", ""), "Jujutsu workspace")
+	jjChange := f.String("jj-change", value("CLANKSPACE_JJ_CHANGE", ""), "full Jujutsu change ID")
+	jjCommit := f.String("jj-commit", value("CLANKSPACE_JJ_COMMIT", ""), "full Jujutsu commit ID")
+	jjBookmarks := f.String("jj-bookmarks", value("CLANKSPACE_JJ_BOOKMARKS", ""), "Jujutsu bookmarks, comma separated")
 	paths := f.String("instructions", value("CLANKSPACE_INSTRUCTIONS", ""), "instruction profile names/hashes, comma separated")
 	if err := f.Parse(args[1:]); err != nil {
 		return err
 	}
 	cwd, _ := os.Getwd()
-	currentHead := gitOutput(cwd, "rev-parse", "HEAD")
-	if *branch == "" {
-		*branch = gitOutput(cwd, "branch", "--show-current")
+	current := detectVCSContext(cwd)
+	currentHead := current.HeadSHA
+	if *vcs == "" {
+		*vcs = current.VCS
 	}
-	if *worktree == "" && currentHead != "" {
-		*worktree = cwd
+	if *branch == "" {
+		*branch = current.Branch
+	}
+	if *worktree == "" {
+		*worktree = current.Worktree
 	}
 	if *base == "" {
 		*base = currentHead
@@ -484,11 +515,25 @@ func runCommand(ctx context.Context, c *client.Client, args []string) error {
 	if *head == "" {
 		*head = currentHead
 	}
-	if *repository == "" {
-		*repository = matchingRepositoryID(ctx, c, *project, gitOutput(cwd, "remote", "get-url", "origin"))
+	if *jjWorkspace == "" {
+		*jjWorkspace = current.JJWorkspace
 	}
-	o, e := c.StartRun(ctx, domain.StartRunInput{ProjectID: *project, AgentName: *agent, Harness: *harness, HarnessVersion: *harnessVersion, Provider: *provider, Model: *model, Reasoning: *reasoning, Role: *role, RunType: *runType, Objective: *objective, RepositoryID: *repository, Branch: *branch, Worktree: *worktree, BaseSHA: *base, HeadSHA: *head, InstructionProfile: split(*paths)})
+	if *jjChange == "" {
+		*jjChange = current.JJChangeID
+	}
+	if *jjCommit == "" {
+		*jjCommit = current.JJCommitID
+	}
+	bookmarks := split(*jjBookmarks)
+	if len(bookmarks) == 0 {
+		bookmarks = current.JJBookmarks
+	}
+	if *repository == "" {
+		*repository = matchingRepositoryID(ctx, c, *project, current.Remote)
+	}
+	o, e := c.StartRun(ctx, domain.StartRunInput{ProjectID: *project, AgentName: *agent, Harness: *harness, HarnessVersion: *harnessVersion, Provider: *provider, Model: *model, Reasoning: *reasoning, Role: *role, RunType: *runType, Objective: *objective, RepositoryID: *repository, VCS: *vcs, Branch: *branch, Worktree: *worktree, BaseSHA: *base, HeadSHA: *head, JJWorkspace: *jjWorkspace, JJChangeID: *jjChange, JJCommitID: *jjCommit, JJBookmarks: bookmarks, InstructionProfile: split(*paths)})
 	if e == nil {
+		warnUnsupportedJJ(*vcs, o)
 		printJSON(o)
 	}
 	return e
@@ -702,7 +747,7 @@ func setup(ctx context.Context, args []string) error {
 	if len(args) > 0 && isHelp(args[0]) {
 		fmt.Fprintln(os.Stdout, `clank setup [--url <service>] [--project <slug>] [--agent-name <name>] [--no-browser]
 
-Detect the current Git repository, request one browser approval, then install the ClankSpace
+Detect the current Git or Jujutsu repository, request one browser approval, then install the ClankSpace
 project pointer, skill, AGENTS.md instruction, and project-scoped local credential.`)
 		return nil
 	}
@@ -718,7 +763,7 @@ project pointer, skill, AGENTS.md instruction, and project-scoped local credenti
 	if err != nil {
 		return err
 	}
-	repositoryURL := gitOutput(cwd, "remote", "get-url", "origin")
+	repositoryURL := detectVCSContext(cwd).Remote
 	projectName := filepath.Base(cwd)
 	projectSlug := strings.TrimSpace(*projectFlag)
 	if projectSlug == "" {
@@ -836,6 +881,94 @@ func gitOutput(dir string, args ...string) string {
 	return strings.TrimSpace(string(body))
 }
 
+func jjOutput(dir string, args ...string) string {
+	cmd := exec.Command("jj", args...)
+	cmd.Dir = dir
+	body, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(body))
+}
+
+type vcsContext struct {
+	VCS         string
+	Remote      string
+	Branch      string
+	Worktree    string
+	BaseSHA     string
+	HeadSHA     string
+	JJWorkspace string
+	JJChangeID  string
+	JJCommitID  string
+	JJBookmarks []string
+}
+
+func detectVCSContext(dir string) vcsContext {
+	current := vcsContext{
+		Remote:   gitOutput(dir, "remote", "get-url", "origin"),
+		Branch:   gitOutput(dir, "branch", "--show-current"),
+		Worktree: gitOutput(dir, "rev-parse", "--show-toplevel"),
+		HeadSHA:  gitOutput(dir, "rev-parse", "HEAD"),
+	}
+	current.BaseSHA = current.HeadSHA
+	if root := jjOutput(dir, "root"); root != "" {
+		current.VCS = "jj"
+		current.Worktree = root
+		current.Remote = jjRemoteURL(dir, current.Remote)
+		current.JJChangeID, current.JJCommitID, current.JJBookmarks = jjRevision(dir)
+		workspace := jjOutput(dir, "workspace", "list", "-T", `if(self.target().current_working_copy(), json(self.name()) ++ "\n")`)
+		_ = json.Unmarshal([]byte(workspace), &current.JJWorkspace)
+		return current
+	}
+	if current.Worktree != "" {
+		current.VCS = "git"
+	}
+	return current
+}
+
+func jjRevision(dir string) (string, string, []string) {
+	body := jjOutput(dir, "log", "-r", "@", "--no-graph", "-T", `json(change_id) ++ "\n" ++ json(commit_id) ++ "\n" ++ json(local_bookmarks.map(|b| b.name())) ++ "\n"`)
+	lines := strings.Split(body, "\n")
+	if len(lines) < 3 {
+		return "", "", nil
+	}
+	var changeID, commitID string
+	var bookmarks []string
+	if json.Unmarshal([]byte(lines[0]), &changeID) != nil || json.Unmarshal([]byte(lines[1]), &commitID) != nil || json.Unmarshal([]byte(lines[2]), &bookmarks) != nil {
+		return "", "", nil
+	}
+	sort.Strings(bookmarks)
+	return changeID, commitID, bookmarks
+}
+
+func jjRemoteURL(dir, fallback string) string {
+	body := jjOutput(dir, "git", "remote", "list")
+	first := ""
+	for _, line := range strings.Split(body, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		if first == "" {
+			first = fields[1]
+		}
+		if fields[0] == "origin" {
+			return fields[1]
+		}
+	}
+	if first != "" {
+		return first
+	}
+	return fallback
+}
+
+func warnUnsupportedJJ(requestedVCS string, run domain.Run) {
+	if requestedVCS == "jj" && run.VCS != "jj" {
+		fmt.Fprintln(os.Stderr, "clank: warning: this server accepted the run without native Jujutsu provenance; upgrade the server to schema 14 before relying on JJ change, commit, workspace, or bookmark fields")
+	}
+}
+
 func matchingRepositoryID(ctx context.Context, c *client.Client, project, remote string) string {
 	if strings.TrimSpace(project) == "" {
 		return ""
@@ -857,12 +990,26 @@ func matchingRepositoryID(ctx context.Context, c *client.Client, project, remote
 }
 
 func detectRunDelivery(ctx context.Context, dir string) domain.LinkRunDeliveryInput {
+	current := detectVCSContext(dir)
 	delivery := domain.LinkRunDeliveryInput{
-		DeliveryBranch: gitOutput(dir, "branch", "--show-current"),
-		HeadSHA:        gitOutput(dir, "rev-parse", "HEAD"),
+		VCS:                 current.VCS,
+		DeliveryBranch:      current.Branch,
+		HeadSHA:             current.HeadSHA,
+		DeliveryJJWorkspace: current.JJWorkspace,
+		DeliveryJJChangeID:  current.JJChangeID,
+		DeliveryJJCommitID:  current.JJCommitID,
+		DeliveryJJBookmarks: current.JJBookmarks,
 	}
-	command := exec.CommandContext(ctx, "gh", "pr", "view", "--json", "url,number,state,mergeCommit,mergedAt,headRefOid")
+	args := []string{"pr", "view"}
+	if current.VCS == "jj" && len(current.JJBookmarks) > 0 {
+		args = append(args, current.JJBookmarks[0])
+	}
+	args = append(args, "--json", "url,number,state,mergeCommit,mergedAt,headRefOid")
+	command := exec.CommandContext(ctx, "gh", args...)
 	command.Dir = dir
+	if gitDir := jjOutput(dir, "git", "root"); gitDir != "" {
+		command.Env = append(os.Environ(), "GIT_DIR="+gitDir)
+	}
 	body, err := command.Output()
 	if err != nil {
 		return delivery
@@ -993,19 +1140,12 @@ func split(s string) []string {
 }
 func localContext(resolved localconfig.Resolved) error {
 	cwd, _ := os.Getwd()
-	git := func(args ...string) string {
-		cmd := exec.Command("git", args...)
-		cmd.Dir = cwd
-		b, err := cmd.Output()
-		if err != nil {
-			return ""
-		}
-		return strings.TrimSpace(string(b))
-	}
+	current := detectVCSContext(cwd)
 	printJSON(map[string]any{
 		"url": resolved.URL, "project": resolved.Project, "projectFile": resolved.ProjectFilePath,
-		"repository": git("remote", "get-url", "origin"),
-		"branch":     git("branch", "--show-current"), "head": git("rev-parse", "HEAD"), "worktree": cwd,
+		"repository": current.Remote, "vcs": current.VCS,
+		"branch": current.Branch, "head": current.HeadSHA, "worktree": current.Worktree,
+		"jjWorkspace": current.JJWorkspace, "jjChangeId": current.JJChangeID, "jjCommitId": current.JJCommitID, "jjBookmarks": current.JJBookmarks,
 		"tokenConfigured": resolved.Token != "", "tokenSource": resolved.TokenSource, "notice": domain.AdvisoryNotice,
 	})
 	return nil
@@ -1045,20 +1185,27 @@ func runUsage() {
   --objective <text>           current material task
   --branch <branch>            current branch
   --worktree <path>            current worktree
-  --repository <id>           attached repository ID
+  --repository <id>            attached repository ID
+  --vcs <git|jj>               detected version-control system
   --base <sha>                 starting commit SHA
   --head <sha>                 current commit SHA
+  --jj-workspace <name>        current Jujutsu workspace
+  --jj-change <id>             full Jujutsu change ID
+  --jj-commit <id>             full Jujutsu commit ID
+  --jj-bookmarks <names>       comma-separated Jujutsu bookmarks
   --instructions <profiles>    comma-separated instruction names or hashes
 
-Branch, worktree, repository, base, and HEAD are detected from Git when omitted.
+Repository, worktree, and native Git or Jujutsu coordinates are detected when omitted.
+Colocated JJ repositories retain both JJ identity and Git/GitHub delivery evidence.
 The command returns a JSON run object. Pass its top-level id to brief, trajectory, note, and run end.
 
 clank run end --id <run-id> --outcome <completed|aborted> --verification <text>
 clank run link --id <run-id>
-  Both commands detect the delivered branch and HEAD. With an installed, authenticated
+  Both commands detect delivered Git and Jujutsu coordinates. With an installed, authenticated
   GitHub CLI they also detect the current pull request. Use link again after a pull request
   is opened or merged. Explicit overrides:
   --repository <id> --branch <branch> --head <sha> --pr <url> --pr-number <n> --pr-state <state>
+  --vcs <git|jj> --jj-workspace <name> --jj-change <id> --jj-commit <id> --jj-bookmarks <names>
   --merge-commit <sha> --merged-at <RFC3339>
   --run is accepted as an alias for --id`)
 }

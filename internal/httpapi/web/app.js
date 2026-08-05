@@ -326,18 +326,24 @@ function runtimeText(run) {
 }
 
 function shortSHA(sha) { return sha ? sha.slice(0, 8) : '' }
+function shortID(id) { return id ? id.slice(0, 8) : '' }
 
 function repositoryForRun(run) {
   return (projectData.repositories || []).find((repository) => repository.id === run?.repositoryId)
 }
 
-function runGitText(run) {
-  if (!run) return ''
-  const origin = [run.branch, shortSHA(run.baseSha)].filter(Boolean).join('@')
-  const delivered = run.headSha && run.headSha !== run.baseSha ? `delivered ${[run.deliveryBranch, shortSHA(run.headSha)].filter(Boolean).join('@')}` : ''
+function runVCSParts(run) {
+  if (!run) return []
+  const gitOrigin = [run.branch, shortSHA(run.baseSha)].filter(Boolean).join('@')
+  const gitDelivered = run.headSha && run.headSha !== run.baseSha ? `delivered ${[run.deliveryBranch, shortSHA(run.headSha)].filter(Boolean).join('@')}` : ''
+  const jjOrigin = run.jjChangeId ? `JJ ${[(run.jjBookmarks || []).join(', ') || `change ${shortID(run.jjChangeId)}`, [shortID(run.jjChangeId), shortID(run.jjCommitId)].filter(Boolean).join('@'), run.jjWorkspace ? `workspace ${run.jjWorkspace}` : ''].filter(Boolean).join(' · ')}` : ''
+  const jjChanged = run.deliveryJjCommitId && (run.deliveryJjCommitId !== run.jjCommitId || run.deliveryJjChangeId !== run.jjChangeId || run.deliveryJjWorkspace !== run.jjWorkspace || JSON.stringify(run.deliveryJjBookmarks || []) !== JSON.stringify(run.jjBookmarks || []))
+  const jjDelivered = jjChanged ? `delivered JJ ${[(run.deliveryJjBookmarks || []).join(', ') || `change ${shortID(run.deliveryJjChangeId)}`, [shortID(run.deliveryJjChangeId), shortID(run.deliveryJjCommitId)].filter(Boolean).join('@'), run.deliveryJjWorkspace ? `workspace ${run.deliveryJjWorkspace}` : ''].filter(Boolean).join(' · ')}` : ''
   const pull = run.pullRequestNumber ? `PR #${run.pullRequestNumber} ${run.pullRequestState || ''}`.trim() : run.pullRequestState
-  return [origin, delivered, pull].filter(Boolean).join(' · ')
+  return [gitOrigin, jjOrigin, gitDelivered, jjDelivered, pull].filter(Boolean)
 }
+
+function runVCSText(run) { return runVCSParts(run).join(' · ') }
 
 function runEvidence(run) {
   if (!run) return ''
@@ -354,8 +360,8 @@ function runEvidence(run) {
 }
 
 function normalizedEntries() {
-  const notes = (projectData.notes || []).map((note) => ({ type: 'note', kind: note.kind, status: note.status, timestamp: note.updatedAt, item: note, searchable: [note.kind, note.status, note.title, note.summary, note.rationale, noteActor(note), runtimeText(note.run), runGitText(note.run), note.directionBasis, note.verification, note.sourceRef, note.pullRequestUrl, ...(note.paths || [])].join(' ').toLowerCase() }))
-  const trajectories = (projectData.trajectories || []).map((trajectory) => ({ type: 'trajectory', kind: 'trajectory', status: trajectory.status, timestamp: trajectory.updatedAt, item: trajectory, searchable: ['work started', trajectory.status, trajectory.objective, trajectory.rationale, actor(trajectory.run), runtimeText(trajectory.run), runGitText(trajectory.run), trajectory.branch, ...(trajectory.paths || [])].join(' ').toLowerCase() }))
+  const notes = (projectData.notes || []).map((note) => ({ type: 'note', kind: note.kind, status: note.status, timestamp: note.updatedAt, item: note, searchable: [note.kind, note.status, note.title, note.summary, note.rationale, noteActor(note), runtimeText(note.run), runVCSText(note.run), note.directionBasis, note.verification, note.sourceRef, note.pullRequestUrl, ...(note.paths || [])].join(' ').toLowerCase() }))
+  const trajectories = (projectData.trajectories || []).map((trajectory) => ({ type: 'trajectory', kind: 'trajectory', status: trajectory.status, timestamp: trajectory.updatedAt, item: trajectory, searchable: ['work started', trajectory.status, trajectory.objective, trajectory.rationale, actor(trajectory.run), runtimeText(trajectory.run), runVCSText(trajectory.run), trajectory.branch, trajectory.jjWorkspace, trajectory.jjChangeId, ...(trajectory.jjBookmarks || []), ...(trajectory.paths || [])].join(' ').toLowerCase() }))
   return [...notes, ...trajectories].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
 }
 
@@ -379,12 +385,14 @@ function logEntry(entry) {
   const title = entry.type === 'trajectory' ? item.objective : item.title
   const run = item.run
   const who = entry.type === 'trajectory' ? actor(run) : noteActor(item)
-  const meta = [who, runtimeText(run), runGitText(run) || item.branch].filter(Boolean).map(esc).join(' · ')
+  const metaItems = [who, runtimeText(run), ...runVCSParts(run)]
+  if (metaItems.length === 2 && item.branch) metaItems.push(item.branch)
+  const meta = metaItems.filter(Boolean).map((value, index) => `<span${index === 0 ? ' class="actor"' : ''}>${esc(value)}</span>`).join('')
   const paths = (item.paths || []).map((path) => `<code>${esc(path)}</code>`).join('')
   const pullURL = safeURL(item.pullRequestUrl)
   const sourceURL = safeURL(item.sourceRef)
   const deliveryEvidence = runEvidence(run)
-  return `<article class="log-entry ${historical ? 'historical' : ''}"><time datetime="${esc(entry.timestamp)}"><strong>${esc(formatDate(entry.timestamp))}</strong><span>${esc(formatTime(entry.timestamp))}</span></time><div class="entry-body"><div class="entry-labels"><span class="entry-kind">${esc(entry.type === 'trajectory' ? 'work started' : item.kind)}</span><span class="entry-status">${esc(item.status)}</span>${entry.type === 'note' && item.status === 'current' ? `<button class="supersede" data-id="${esc(item.id)}" data-rev="${item.revision}">Supersede</button>` : ''}</div><h3>${esc(title)}</h3>${entry.type === 'note' && item.summary ? `<p class="entry-summary">${esc(item.summary)}</p>` : ''}${item.rationale ? `<p class="entry-rationale"><strong>Why:</strong> ${esc(item.rationale)}</p>` : ''}<div class="entry-provenance"><span class="actor">${meta}</span>${item.directionBasis ? `<span>${esc(item.directionBasis.replaceAll('_', ' '))}</span>` : ''}${item.verification ? `<span>${esc(item.verification)}</span>` : ''}</div>${paths || pullURL || sourceURL || deliveryEvidence ? `<div class="entry-evidence"><div class="entry-paths">${paths}</div>${deliveryEvidence}${pullURL ? `<a href="${pullURL}" target="_blank" rel="noreferrer">Pull request ↗</a>` : ''}${sourceURL ? `<a href="${sourceURL}" target="_blank" rel="noreferrer">Source ↗</a>` : ''}</div>` : ''}</div></article>`
+  return `<article class="log-entry ${historical ? 'historical' : ''}"><time datetime="${esc(entry.timestamp)}"><strong>${esc(formatDate(entry.timestamp))}</strong><span>${esc(formatTime(entry.timestamp))}</span></time><div class="entry-body"><div class="entry-labels"><span class="entry-kind">${esc(entry.type === 'trajectory' ? 'work started' : item.kind)}</span><span class="entry-status">${esc(item.status)}</span>${entry.type === 'note' && item.status === 'current' ? `<button class="supersede" data-id="${esc(item.id)}" data-rev="${item.revision}">Supersede</button>` : ''}</div><h3>${esc(title)}</h3>${entry.type === 'note' && item.summary ? `<p class="entry-summary">${esc(item.summary)}</p>` : ''}${item.rationale ? `<p class="entry-rationale"><strong>Why:</strong> ${esc(item.rationale)}</p>` : ''}<div class="entry-provenance">${meta}${item.directionBasis ? `<span>${esc(item.directionBasis.replaceAll('_', ' '))}</span>` : ''}${item.verification ? `<span>${esc(item.verification)}</span>` : ''}</div>${paths || pullURL || sourceURL || deliveryEvidence ? `<div class="entry-evidence"><div class="entry-paths">${paths}</div>${deliveryEvidence}${pullURL ? `<a href="${pullURL}" target="_blank" rel="noreferrer">Pull request ↗</a>` : ''}${sourceURL ? `<a href="${sourceURL}" target="_blank" rel="noreferrer">Source ↗</a>` : ''}</div>` : ''}</div></article>`
 }
 
 function renderRepositories() {

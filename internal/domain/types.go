@@ -117,40 +117,49 @@ type Agent struct {
 }
 
 type Run struct {
-	ID                 string     `json:"id"`
-	ProjectID          string     `json:"projectId"`
-	AgentID            string     `json:"agentId"`
-	AgentName          string     `json:"agentName"`
-	PrincipalID        string     `json:"principalId"`
-	PrincipalName      string     `json:"principalName"`
-	Harness            string     `json:"harness,omitempty"`
-	HarnessVersion     string     `json:"harnessVersion,omitempty"`
-	Provider           string     `json:"provider,omitempty"`
-	Model              string     `json:"model,omitempty"`
-	Reasoning          string     `json:"reasoning,omitempty"`
-	Role               string     `json:"role"`
-	ParentRunID        string     `json:"parentRunId,omitempty"`
-	RootRunID          string     `json:"rootRunId,omitempty"`
-	RunType            string     `json:"runType"`
-	PermissionMode     string     `json:"permissionMode,omitempty"`
-	InteractionMode    string     `json:"interactionMode,omitempty"`
-	RepositoryID       string     `json:"repositoryId,omitempty"`
-	Branch             string     `json:"branch,omitempty"`
-	Worktree           string     `json:"worktree,omitempty"`
-	BaseSHA            string     `json:"baseSha,omitempty"`
-	HeadSHA            string     `json:"headSha,omitempty"`
-	DeliveryBranch     string     `json:"deliveryBranch,omitempty"`
-	PullRequestURL     string     `json:"pullRequestUrl,omitempty"`
-	PullRequestNumber  int        `json:"pullRequestNumber,omitempty"`
-	PullRequestState   string     `json:"pullRequestState,omitempty"`
-	MergeCommitSHA     string     `json:"mergeCommitSha,omitempty"`
-	MergedAt           *time.Time `json:"mergedAt,omitempty"`
-	Objective          string     `json:"objective,omitempty"`
-	InstructionProfile []string   `json:"instructionProfile,omitempty"`
-	StartedAt          time.Time  `json:"startedAt"`
-	EndedAt            *time.Time `json:"endedAt,omitempty"`
-	Outcome            string     `json:"outcome,omitempty"`
-	Verification       string     `json:"verification,omitempty"`
+	ID                  string     `json:"id"`
+	ProjectID           string     `json:"projectId"`
+	AgentID             string     `json:"agentId"`
+	AgentName           string     `json:"agentName"`
+	PrincipalID         string     `json:"principalId"`
+	PrincipalName       string     `json:"principalName"`
+	Harness             string     `json:"harness,omitempty"`
+	HarnessVersion      string     `json:"harnessVersion,omitempty"`
+	Provider            string     `json:"provider,omitempty"`
+	Model               string     `json:"model,omitempty"`
+	Reasoning           string     `json:"reasoning,omitempty"`
+	Role                string     `json:"role"`
+	ParentRunID         string     `json:"parentRunId,omitempty"`
+	RootRunID           string     `json:"rootRunId,omitempty"`
+	RunType             string     `json:"runType"`
+	PermissionMode      string     `json:"permissionMode,omitempty"`
+	InteractionMode     string     `json:"interactionMode,omitempty"`
+	RepositoryID        string     `json:"repositoryId,omitempty"`
+	VCS                 string     `json:"vcs,omitempty"`
+	Branch              string     `json:"branch,omitempty"`
+	Worktree            string     `json:"worktree,omitempty"`
+	BaseSHA             string     `json:"baseSha,omitempty"`
+	HeadSHA             string     `json:"headSha,omitempty"`
+	JJWorkspace         string     `json:"jjWorkspace,omitempty"`
+	JJChangeID          string     `json:"jjChangeId,omitempty"`
+	JJCommitID          string     `json:"jjCommitId,omitempty"`
+	JJBookmarks         []string   `json:"jjBookmarks,omitempty"`
+	DeliveryBranch      string     `json:"deliveryBranch,omitempty"`
+	DeliveryJJWorkspace string     `json:"deliveryJjWorkspace,omitempty"`
+	DeliveryJJChangeID  string     `json:"deliveryJjChangeId,omitempty"`
+	DeliveryJJCommitID  string     `json:"deliveryJjCommitId,omitempty"`
+	DeliveryJJBookmarks []string   `json:"deliveryJjBookmarks,omitempty"`
+	PullRequestURL      string     `json:"pullRequestUrl,omitempty"`
+	PullRequestNumber   int        `json:"pullRequestNumber,omitempty"`
+	PullRequestState    string     `json:"pullRequestState,omitempty"`
+	MergeCommitSHA      string     `json:"mergeCommitSha,omitempty"`
+	MergedAt            *time.Time `json:"mergedAt,omitempty"`
+	Objective           string     `json:"objective,omitempty"`
+	InstructionProfile  []string   `json:"instructionProfile,omitempty"`
+	StartedAt           time.Time  `json:"startedAt"`
+	EndedAt             *time.Time `json:"endedAt,omitempty"`
+	Outcome             string     `json:"outcome,omitempty"`
+	Verification        string     `json:"verification,omitempty"`
 }
 
 type StartRunInput struct {
@@ -168,36 +177,51 @@ type StartRunInput struct {
 	PermissionMode     string   `json:"permissionMode,omitempty"`
 	InteractionMode    string   `json:"interactionMode,omitempty"`
 	RepositoryID       string   `json:"repositoryId,omitempty"`
+	VCS                string   `json:"vcs,omitempty"`
 	Branch             string   `json:"branch,omitempty"`
 	Worktree           string   `json:"worktree,omitempty"`
 	BaseSHA            string   `json:"baseSha,omitempty"`
 	HeadSHA            string   `json:"headSha,omitempty"`
+	JJWorkspace        string   `json:"jjWorkspace,omitempty"`
+	JJChangeID         string   `json:"jjChangeId,omitempty"`
+	JJCommitID         string   `json:"jjCommitId,omitempty"`
+	JJBookmarks        []string `json:"jjBookmarks,omitempty"`
 	Objective          string   `json:"objective,omitempty"`
 	InstructionProfile []string `json:"instructionProfile,omitempty"`
 }
 
 type EndRunInput struct {
-	Outcome           string     `json:"outcome"`
-	Verification      string     `json:"verification,omitempty"`
-	RepositoryID      string     `json:"repositoryId,omitempty"`
-	DeliveryBranch    string     `json:"deliveryBranch,omitempty"`
-	HeadSHA           string     `json:"headSha,omitempty"`
-	PullRequestURL    string     `json:"pullRequestUrl,omitempty"`
-	PullRequestNumber int        `json:"pullRequestNumber,omitempty"`
-	PullRequestState  string     `json:"pullRequestState,omitempty"`
-	MergeCommitSHA    string     `json:"mergeCommitSha,omitempty"`
-	MergedAt          *time.Time `json:"mergedAt,omitempty"`
+	Outcome             string     `json:"outcome"`
+	Verification        string     `json:"verification,omitempty"`
+	RepositoryID        string     `json:"repositoryId,omitempty"`
+	VCS                 string     `json:"vcs,omitempty"`
+	DeliveryBranch      string     `json:"deliveryBranch,omitempty"`
+	HeadSHA             string     `json:"headSha,omitempty"`
+	DeliveryJJWorkspace string     `json:"deliveryJjWorkspace,omitempty"`
+	DeliveryJJChangeID  string     `json:"deliveryJjChangeId,omitempty"`
+	DeliveryJJCommitID  string     `json:"deliveryJjCommitId,omitempty"`
+	DeliveryJJBookmarks []string   `json:"deliveryJjBookmarks,omitempty"`
+	PullRequestURL      string     `json:"pullRequestUrl,omitempty"`
+	PullRequestNumber   int        `json:"pullRequestNumber,omitempty"`
+	PullRequestState    string     `json:"pullRequestState,omitempty"`
+	MergeCommitSHA      string     `json:"mergeCommitSha,omitempty"`
+	MergedAt            *time.Time `json:"mergedAt,omitempty"`
 }
 
 type LinkRunDeliveryInput struct {
-	RepositoryID      string     `json:"repositoryId,omitempty"`
-	DeliveryBranch    string     `json:"deliveryBranch,omitempty"`
-	HeadSHA           string     `json:"headSha,omitempty"`
-	PullRequestURL    string     `json:"pullRequestUrl,omitempty"`
-	PullRequestNumber int        `json:"pullRequestNumber,omitempty"`
-	PullRequestState  string     `json:"pullRequestState,omitempty"`
-	MergeCommitSHA    string     `json:"mergeCommitSha,omitempty"`
-	MergedAt          *time.Time `json:"mergedAt,omitempty"`
+	RepositoryID        string     `json:"repositoryId,omitempty"`
+	VCS                 string     `json:"vcs,omitempty"`
+	DeliveryBranch      string     `json:"deliveryBranch,omitempty"`
+	HeadSHA             string     `json:"headSha,omitempty"`
+	DeliveryJJWorkspace string     `json:"deliveryJjWorkspace,omitempty"`
+	DeliveryJJChangeID  string     `json:"deliveryJjChangeId,omitempty"`
+	DeliveryJJCommitID  string     `json:"deliveryJjCommitId,omitempty"`
+	DeliveryJJBookmarks []string   `json:"deliveryJjBookmarks,omitempty"`
+	PullRequestURL      string     `json:"pullRequestUrl,omitempty"`
+	PullRequestNumber   int        `json:"pullRequestNumber,omitempty"`
+	PullRequestState    string     `json:"pullRequestState,omitempty"`
+	MergeCommitSHA      string     `json:"mergeCommitSha,omitempty"`
+	MergedAt            *time.Time `json:"mergedAt,omitempty"`
 }
 
 type Note struct {
@@ -258,9 +282,14 @@ type Trajectory struct {
 	Status       string    `json:"status"`
 	Paths        []string  `json:"paths,omitempty"`
 	RepositoryID string    `json:"repositoryId,omitempty"`
+	VCS          string    `json:"vcs,omitempty"`
 	Branch       string    `json:"branch,omitempty"`
 	BaseSHA      string    `json:"baseSha,omitempty"`
 	HeadSHA      string    `json:"headSha,omitempty"`
+	JJWorkspace  string    `json:"jjWorkspace,omitempty"`
+	JJChangeID   string    `json:"jjChangeId,omitempty"`
+	JJCommitID   string    `json:"jjCommitId,omitempty"`
+	JJBookmarks  []string  `json:"jjBookmarks,omitempty"`
 	CreatedAt    time.Time `json:"createdAt"`
 	UpdatedAt    time.Time `json:"updatedAt"`
 	Run          *Run      `json:"run,omitempty"`
@@ -272,9 +301,14 @@ type CreateTrajectoryInput struct {
 	Rationale    string   `json:"rationale,omitempty"`
 	Paths        []string `json:"paths,omitempty"`
 	RepositoryID string   `json:"repositoryId,omitempty"`
+	VCS          string   `json:"vcs,omitempty"`
 	Branch       string   `json:"branch,omitempty"`
 	BaseSHA      string   `json:"baseSha,omitempty"`
 	HeadSHA      string   `json:"headSha,omitempty"`
+	JJWorkspace  string   `json:"jjWorkspace,omitempty"`
+	JJChangeID   string   `json:"jjChangeId,omitempty"`
+	JJCommitID   string   `json:"jjCommitId,omitempty"`
+	JJBookmarks  []string `json:"jjBookmarks,omitempty"`
 }
 
 type Repository struct {

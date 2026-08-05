@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,7 +32,56 @@ var (
 	ErrIdempotencyKeyReuse = errors.New("idempotency key reused with different request")
 )
 
-var fullGitSHA = regexp.MustCompile(`^[0-9a-fA-F]{40}([0-9a-fA-F]{24})?$`)
+var (
+	fullGitSHA = regexp.MustCompile(`^[0-9a-fA-F]{40}([0-9a-fA-F]{24})?$`)
+	fullJJID   = regexp.MustCompile(`^[a-zA-Z0-9]{1,128}$`)
+)
+
+func normalizeProvenanceLabels(items []string) []string {
+	seen := map[string]bool{}
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		if item != "" && !seen[item] {
+			seen[item] = true
+			out = append(out, item)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+func marshalProvenanceLabels(items []string) string {
+	if len(items) == 0 {
+		return "[]"
+	}
+	body, _ := json.Marshal(items)
+	return string(body)
+}
+
+func validateJujutsuProvenance(vcs, workspace, changeID, commitID string, bookmarks []string) error {
+	if vcs != "" && vcs != "git" && vcs != "jj" {
+		return errors.New("vcs must be git or jj")
+	}
+	if len(workspace) > 255 {
+		return errors.New("JJ workspace is too long")
+	}
+	if changeID != "" && !fullJJID.MatchString(changeID) {
+		return errors.New("JJ change ID must be a full alphanumeric object ID")
+	}
+	if commitID != "" && !fullGitSHA.MatchString(commitID) {
+		return errors.New("JJ commit ID must be a full 40- or 64-character hexadecimal object ID")
+	}
+	if len(bookmarks) > 64 {
+		return errors.New("at most 64 JJ bookmarks may be recorded")
+	}
+	for _, bookmark := range bookmarks {
+		if bookmark == "" || len(bookmark) > 255 || strings.ContainsAny(bookmark, "\r\n\x00") {
+			return errors.New("JJ bookmark must be non-empty, single-line, and at most 255 characters")
+		}
+	}
+	return nil
+}
 
 type Store struct {
 	db             *sql.DB
@@ -468,6 +518,13 @@ func (s *Store) CreateProject(ctx context.Context, principal domain.Principal, k
 }
 
 func (s *Store) StartRun(ctx context.Context, principal domain.Principal, key string, in domain.StartRunInput) (domain.Run, domain.Receipt, error) {
+	in.JJBookmarks = normalizeProvenanceLabels(in.JJBookmarks)
+	if in.VCS == "" && (in.JJWorkspace != "" || in.JJChangeID != "" || in.JJCommitID != "" || len(in.JJBookmarks) > 0) {
+		in.VCS = "jj"
+	}
+	if err := validateJujutsuProvenance(in.VCS, in.JJWorkspace, in.JJChangeID, in.JJCommitID, in.JJBookmarks); err != nil {
+		return domain.Run{}, domain.Receipt{}, err
+	}
 	b, receipt, err := s.mutate(ctx, principal.WorkspaceID, in.ProjectID, principal.ID, principal.ID, "", key, in, func(tx *sql.Tx) (string, string, any, error) {
 		var projectCount int
 		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM projects WHERE id=? AND workspace_id=?`, in.ProjectID, principal.WorkspaceID).Scan(&projectCount); err != nil || projectCount == 0 {
@@ -516,8 +573,9 @@ func (s *Store) StartRun(ctx context.Context, principal domain.Principal, key st
 			runType = "interactive"
 		}
 		profile, _ := json.Marshal(in.InstructionProfile)
-		r := domain.Run{ID: newID("run"), ProjectID: in.ProjectID, AgentID: agentID, AgentName: agentName, PrincipalID: principal.ID, PrincipalName: principal.DisplayName, Harness: in.Harness, HarnessVersion: in.HarnessVersion, Provider: in.Provider, Model: in.Model, Reasoning: in.Reasoning, Role: role, ParentRunID: in.ParentRunID, RootRunID: in.RootRunID, RunType: runType, PermissionMode: in.PermissionMode, InteractionMode: in.InteractionMode, RepositoryID: in.RepositoryID, Branch: in.Branch, Worktree: in.Worktree, BaseSHA: in.BaseSHA, HeadSHA: in.HeadSHA, Objective: in.Objective, InstructionProfile: in.InstructionProfile, StartedAt: t}
-		_, err = tx.ExecContext(ctx, `INSERT INTO runs(id,project_id,agent_id,principal_id,harness,harness_version,provider,model,reasoning,role,parent_run_id,root_run_id,run_type,permission_mode,interaction_mode,repository_id,branch,worktree,base_sha,head_sha,objective,instruction_profile_json,started_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, r.ID, r.ProjectID, r.AgentID, r.PrincipalID, r.Harness, r.HarnessVersion, r.Provider, r.Model, r.Reasoning, r.Role, nullable(r.ParentRunID), nullable(r.RootRunID), r.RunType, r.PermissionMode, r.InteractionMode, nullable(r.RepositoryID), r.Branch, r.Worktree, r.BaseSHA, r.HeadSHA, r.Objective, string(profile), ts(t))
+		jjBookmarks := marshalProvenanceLabels(in.JJBookmarks)
+		r := domain.Run{ID: newID("run"), ProjectID: in.ProjectID, AgentID: agentID, AgentName: agentName, PrincipalID: principal.ID, PrincipalName: principal.DisplayName, Harness: in.Harness, HarnessVersion: in.HarnessVersion, Provider: in.Provider, Model: in.Model, Reasoning: in.Reasoning, Role: role, ParentRunID: in.ParentRunID, RootRunID: in.RootRunID, RunType: runType, PermissionMode: in.PermissionMode, InteractionMode: in.InteractionMode, RepositoryID: in.RepositoryID, VCS: in.VCS, Branch: in.Branch, Worktree: in.Worktree, BaseSHA: in.BaseSHA, HeadSHA: in.HeadSHA, JJWorkspace: in.JJWorkspace, JJChangeID: in.JJChangeID, JJCommitID: in.JJCommitID, JJBookmarks: in.JJBookmarks, Objective: in.Objective, InstructionProfile: in.InstructionProfile, StartedAt: t}
+		_, err = tx.ExecContext(ctx, `INSERT INTO runs(id,project_id,agent_id,principal_id,harness,harness_version,provider,model,reasoning,role,parent_run_id,root_run_id,run_type,permission_mode,interaction_mode,repository_id,vcs,branch,worktree,base_sha,head_sha,jj_workspace,jj_change_id,jj_commit_id,jj_bookmarks_json,objective,instruction_profile_json,started_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, r.ID, r.ProjectID, r.AgentID, r.PrincipalID, r.Harness, r.HarnessVersion, r.Provider, r.Model, r.Reasoning, r.Role, nullable(r.ParentRunID), nullable(r.RootRunID), r.RunType, r.PermissionMode, r.InteractionMode, nullable(r.RepositoryID), r.VCS, r.Branch, r.Worktree, r.BaseSHA, r.HeadSHA, r.JJWorkspace, r.JJChangeID, r.JJCommitID, jjBookmarks, r.Objective, string(profile), ts(t))
 		return r.ID, "run.started", r, err
 	})
 	if err != nil {
@@ -529,12 +587,20 @@ func (s *Store) StartRun(ctx context.Context, principal domain.Principal, key st
 }
 
 func (s *Store) EndRun(ctx context.Context, principal domain.Principal, key, runID string, in domain.EndRunInput) (domain.Run, domain.Receipt, error) {
+	in.DeliveryJJBookmarks = normalizeProvenanceLabels(in.DeliveryJJBookmarks)
+	if in.VCS == "" && (in.DeliveryJJWorkspace != "" || in.DeliveryJJChangeID != "" || in.DeliveryJJCommitID != "" || len(in.DeliveryJJBookmarks) > 0) {
+		in.VCS = "jj"
+	}
 	b, receipt, err := s.mutate(ctx, principal.WorkspaceID, "", principal.ID, principal.ID, runID, key, in, func(tx *sql.Tx) (string, string, any, error) {
-		if err := validateRunDeliveryTx(ctx, tx, runID, principal.ID, domain.LinkRunDeliveryInput{RepositoryID: in.RepositoryID, DeliveryBranch: in.DeliveryBranch, HeadSHA: in.HeadSHA, PullRequestURL: in.PullRequestURL, PullRequestNumber: in.PullRequestNumber, PullRequestState: in.PullRequestState, MergeCommitSHA: in.MergeCommitSHA, MergedAt: in.MergedAt}); err != nil {
+		if err := validateRunDeliveryTx(ctx, tx, runID, principal.ID, domain.LinkRunDeliveryInput{RepositoryID: in.RepositoryID, VCS: in.VCS, DeliveryBranch: in.DeliveryBranch, HeadSHA: in.HeadSHA, DeliveryJJWorkspace: in.DeliveryJJWorkspace, DeliveryJJChangeID: in.DeliveryJJChangeID, DeliveryJJCommitID: in.DeliveryJJCommitID, DeliveryJJBookmarks: in.DeliveryJJBookmarks, PullRequestURL: in.PullRequestURL, PullRequestNumber: in.PullRequestNumber, PullRequestState: in.PullRequestState, MergeCommitSHA: in.MergeCommitSHA, MergedAt: in.MergedAt}); err != nil {
 			return "", "", nil, err
 		}
 		t := now()
-		result, err := tx.ExecContext(ctx, `UPDATE runs SET ended_at=?,outcome=?,verification=?,repository_id=CASE WHEN repository_id IS NULL AND ?!='' THEN ? ELSE repository_id END,delivery_branch=CASE WHEN ?='' THEN delivery_branch ELSE ? END,head_sha=CASE WHEN ?='' THEN head_sha ELSE ? END,pull_request_url=CASE WHEN ?='' THEN pull_request_url ELSE ? END,pull_request_number=CASE WHEN ?=0 THEN pull_request_number ELSE ? END,pull_request_state=CASE WHEN ?='' THEN pull_request_state ELSE ? END,merge_commit_sha=CASE WHEN ?='' THEN merge_commit_sha ELSE ? END,merged_at=COALESCE(?,merged_at) WHERE id=? AND principal_id=? AND ended_at IS NULL`, ts(t), in.Outcome, in.Verification, in.RepositoryID, in.RepositoryID, in.DeliveryBranch, in.DeliveryBranch, in.HeadSHA, in.HeadSHA, in.PullRequestURL, in.PullRequestURL, in.PullRequestNumber, in.PullRequestNumber, in.PullRequestState, in.PullRequestState, in.MergeCommitSHA, in.MergeCommitSHA, nullableTime(in.MergedAt), runID, principal.ID)
+		deliveryJJBookmarks := ""
+		if len(in.DeliveryJJBookmarks) > 0 {
+			deliveryJJBookmarks = marshalProvenanceLabels(in.DeliveryJJBookmarks)
+		}
+		result, err := tx.ExecContext(ctx, `UPDATE runs SET ended_at=?,outcome=?,verification=?,repository_id=CASE WHEN repository_id IS NULL AND ?!='' THEN ? ELSE repository_id END,vcs=CASE WHEN ?='' THEN vcs ELSE ? END,delivery_branch=CASE WHEN ?='' THEN delivery_branch ELSE ? END,head_sha=CASE WHEN ?='' THEN head_sha ELSE ? END,delivery_jj_workspace=CASE WHEN ?='' THEN delivery_jj_workspace ELSE ? END,delivery_jj_change_id=CASE WHEN ?='' THEN delivery_jj_change_id ELSE ? END,delivery_jj_commit_id=CASE WHEN ?='' THEN delivery_jj_commit_id ELSE ? END,delivery_jj_bookmarks_json=CASE WHEN ?='' THEN delivery_jj_bookmarks_json ELSE ? END,pull_request_url=CASE WHEN ?='' THEN pull_request_url ELSE ? END,pull_request_number=CASE WHEN ?=0 THEN pull_request_number ELSE ? END,pull_request_state=CASE WHEN ?='' THEN pull_request_state ELSE ? END,merge_commit_sha=CASE WHEN ?='' THEN merge_commit_sha ELSE ? END,merged_at=COALESCE(?,merged_at) WHERE id=? AND principal_id=? AND ended_at IS NULL`, ts(t), in.Outcome, in.Verification, in.RepositoryID, in.RepositoryID, in.VCS, in.VCS, in.DeliveryBranch, in.DeliveryBranch, in.HeadSHA, in.HeadSHA, in.DeliveryJJWorkspace, in.DeliveryJJWorkspace, in.DeliveryJJChangeID, in.DeliveryJJChangeID, in.DeliveryJJCommitID, in.DeliveryJJCommitID, deliveryJJBookmarks, deliveryJJBookmarks, in.PullRequestURL, in.PullRequestURL, in.PullRequestNumber, in.PullRequestNumber, in.PullRequestState, in.PullRequestState, in.MergeCommitSHA, in.MergeCommitSHA, nullableTime(in.MergedAt), runID, principal.ID)
 		if err != nil {
 			return "", "", nil, err
 		}
@@ -553,8 +619,8 @@ func (s *Store) EndRun(ctx context.Context, principal domain.Principal, key, run
 	}
 	var r domain.Run
 	err = json.Unmarshal(b, &r)
-	if err == nil && (in.RepositoryID != "" || in.DeliveryBranch != "" || in.HeadSHA != "" || in.PullRequestURL != "" || in.PullRequestNumber != 0 || in.PullRequestState != "" || in.MergeCommitSHA != "" || in.MergedAt != nil) {
-		linked, _, linkErr := s.LinkRunDelivery(ctx, principal, key+":delivery", runID, domain.LinkRunDeliveryInput{RepositoryID: in.RepositoryID, DeliveryBranch: in.DeliveryBranch, HeadSHA: in.HeadSHA, PullRequestURL: in.PullRequestURL, PullRequestNumber: in.PullRequestNumber, PullRequestState: in.PullRequestState, MergeCommitSHA: in.MergeCommitSHA, MergedAt: in.MergedAt})
+	if err == nil && (in.RepositoryID != "" || in.VCS != "" || in.DeliveryBranch != "" || in.HeadSHA != "" || in.DeliveryJJWorkspace != "" || in.DeliveryJJChangeID != "" || in.DeliveryJJCommitID != "" || len(in.DeliveryJJBookmarks) > 0 || in.PullRequestURL != "" || in.PullRequestNumber != 0 || in.PullRequestState != "" || in.MergeCommitSHA != "" || in.MergedAt != nil) {
+		linked, _, linkErr := s.LinkRunDelivery(ctx, principal, key+":delivery", runID, domain.LinkRunDeliveryInput{RepositoryID: in.RepositoryID, VCS: in.VCS, DeliveryBranch: in.DeliveryBranch, HeadSHA: in.HeadSHA, DeliveryJJWorkspace: in.DeliveryJJWorkspace, DeliveryJJChangeID: in.DeliveryJJChangeID, DeliveryJJCommitID: in.DeliveryJJCommitID, DeliveryJJBookmarks: in.DeliveryJJBookmarks, PullRequestURL: in.PullRequestURL, PullRequestNumber: in.PullRequestNumber, PullRequestState: in.PullRequestState, MergeCommitSHA: in.MergeCommitSHA, MergedAt: in.MergedAt})
 		if linkErr != nil {
 			return domain.Run{}, receipt, linkErr
 		}
@@ -564,11 +630,19 @@ func (s *Store) EndRun(ctx context.Context, principal domain.Principal, key, run
 }
 
 func (s *Store) LinkRunDelivery(ctx context.Context, principal domain.Principal, key, runID string, in domain.LinkRunDeliveryInput) (domain.Run, domain.Receipt, error) {
+	in.DeliveryJJBookmarks = normalizeProvenanceLabels(in.DeliveryJJBookmarks)
+	if in.VCS == "" && (in.DeliveryJJWorkspace != "" || in.DeliveryJJChangeID != "" || in.DeliveryJJCommitID != "" || len(in.DeliveryJJBookmarks) > 0) {
+		in.VCS = "jj"
+	}
 	b, receipt, err := s.mutate(ctx, principal.WorkspaceID, "", principal.ID, principal.ID, runID, key, in, func(tx *sql.Tx) (string, string, any, error) {
 		if err := validateRunDeliveryTx(ctx, tx, runID, principal.ID, in); err != nil {
 			return "", "", nil, err
 		}
-		result, err := tx.ExecContext(ctx, `UPDATE runs SET repository_id=CASE WHEN repository_id IS NULL AND ?!='' THEN ? ELSE repository_id END,delivery_branch=CASE WHEN ?='' THEN delivery_branch ELSE ? END,head_sha=CASE WHEN ?='' THEN head_sha ELSE ? END,pull_request_url=CASE WHEN ?='' THEN pull_request_url ELSE ? END,pull_request_number=CASE WHEN ?=0 THEN pull_request_number ELSE ? END,pull_request_state=CASE WHEN ?='' THEN pull_request_state ELSE ? END,merge_commit_sha=CASE WHEN ?='' THEN merge_commit_sha ELSE ? END,merged_at=COALESCE(?,merged_at) WHERE id=? AND principal_id=?`, in.RepositoryID, in.RepositoryID, in.DeliveryBranch, in.DeliveryBranch, in.HeadSHA, in.HeadSHA, in.PullRequestURL, in.PullRequestURL, in.PullRequestNumber, in.PullRequestNumber, in.PullRequestState, in.PullRequestState, in.MergeCommitSHA, in.MergeCommitSHA, nullableTime(in.MergedAt), runID, principal.ID)
+		deliveryJJBookmarks := ""
+		if len(in.DeliveryJJBookmarks) > 0 {
+			deliveryJJBookmarks = marshalProvenanceLabels(in.DeliveryJJBookmarks)
+		}
+		result, err := tx.ExecContext(ctx, `UPDATE runs SET repository_id=CASE WHEN repository_id IS NULL AND ?!='' THEN ? ELSE repository_id END,vcs=CASE WHEN ?='' THEN vcs ELSE ? END,delivery_branch=CASE WHEN ?='' THEN delivery_branch ELSE ? END,head_sha=CASE WHEN ?='' THEN head_sha ELSE ? END,delivery_jj_workspace=CASE WHEN ?='' THEN delivery_jj_workspace ELSE ? END,delivery_jj_change_id=CASE WHEN ?='' THEN delivery_jj_change_id ELSE ? END,delivery_jj_commit_id=CASE WHEN ?='' THEN delivery_jj_commit_id ELSE ? END,delivery_jj_bookmarks_json=CASE WHEN ?='' THEN delivery_jj_bookmarks_json ELSE ? END,pull_request_url=CASE WHEN ?='' THEN pull_request_url ELSE ? END,pull_request_number=CASE WHEN ?=0 THEN pull_request_number ELSE ? END,pull_request_state=CASE WHEN ?='' THEN pull_request_state ELSE ? END,merge_commit_sha=CASE WHEN ?='' THEN merge_commit_sha ELSE ? END,merged_at=COALESCE(?,merged_at) WHERE id=? AND principal_id=?`, in.RepositoryID, in.RepositoryID, in.VCS, in.VCS, in.DeliveryBranch, in.DeliveryBranch, in.HeadSHA, in.HeadSHA, in.DeliveryJJWorkspace, in.DeliveryJJWorkspace, in.DeliveryJJChangeID, in.DeliveryJJChangeID, in.DeliveryJJCommitID, in.DeliveryJJCommitID, deliveryJJBookmarks, deliveryJJBookmarks, in.PullRequestURL, in.PullRequestURL, in.PullRequestNumber, in.PullRequestNumber, in.PullRequestState, in.PullRequestState, in.MergeCommitSHA, in.MergeCommitSHA, nullableTime(in.MergedAt), runID, principal.ID)
 		if err != nil {
 			return "", "", nil, err
 		}
@@ -589,6 +663,9 @@ func (s *Store) LinkRunDelivery(ctx context.Context, principal domain.Principal,
 func validateRunDeliveryTx(ctx context.Context, tx *sql.Tx, runID, principalID string, in domain.LinkRunDeliveryInput) error {
 	if len(in.DeliveryBranch) > 255 || len(in.PullRequestURL) > 2048 {
 		return errors.New("delivery branch or pull request URL is too long")
+	}
+	if err := validateJujutsuProvenance(in.VCS, in.DeliveryJJWorkspace, in.DeliveryJJChangeID, in.DeliveryJJCommitID, in.DeliveryJJBookmarks); err != nil {
+		return err
 	}
 	for label, sha := range map[string]string{"head SHA": in.HeadSHA, "merge commit SHA": in.MergeCommitSHA} {
 		if sha != "" && !fullGitSHA.MatchString(sha) {
@@ -659,16 +736,18 @@ func validateRunDeliveryTx(ctx context.Context, tx *sql.Tx, runID, principalID s
 	return nil
 }
 
-const runSelect = `SELECT r.id,r.project_id,r.agent_id,a.name,r.principal_id,p.display_name,r.harness,r.harness_version,r.provider,r.model,r.reasoning,r.role,COALESCE(r.parent_run_id,''),COALESCE(r.root_run_id,''),r.run_type,r.permission_mode,r.interaction_mode,COALESCE(r.repository_id,''),r.branch,r.worktree,r.base_sha,r.head_sha,r.delivery_branch,r.pull_request_url,r.pull_request_number,r.pull_request_state,r.merge_commit_sha,COALESCE(r.merged_at,''),r.objective,r.instruction_profile_json,r.started_at,COALESCE(r.ended_at,''),r.outcome,r.verification FROM runs r JOIN agents a ON a.id=r.agent_id JOIN principals p ON p.id=r.principal_id`
+const runSelect = `SELECT r.id,r.project_id,r.agent_id,a.name,r.principal_id,p.display_name,r.harness,r.harness_version,r.provider,r.model,r.reasoning,r.role,COALESCE(r.parent_run_id,''),COALESCE(r.root_run_id,''),r.run_type,r.permission_mode,r.interaction_mode,COALESCE(r.repository_id,''),r.vcs,r.branch,r.worktree,r.base_sha,r.head_sha,r.jj_workspace,r.jj_change_id,r.jj_commit_id,r.jj_bookmarks_json,r.delivery_branch,r.delivery_jj_workspace,r.delivery_jj_change_id,r.delivery_jj_commit_id,r.delivery_jj_bookmarks_json,r.pull_request_url,r.pull_request_number,r.pull_request_state,r.merge_commit_sha,COALESCE(r.merged_at,''),r.objective,r.instruction_profile_json,r.started_at,COALESCE(r.ended_at,''),r.outcome,r.verification FROM runs r JOIN agents a ON a.id=r.agent_id JOIN principals p ON p.id=r.principal_id`
 
 func scanRun(row *sql.Row) (domain.Run, error) {
 	var r domain.Run
-	var profile, started, ended, merged string
-	err := row.Scan(&r.ID, &r.ProjectID, &r.AgentID, &r.AgentName, &r.PrincipalID, &r.PrincipalName, &r.Harness, &r.HarnessVersion, &r.Provider, &r.Model, &r.Reasoning, &r.Role, &r.ParentRunID, &r.RootRunID, &r.RunType, &r.PermissionMode, &r.InteractionMode, &r.RepositoryID, &r.Branch, &r.Worktree, &r.BaseSHA, &r.HeadSHA, &r.DeliveryBranch, &r.PullRequestURL, &r.PullRequestNumber, &r.PullRequestState, &r.MergeCommitSHA, &merged, &r.Objective, &profile, &started, &ended, &r.Outcome, &r.Verification)
+	var profile, jjBookmarks, deliveryJJBookmarks, started, ended, merged string
+	err := row.Scan(&r.ID, &r.ProjectID, &r.AgentID, &r.AgentName, &r.PrincipalID, &r.PrincipalName, &r.Harness, &r.HarnessVersion, &r.Provider, &r.Model, &r.Reasoning, &r.Role, &r.ParentRunID, &r.RootRunID, &r.RunType, &r.PermissionMode, &r.InteractionMode, &r.RepositoryID, &r.VCS, &r.Branch, &r.Worktree, &r.BaseSHA, &r.HeadSHA, &r.JJWorkspace, &r.JJChangeID, &r.JJCommitID, &jjBookmarks, &r.DeliveryBranch, &r.DeliveryJJWorkspace, &r.DeliveryJJChangeID, &r.DeliveryJJCommitID, &deliveryJJBookmarks, &r.PullRequestURL, &r.PullRequestNumber, &r.PullRequestState, &r.MergeCommitSHA, &merged, &r.Objective, &profile, &started, &ended, &r.Outcome, &r.Verification)
 	if err != nil {
 		return r, err
 	}
 	_ = json.Unmarshal([]byte(profile), &r.InstructionProfile)
+	_ = json.Unmarshal([]byte(jjBookmarks), &r.JJBookmarks)
+	_ = json.Unmarshal([]byte(deliveryJJBookmarks), &r.DeliveryJJBookmarks)
 	r.StartedAt = parseTime(started)
 	if ended != "" {
 		t := parseTime(ended)
@@ -701,11 +780,13 @@ func (s *Store) ListRuns(ctx context.Context, projectID string, limit int) ([]do
 	runs := make([]domain.Run, 0)
 	for rows.Next() {
 		var run domain.Run
-		var profile, started, ended, merged string
-		if err = rows.Scan(&run.ID, &run.ProjectID, &run.AgentID, &run.AgentName, &run.PrincipalID, &run.PrincipalName, &run.Harness, &run.HarnessVersion, &run.Provider, &run.Model, &run.Reasoning, &run.Role, &run.ParentRunID, &run.RootRunID, &run.RunType, &run.PermissionMode, &run.InteractionMode, &run.RepositoryID, &run.Branch, &run.Worktree, &run.BaseSHA, &run.HeadSHA, &run.DeliveryBranch, &run.PullRequestURL, &run.PullRequestNumber, &run.PullRequestState, &run.MergeCommitSHA, &merged, &run.Objective, &profile, &started, &ended, &run.Outcome, &run.Verification); err != nil {
+		var profile, jjBookmarks, deliveryJJBookmarks, started, ended, merged string
+		if err = rows.Scan(&run.ID, &run.ProjectID, &run.AgentID, &run.AgentName, &run.PrincipalID, &run.PrincipalName, &run.Harness, &run.HarnessVersion, &run.Provider, &run.Model, &run.Reasoning, &run.Role, &run.ParentRunID, &run.RootRunID, &run.RunType, &run.PermissionMode, &run.InteractionMode, &run.RepositoryID, &run.VCS, &run.Branch, &run.Worktree, &run.BaseSHA, &run.HeadSHA, &run.JJWorkspace, &run.JJChangeID, &run.JJCommitID, &jjBookmarks, &run.DeliveryBranch, &run.DeliveryJJWorkspace, &run.DeliveryJJChangeID, &run.DeliveryJJCommitID, &deliveryJJBookmarks, &run.PullRequestURL, &run.PullRequestNumber, &run.PullRequestState, &run.MergeCommitSHA, &merged, &run.Objective, &profile, &started, &ended, &run.Outcome, &run.Verification); err != nil {
 			return nil, err
 		}
 		_ = json.Unmarshal([]byte(profile), &run.InstructionProfile)
+		_ = json.Unmarshal([]byte(jjBookmarks), &run.JJBookmarks)
+		_ = json.Unmarshal([]byte(deliveryJJBookmarks), &run.DeliveryJJBookmarks)
 		run.StartedAt = parseTime(started)
 		if ended != "" {
 			t := parseTime(ended)
@@ -732,11 +813,13 @@ func (s *Store) ListAllRuns(ctx context.Context, projectID string) ([]domain.Run
 	runs := make([]domain.Run, 0)
 	for rows.Next() {
 		var run domain.Run
-		var profile, started, ended, merged string
-		if err = rows.Scan(&run.ID, &run.ProjectID, &run.AgentID, &run.AgentName, &run.PrincipalID, &run.PrincipalName, &run.Harness, &run.HarnessVersion, &run.Provider, &run.Model, &run.Reasoning, &run.Role, &run.ParentRunID, &run.RootRunID, &run.RunType, &run.PermissionMode, &run.InteractionMode, &run.RepositoryID, &run.Branch, &run.Worktree, &run.BaseSHA, &run.HeadSHA, &run.DeliveryBranch, &run.PullRequestURL, &run.PullRequestNumber, &run.PullRequestState, &run.MergeCommitSHA, &merged, &run.Objective, &profile, &started, &ended, &run.Outcome, &run.Verification); err != nil {
+		var profile, jjBookmarks, deliveryJJBookmarks, started, ended, merged string
+		if err = rows.Scan(&run.ID, &run.ProjectID, &run.AgentID, &run.AgentName, &run.PrincipalID, &run.PrincipalName, &run.Harness, &run.HarnessVersion, &run.Provider, &run.Model, &run.Reasoning, &run.Role, &run.ParentRunID, &run.RootRunID, &run.RunType, &run.PermissionMode, &run.InteractionMode, &run.RepositoryID, &run.VCS, &run.Branch, &run.Worktree, &run.BaseSHA, &run.HeadSHA, &run.JJWorkspace, &run.JJChangeID, &run.JJCommitID, &jjBookmarks, &run.DeliveryBranch, &run.DeliveryJJWorkspace, &run.DeliveryJJChangeID, &run.DeliveryJJCommitID, &deliveryJJBookmarks, &run.PullRequestURL, &run.PullRequestNumber, &run.PullRequestState, &run.MergeCommitSHA, &merged, &run.Objective, &profile, &started, &ended, &run.Outcome, &run.Verification); err != nil {
 			return nil, err
 		}
 		_ = json.Unmarshal([]byte(profile), &run.InstructionProfile)
+		_ = json.Unmarshal([]byte(jjBookmarks), &run.JJBookmarks)
+		_ = json.Unmarshal([]byte(deliveryJJBookmarks), &run.DeliveryJJBookmarks)
 		run.StartedAt = parseTime(started)
 		if ended != "" {
 			t := parseTime(ended)
@@ -914,11 +997,19 @@ func (s *Store) SearchNotes(ctx context.Context, projectID, query string, limit 
 }
 
 func (s *Store) CreateTrajectory(ctx context.Context, principal domain.Principal, projectID, key string, in domain.CreateTrajectoryInput) (domain.Trajectory, domain.Receipt, error) {
+	in.JJBookmarks = normalizeProvenanceLabels(in.JJBookmarks)
+	if in.VCS == "" && (in.JJWorkspace != "" || in.JJChangeID != "" || in.JJCommitID != "" || len(in.JJBookmarks) > 0) {
+		in.VCS = "jj"
+	}
+	if err := validateJujutsuProvenance(in.VCS, in.JJWorkspace, in.JJChangeID, in.JJCommitID, in.JJBookmarks); err != nil {
+		return domain.Trajectory{}, domain.Receipt{}, err
+	}
 	b, receipt, err := s.mutate(ctx, principal.WorkspaceID, projectID, principal.ID, principal.ID, in.RunID, key, in, func(tx *sql.Tx) (string, string, any, error) {
 		t := now()
 		paths, _ := json.Marshal(in.Paths)
-		tr := domain.Trajectory{ID: newID("trajectory"), ProjectID: projectID, RunID: in.RunID, PrincipalID: principal.ID, Objective: in.Objective, Rationale: in.Rationale, Status: "active", Paths: in.Paths, RepositoryID: in.RepositoryID, Branch: in.Branch, BaseSHA: in.BaseSHA, HeadSHA: in.HeadSHA, CreatedAt: t, UpdatedAt: t}
-		_, err := tx.ExecContext(ctx, `INSERT INTO trajectories(id,project_id,run_id,principal_id,objective,rationale,status,paths_json,repository_id,branch,base_sha,head_sha,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, tr.ID, projectID, tr.RunID, principal.ID, tr.Objective, tr.Rationale, tr.Status, string(paths), nullable(tr.RepositoryID), tr.Branch, tr.BaseSHA, tr.HeadSHA, ts(t), ts(t))
+		jjBookmarks := marshalProvenanceLabels(in.JJBookmarks)
+		tr := domain.Trajectory{ID: newID("trajectory"), ProjectID: projectID, RunID: in.RunID, PrincipalID: principal.ID, Objective: in.Objective, Rationale: in.Rationale, Status: "active", Paths: in.Paths, RepositoryID: in.RepositoryID, VCS: in.VCS, Branch: in.Branch, BaseSHA: in.BaseSHA, HeadSHA: in.HeadSHA, JJWorkspace: in.JJWorkspace, JJChangeID: in.JJChangeID, JJCommitID: in.JJCommitID, JJBookmarks: in.JJBookmarks, CreatedAt: t, UpdatedAt: t}
+		_, err := tx.ExecContext(ctx, `INSERT INTO trajectories(id,project_id,run_id,principal_id,objective,rationale,status,paths_json,repository_id,vcs,branch,base_sha,head_sha,jj_workspace,jj_change_id,jj_commit_id,jj_bookmarks_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, tr.ID, projectID, tr.RunID, principal.ID, tr.Objective, tr.Rationale, tr.Status, string(paths), nullable(tr.RepositoryID), tr.VCS, tr.Branch, tr.BaseSHA, tr.HeadSHA, tr.JJWorkspace, tr.JJChangeID, tr.JJCommitID, jjBookmarks, ts(t), ts(t))
 		return tr.ID, "trajectory.started", tr, err
 	})
 	if err != nil {
@@ -930,7 +1021,7 @@ func (s *Store) CreateTrajectory(ctx context.Context, principal domain.Principal
 }
 
 func (s *Store) ListTrajectories(ctx context.Context, projectID string, activeOnly bool) ([]domain.Trajectory, error) {
-	q := `SELECT id,project_id,run_id,principal_id,objective,rationale,status,paths_json,COALESCE(repository_id,''),branch,base_sha,head_sha,created_at,updated_at FROM trajectories WHERE project_id=?`
+	q := `SELECT id,project_id,run_id,principal_id,objective,rationale,status,paths_json,COALESCE(repository_id,''),vcs,branch,base_sha,head_sha,jj_workspace,jj_change_id,jj_commit_id,jj_bookmarks_json,created_at,updated_at FROM trajectories WHERE project_id=?`
 	if activeOnly {
 		q += ` AND status='active'`
 	}
@@ -943,11 +1034,12 @@ func (s *Store) ListTrajectories(ctx context.Context, projectID string, activeOn
 	var out []domain.Trajectory
 	for rows.Next() {
 		var tr domain.Trajectory
-		var paths, created, updated string
-		if err := rows.Scan(&tr.ID, &tr.ProjectID, &tr.RunID, &tr.PrincipalID, &tr.Objective, &tr.Rationale, &tr.Status, &paths, &tr.RepositoryID, &tr.Branch, &tr.BaseSHA, &tr.HeadSHA, &created, &updated); err != nil {
+		var paths, jjBookmarks, created, updated string
+		if err := rows.Scan(&tr.ID, &tr.ProjectID, &tr.RunID, &tr.PrincipalID, &tr.Objective, &tr.Rationale, &tr.Status, &paths, &tr.RepositoryID, &tr.VCS, &tr.Branch, &tr.BaseSHA, &tr.HeadSHA, &tr.JJWorkspace, &tr.JJChangeID, &tr.JJCommitID, &jjBookmarks, &created, &updated); err != nil {
 			return nil, err
 		}
 		_ = json.Unmarshal([]byte(paths), &tr.Paths)
+		_ = json.Unmarshal([]byte(jjBookmarks), &tr.JJBookmarks)
 		tr.CreatedAt = parseTime(created)
 		tr.UpdatedAt = parseTime(updated)
 		if r, e := s.GetRun(ctx, tr.RunID); e == nil {

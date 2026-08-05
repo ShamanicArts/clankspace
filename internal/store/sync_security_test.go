@@ -237,12 +237,12 @@ func TestSchema12RunMigratesWithSafeDeliveryDefaults(t *testing.T) {
 	}
 	defer migrated.Close()
 	run, err := migrated.GetRun(t.Context(), "run_old")
-	if err != nil || run.Branch != "legacy-branch" || run.PullRequestURL != "" || run.DeliveryBranch != "" {
+	if err != nil || run.Branch != "legacy-branch" || run.PullRequestURL != "" || run.DeliveryBranch != "" || run.VCS != "" || run.JJChangeID != "" || len(run.JJBookmarks) != 0 {
 		t.Fatalf("migrated run = %#v, %v", run, err)
 	}
 	principal := domain.Principal{ID: "principal_old", WorkspaceID: "ws_old", DisplayName: "Old agent", Kind: "project"}
-	linked, _, err := migrated.LinkRunDelivery(t.Context(), principal, "legacy-link", run.ID, domain.LinkRunDeliveryInput{DeliveryBranch: "release", HeadSHA: "3333333333333333333333333333333333333333"})
-	if err != nil || linked.Branch != "legacy-branch" || linked.DeliveryBranch != "release" {
+	linked, _, err := migrated.LinkRunDelivery(t.Context(), principal, "legacy-link", run.ID, domain.LinkRunDeliveryInput{VCS: "jj", DeliveryBranch: "release", HeadSHA: "3333333333333333333333333333333333333333", DeliveryJJWorkspace: "legacy-ws", DeliveryJJChangeID: "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", DeliveryJJCommitID: "3333333333333333333333333333333333333333", DeliveryJJBookmarks: []string{"release"}})
+	if err != nil || linked.Branch != "legacy-branch" || linked.DeliveryBranch != "release" || linked.VCS != "jj" || linked.DeliveryJJWorkspace != "legacy-ws" || len(linked.DeliveryJJBookmarks) != 1 {
 		t.Fatalf("link migrated run = %#v, %v", linked, err)
 	}
 }

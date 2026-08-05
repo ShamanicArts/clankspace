@@ -244,7 +244,7 @@ func TestProjectRunsAreVisibleToScopedClients(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	run, _, err := core.StartRun(t.Context(), principal, "run", domain.StartRunInput{ProjectID: project.ID, AgentName: "Luna", Model: "gpt-5.6-luna"})
+	run, _, err := core.StartRun(t.Context(), principal, "run", domain.StartRunInput{ProjectID: project.ID, AgentName: "Luna", Model: "gpt-5.6-luna", VCS: "jj", JJWorkspace: "api-ws", JJChangeID: "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", JJCommitID: "1111111111111111111111111111111111111111", JJBookmarks: []string{"agent/api"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,17 +262,17 @@ func TestProjectRunsAreVisibleToScopedClients(t *testing.T) {
 	if err = json.NewDecoder(w.Body).Decode(&out); err != nil {
 		t.Fatal(err)
 	}
-	if len(out.Runs) != 1 || out.Runs[0].AgentName != "Luna" {
+	if len(out.Runs) != 1 || out.Runs[0].AgentName != "Luna" || out.Runs[0].VCS != "jj" || out.Runs[0].JJWorkspace != "api-ws" || len(out.Runs[0].JJBookmarks) != 1 {
 		t.Fatalf("unexpected runs: %#v", out.Runs)
 	}
-	body := bytes.NewBufferString(`{"deliveryBranch":"release/test","headSha":"2222222222222222222222222222222222222222"}`)
+	body := bytes.NewBufferString(`{"vcs":"jj","deliveryBranch":"release/test","headSha":"2222222222222222222222222222222222222222","deliveryJjWorkspace":"api-ws","deliveryJjChangeId":"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz","deliveryJjCommitId":"2222222222222222222222222222222222222222","deliveryJjBookmarks":["agent/api"]}`)
 	r = httptest.NewRequest(http.MethodPost, "/api/v1/runs/"+run.ID+"/delivery", body)
 	r.Header.Set("Authorization", "Bearer "+credential.Token)
 	r.Header.Set("Content-Type", "application/json")
 	r.Header.Set("Idempotency-Key", "delivery-link")
 	w = httptest.NewRecorder()
 	h.ServeHTTP(w, r)
-	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"deliveryBranch":"release/test"`) {
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"deliveryBranch":"release/test"`) || !strings.Contains(w.Body.String(), `"deliveryJjCommitId":"2222222222222222222222222222222222222222"`) {
 		t.Fatalf("delivery link = %d %s", w.Code, w.Body.String())
 	}
 }

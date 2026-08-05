@@ -124,6 +124,70 @@ func TestRunDeliveryDetectsGitCoordinatesWithoutManualFlags(t *testing.T) {
 	}
 }
 
+func TestDetectVCSContextReadsNativeJujutsuCoordinates(t *testing.T) {
+	repository := t.TempDir()
+	bin := t.TempDir()
+	jj := filepath.Join(bin, "jj")
+	body := `#!/bin/sh
+case "$1 $2" in
+  "git remote") printf '%s\n' 'origin https://github.com/example/project.git' ;;
+  "workspace list") printf '%s\n' '"agent-ws"' ;;
+  "log -r") printf '%s\n' '"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"' '"1111111111111111111111111111111111111111"' '["agent/jj-provenance"]' ;;
+  "root ") printf '%s\n' '` + repository + `' ;;
+  *) exit 1 ;;
+esac
+`
+	if err := os.WriteFile(jj, []byte(body), 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	current := detectVCSContext(repository)
+	if current.VCS != "jj" || current.Remote != "https://github.com/example/project.git" || current.Worktree != repository {
+		t.Fatalf("context = %#v", current)
+	}
+	if current.JJWorkspace != "agent-ws" || current.JJChangeID != "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" || current.JJCommitID != "1111111111111111111111111111111111111111" {
+		t.Fatalf("JJ coordinates = %#v", current)
+	}
+	if len(current.JJBookmarks) != 1 || current.JJBookmarks[0] != "agent/jj-provenance" {
+		t.Fatalf("JJ bookmarks = %#v", current.JJBookmarks)
+	}
+}
+
+func TestRunDeliveryUsesJujutsuBookmarkForGitHubPullRequest(t *testing.T) {
+	repository := t.TempDir()
+	bin := t.TempDir()
+	jj := filepath.Join(bin, "jj")
+	jjBody := `#!/bin/sh
+case "$1 $2" in
+  "git remote") printf '%s\n' 'origin https://github.com/example/project.git' ;;
+  "git root") printf '%s\n' '` + repository + `/.jj/repo/store/git' ;;
+  "workspace list") printf '%s\n' '"agent-ws"' ;;
+  "log -r") printf '%s\n' '"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"' '"2222222222222222222222222222222222222222"' '["agent/jj-provenance"]' ;;
+  "root ") printf '%s\n' '` + repository + `' ;;
+  *) exit 1 ;;
+esac
+`
+	if err := os.WriteFile(jj, []byte(jjBody), 0755); err != nil {
+		t.Fatal(err)
+	}
+	gh := filepath.Join(bin, "gh")
+	ghBody := `#!/bin/sh
+test "$1 $2 $3" = "pr view agent/jj-provenance" || exit 1
+printf '%s\n' '{"url":"https://github.com/example/project/pull/7","number":7,"state":"OPEN","headRefOid":"2222222222222222222222222222222222222222","mergedAt":null,"mergeCommit":{"oid":""}}'
+`
+	if err := os.WriteFile(gh, []byte(ghBody), 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	delivery := detectRunDelivery(t.Context(), repository)
+	if delivery.VCS != "jj" || delivery.DeliveryJJWorkspace != "agent-ws" || delivery.DeliveryJJChangeID != "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" || delivery.DeliveryJJCommitID != "2222222222222222222222222222222222222222" {
+		t.Fatalf("JJ delivery = %#v", delivery)
+	}
+	if len(delivery.DeliveryJJBookmarks) != 1 || delivery.PullRequestNumber != 7 || delivery.PullRequestState != "open" {
+		t.Fatalf("JJ pull request delivery = %#v", delivery)
+	}
+}
+
 func TestRunDeliveryReadsPullRequestFromGitHubCLI(t *testing.T) {
 	repository := t.TempDir()
 	for _, args := range [][]string{{"init", "-b", "feature/provenance"}, {"config", "user.email", "agent@example.test"}, {"config", "user.name", "Agent"}} {

@@ -12,7 +12,7 @@ updated: 2026-08-03
 | Question | Answer | File |
 |---|---|---|
 | Are notes canonical? | No; they are advisory accrued intent and rationale. | `memory-semantics.md` |
-| What identifies an agent action? | Principal → agent → run plus harness/model/Git context. | `identity-and-provenance.md` |
+| What identifies an agent action? | Principal → agent → run plus harness/model/Git/Jujutsu context. | `identity-and-provenance.md` |
 | What may an agent record? | Only minimal, professionally paraphrased, project-relevant information. | `content-boundary.md` |
 | How is it hosted? | Permanent production is one Railway service and SQLite volume; ClankSpace evals occupy an isolated slice of the reusable exe.dev agent-compute plane. | `hosting.md` |
 | How does storage work? | Transactional events, projections, receipts, WAL, and FTS5. | `architecture.md` |
