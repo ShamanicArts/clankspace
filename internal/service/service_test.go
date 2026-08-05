@@ -123,11 +123,19 @@ func TestDecisionAndCheckpointInheritOriginAndDeliveryProvenance(t *testing.T) {
 		t.Fatal(err)
 	}
 	run, _, err := svc.StartRun(ctx, principal, "delivery-run", domain.StartRunInput{
-		ProjectID: project.ID, AgentName: "Codex", RepositoryID: repository.ID, Branch: "feature/provenance",
+		ProjectID: project.ID, AgentName: "Codex", RepositoryID: repository.ID, VCS: "jj", Branch: "feature/provenance",
 		BaseSHA: "1111111111111111111111111111111111111111", HeadSHA: "1111111111111111111111111111111111111111",
+		JJWorkspace: "agent-workspace", JJChangeID: "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", JJCommitID: "1111111111111111111111111111111111111111", JJBookmarks: []string{"agent/provenance"},
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	trajectory, _, err := svc.CreateTrajectory(ctx, principal, project.ID, "delivery-trajectory", domain.CreateTrajectoryInput{RunID: run.ID, Objective: "Preserve native Jujutsu provenance"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if trajectory.VCS != "jj" || trajectory.JJWorkspace != "agent-workspace" || trajectory.JJChangeID != run.JJChangeID || len(trajectory.JJBookmarks) != 1 {
+		t.Fatalf("trajectory did not inherit Jujutsu provenance: %#v", trajectory)
 	}
 	for _, kind := range []string{"decision", "checkpoint"} {
 		if _, _, err = svc.CreateNote(ctx, principal, project.ID, "delivery-note-"+kind, domain.CreateNoteInput{RunID: run.ID, Kind: kind, Title: "Delivery provenance " + kind, Summary: "This record inherits delivery evidence from its run.", LedBy: "agent", DirectionBasis: "autonomous_agent_judgment"}); err != nil {
@@ -135,7 +143,8 @@ func TestDecisionAndCheckpointInheritOriginAndDeliveryProvenance(t *testing.T) {
 		}
 	}
 	if _, _, err = db.EndRun(ctx, principal, "delivery-end", run.ID, domain.EndRunInput{
-		Outcome: "completed", DeliveryBranch: "release/provenance", HeadSHA: "2222222222222222222222222222222222222222",
+		Outcome: "completed", VCS: "jj", DeliveryBranch: "release/provenance", HeadSHA: "2222222222222222222222222222222222222222",
+		DeliveryJJWorkspace: "agent-workspace", DeliveryJJChangeID: "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", DeliveryJJCommitID: "2222222222222222222222222222222222222222", DeliveryJJBookmarks: []string{"agent/provenance"},
 		PullRequestURL: "https://github.com/example/repo/pull/42", PullRequestNumber: 42, PullRequestState: "open",
 	}); err != nil {
 		t.Fatal(err)
@@ -155,6 +164,12 @@ func TestDecisionAndCheckpointInheritOriginAndDeliveryProvenance(t *testing.T) {
 		if note.Run.Branch != "feature/provenance" || note.Run.DeliveryBranch != "release/provenance" {
 			t.Fatalf("origin branch was rewritten: %#v", note.Run)
 		}
+		if note.Run.VCS != "jj" || note.Run.JJWorkspace != "agent-workspace" || note.Run.JJChangeID != note.Run.DeliveryJJChangeID || note.Run.JJCommitID == note.Run.DeliveryJJCommitID || note.Run.DeliveryJJCommitID != "2222222222222222222222222222222222222222" {
+			t.Fatalf("Jujutsu change evolution lost: %#v", note.Run)
+		}
+		if len(note.Run.JJBookmarks) != 1 || len(note.Run.DeliveryJJBookmarks) != 1 || note.Run.DeliveryJJBookmarks[0] != "agent/provenance" {
+			t.Fatalf("Jujutsu bookmarks lost: %#v", note.Run)
+		}
 		if note.Run.PullRequestNumber != 42 || note.Run.PullRequestState != "merged" || note.Run.MergeCommitSHA != "3333333333333333333333333333333333333333" || note.Run.MergedAt == nil {
 			t.Fatalf("pull request lifecycle lost: %#v", note.Run)
 		}
@@ -170,6 +185,9 @@ func TestRunDeliveryPreservesEvidenceAndRejectsForeignRepository(t *testing.T) {
 	}
 	if _, _, err = svc.StartRun(ctx, principal, "foreign-repository-run", domain.StartRunInput{ProjectID: project.ID, AgentName: "Codex", RepositoryID: "repo-from-another-project"}); err == nil {
 		t.Fatal("run accepted a repository that is not attached to its project")
+	}
+	if _, _, err = svc.StartRun(ctx, principal, "invalid-jj-run", domain.StartRunInput{ProjectID: project.ID, AgentName: "Codex", VCS: "jj", JJChangeID: "not/a/change"}); err == nil {
+		t.Fatal("run accepted an invalid Jujutsu change ID")
 	}
 	run, _, err := svc.StartRun(ctx, principal, "preserve-run", domain.StartRunInput{ProjectID: project.ID, AgentName: "Codex", RepositoryID: repository.ID, Branch: "feature/origin", BaseSHA: "1111111111111111111111111111111111111111", HeadSHA: "1111111111111111111111111111111111111111"})
 	if err != nil {

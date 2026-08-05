@@ -117,7 +117,7 @@ func TestTwoInstancesPairPullPushAndRevoke(t *testing.T) {
 		t.Fatal(err)
 	}
 	replicaCore := service.New(replicaDB)
-	run, _, err := replicaCore.StartRun(ctx, replicaPrincipal, "replica-run", domain.StartRunInput{ProjectID: project.ID, AgentName: "Local agent", Harness: "codex", Provider: "openai", Model: "test-model", Reasoning: "high", Role: "primary", RunType: "interactive", Branch: "offline/provenance", BaseSHA: "1111111111111111111111111111111111111111", HeadSHA: "1111111111111111111111111111111111111111", Objective: "Record offline context"})
+	run, _, err := replicaCore.StartRun(ctx, replicaPrincipal, "replica-run", domain.StartRunInput{ProjectID: project.ID, AgentName: "Local agent", Harness: "codex", Provider: "openai", Model: "test-model", Reasoning: "high", Role: "primary", RunType: "interactive", VCS: "jj", Branch: "offline/provenance", BaseSHA: "1111111111111111111111111111111111111111", HeadSHA: "1111111111111111111111111111111111111111", JJWorkspace: "offline-ws", JJChangeID: "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", JJCommitID: "1111111111111111111111111111111111111111", JJBookmarks: []string{"offline/provenance"}, Objective: "Record offline context"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestTwoInstancesPairPullPushAndRevoke(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err = replicaDB.LinkRunDelivery(ctx, replicaPrincipal, "replica-run-open", run.ID, domain.LinkRunDeliveryInput{RepositoryID: repository.ID, DeliveryBranch: "offline/provenance", HeadSHA: "2222222222222222222222222222222222222222", PullRequestURL: "https://github.com/example/repo/pull/7", PullRequestNumber: 7, PullRequestState: "open"}); err != nil {
+	if _, _, err = replicaDB.LinkRunDelivery(ctx, replicaPrincipal, "replica-run-open", run.ID, domain.LinkRunDeliveryInput{RepositoryID: repository.ID, VCS: "jj", DeliveryBranch: "offline/provenance", HeadSHA: "2222222222222222222222222222222222222222", DeliveryJJWorkspace: "offline-ws", DeliveryJJChangeID: "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", DeliveryJJCommitID: "2222222222222222222222222222222222222222", DeliveryJJBookmarks: []string{"offline/provenance"}, PullRequestURL: "https://github.com/example/repo/pull/7", PullRequestNumber: 7, PullRequestState: "open"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err = replicaDB.EndRun(ctx, replicaPrincipal, "replica-run-end", run.ID, domain.EndRunInput{Outcome: "completed"}); err != nil {
@@ -149,7 +149,7 @@ func TestTwoInstancesPairPullPushAndRevoke(t *testing.T) {
 		t.Fatalf("pushed note missing: %#v", authorityNotes)
 	}
 	for _, note := range authorityNotes {
-		if note.ID == offline.ID && (note.Run == nil || note.Run.RepositoryID != repository.ID || note.Run.PullRequestNumber != 7 || note.Run.PullRequestState != "merged" || note.Run.MergeCommitSHA == "") {
+		if note.ID == offline.ID && (note.Run == nil || note.Run.RepositoryID != repository.ID || note.Run.PullRequestNumber != 7 || note.Run.PullRequestState != "merged" || note.Run.MergeCommitSHA == "" || note.Run.JJChangeID != note.Run.DeliveryJJChangeID || note.Run.JJCommitID == note.Run.DeliveryJJCommitID || len(note.Run.DeliveryJJBookmarks) != 1) {
 			t.Fatalf("delivery provenance did not converge: %#v", note.Run)
 		}
 	}
@@ -291,6 +291,7 @@ func TestWorkspaceSnapshotDoesNotTruncateRunHistory(t *testing.T) {
 		input := domain.StartRunInput{ProjectID: project.ID, AgentName: "archive-agent", Role: "automation", Objective: fmt.Sprintf("Archived run %03d", index)}
 		if index == 0 {
 			input.RepositoryID, input.Branch, input.BaseSHA, input.HeadSHA = repository.ID, "feature/snapshot", "1111111111111111111111111111111111111111", "1111111111111111111111111111111111111111"
+			input.VCS, input.JJWorkspace, input.JJChangeID, input.JJCommitID, input.JJBookmarks = "jj", "snapshot-ws", "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", "1111111111111111111111111111111111111111", []string{"feature/snapshot"}
 		}
 		run, _, startErr := core.StartRun(ctx, principal, fmt.Sprintf("snapshot-run-%03d", index), input)
 		err = startErr
@@ -299,7 +300,7 @@ func TestWorkspaceSnapshotDoesNotTruncateRunHistory(t *testing.T) {
 		}
 		if index == 0 {
 			merged := time.Date(2026, time.August, 4, 2, 0, 0, 0, time.UTC)
-			deliveryRun, _, err = db.LinkRunDelivery(ctx, principal, "snapshot-delivery", run.ID, domain.LinkRunDeliveryInput{DeliveryBranch: "release/snapshot", HeadSHA: "2222222222222222222222222222222222222222", PullRequestURL: "https://github.com/example/repo/pull/5", PullRequestNumber: 5, PullRequestState: "merged", MergeCommitSHA: "3333333333333333333333333333333333333333", MergedAt: &merged})
+			deliveryRun, _, err = db.LinkRunDelivery(ctx, principal, "snapshot-delivery", run.ID, domain.LinkRunDeliveryInput{VCS: "jj", DeliveryBranch: "release/snapshot", HeadSHA: "2222222222222222222222222222222222222222", DeliveryJJWorkspace: "snapshot-ws", DeliveryJJChangeID: "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", DeliveryJJCommitID: "2222222222222222222222222222222222222222", DeliveryJJBookmarks: []string{"release/snapshot"}, PullRequestURL: "https://github.com/example/repo/pull/5", PullRequestNumber: 5, PullRequestState: "merged", MergeCommitSHA: "3333333333333333333333333333333333333333", MergedAt: &merged})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -315,7 +316,7 @@ func TestWorkspaceSnapshotDoesNotTruncateRunHistory(t *testing.T) {
 	found := false
 	for _, run := range snapshot.Projects[0].Runs {
 		if run.ID == deliveryRun.ID {
-			found = run.Branch == "feature/snapshot" && run.DeliveryBranch == "release/snapshot" && run.PullRequestNumber == 5 && run.MergeCommitSHA != "" && run.MergedAt != nil
+			found = run.Branch == "feature/snapshot" && run.DeliveryBranch == "release/snapshot" && run.PullRequestNumber == 5 && run.MergeCommitSHA != "" && run.MergedAt != nil && run.VCS == "jj" && run.JJChangeID == run.DeliveryJJChangeID && run.JJCommitID != run.DeliveryJJCommitID && len(run.DeliveryJJBookmarks) == 1
 		}
 	}
 	if !found {
@@ -339,7 +340,7 @@ func TestWorkspaceSnapshotDoesNotTruncateRunHistory(t *testing.T) {
 		t.Fatal(err)
 	}
 	imported, err := importedDB.GetRun(ctx, deliveryRun.ID)
-	if err != nil || imported.Branch != "feature/snapshot" || imported.BaseSHA != "1111111111111111111111111111111111111111" || imported.DeliveryBranch != "release/snapshot" || imported.HeadSHA != "2222222222222222222222222222222222222222" || imported.PullRequestURL != "https://github.com/example/repo/pull/5" || imported.PullRequestNumber != 5 || imported.PullRequestState != "merged" || imported.MergeCommitSHA == "" || imported.MergedAt == nil {
+	if err != nil || imported.Branch != "feature/snapshot" || imported.BaseSHA != "1111111111111111111111111111111111111111" || imported.DeliveryBranch != "release/snapshot" || imported.HeadSHA != "2222222222222222222222222222222222222222" || imported.PullRequestURL != "https://github.com/example/repo/pull/5" || imported.PullRequestNumber != 5 || imported.PullRequestState != "merged" || imported.MergeCommitSHA == "" || imported.MergedAt == nil || imported.VCS != "jj" || imported.JJWorkspace != "snapshot-ws" || imported.JJChangeID != imported.DeliveryJJChangeID || imported.JJCommitID == imported.DeliveryJJCommitID || len(imported.DeliveryJJBookmarks) != 1 {
 		t.Fatalf("snapshot import lost run delivery provenance: %#v, %v", imported, err)
 	}
 }

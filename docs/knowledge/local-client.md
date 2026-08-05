@@ -41,7 +41,11 @@ The credential directory is mode `0700` and the atomic credential file is mode `
 
 ## Agent preflight
 
-`clank context` reports the resolved server, project, pointer path, token source, repository remote, branch, HEAD, and worktree without printing the token. An agent should stop and request one-time human setup when `tokenConfigured` is false.
+`clank context` reports the resolved server, project, pointer path, token source, repository remote, detected VCS, worktree, Git branch/HEAD when available, and native Jujutsu workspace/change/commit/bookmarks when available without printing the token. An agent should stop and request one-time human setup when `tokenConfigured` is false.
+
+CLI upgrades may precede a hosted server upgrade. If a pre-schema-14 server rejects the new JJ
+fields, run start/end/link retry once with the legacy Git payload and print a warning. The run still
+closes safely, but native JJ provenance is not durable until the server supports schema 14.
 
 The stdio MCP bridge uses the same resolution, so harness configuration can be only `clank mcp` when it starts inside a connected repository.
 

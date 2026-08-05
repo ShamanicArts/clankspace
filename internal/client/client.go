@@ -177,6 +177,9 @@ func (c *Client) StartRun(ctx context.Context, in domain.StartRunInput) (domain.
 		Run domain.Run `json:"run"`
 	}
 	err := c.Do(ctx, "POST", "/runs", in, &o)
+	if isUnknownFieldError(err) {
+		err = c.Do(ctx, "POST", "/runs", withoutFields(in, "vcs", "jjWorkspace", "jjChangeId", "jjCommitId", "jjBookmarks"), &o)
+	}
 	return o.Run, err
 }
 func (c *Client) EndRun(ctx context.Context, id string, in domain.EndRunInput) (domain.Run, error) {
@@ -184,6 +187,9 @@ func (c *Client) EndRun(ctx context.Context, id string, in domain.EndRunInput) (
 		Run domain.Run `json:"run"`
 	}
 	err := c.Do(ctx, "POST", "/runs/"+id+"/end", in, &o)
+	if isUnknownFieldError(err) {
+		err = c.Do(ctx, "POST", "/runs/"+id+"/end", withoutFields(in, "vcs", "deliveryJjWorkspace", "deliveryJjChangeId", "deliveryJjCommitId", "deliveryJjBookmarks"), &o)
+	}
 	return o.Run, err
 }
 func (c *Client) LinkRunDelivery(ctx context.Context, id string, in domain.LinkRunDeliveryInput) (domain.Run, error) {
@@ -191,7 +197,24 @@ func (c *Client) LinkRunDelivery(ctx context.Context, id string, in domain.LinkR
 		Run domain.Run `json:"run"`
 	}
 	err := c.Do(ctx, http.MethodPost, "/runs/"+id+"/delivery", in, &o)
+	if isUnknownFieldError(err) {
+		err = c.Do(ctx, http.MethodPost, "/runs/"+id+"/delivery", withoutFields(in, "vcs", "deliveryJjWorkspace", "deliveryJjChangeId", "deliveryJjCommitId", "deliveryJjBookmarks"), &o)
+	}
 	return o.Run, err
+}
+
+func isUnknownFieldError(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "unknown field")
+}
+
+func withoutFields(in any, names ...string) map[string]any {
+	body, _ := json.Marshal(in)
+	out := map[string]any{}
+	_ = json.Unmarshal(body, &out)
+	for _, name := range names {
+		delete(out, name)
+	}
+	return out
 }
 func (c *Client) ListRuns(ctx context.Context, project string, limit int) ([]domain.Run, error) {
 	var out struct {

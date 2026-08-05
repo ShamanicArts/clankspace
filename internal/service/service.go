@@ -188,6 +188,9 @@ func (s *Service) CreateTrajectory(ctx context.Context, p domain.Principal, proj
 	if in.RepositoryID == "" {
 		in.RepositoryID = r.RepositoryID
 	}
+	if in.VCS == "" {
+		in.VCS = r.VCS
+	}
 	if in.Branch == "" {
 		in.Branch = r.Branch
 	}
@@ -196,6 +199,18 @@ func (s *Service) CreateTrajectory(ctx context.Context, p domain.Principal, proj
 	}
 	if in.HeadSHA == "" {
 		in.HeadSHA = r.HeadSHA
+	}
+	if in.JJWorkspace == "" {
+		in.JJWorkspace = r.JJWorkspace
+	}
+	if in.JJChangeID == "" {
+		in.JJChangeID = r.JJChangeID
+	}
+	if in.JJCommitID == "" {
+		in.JJCommitID = r.JJCommitID
+	}
+	if len(in.JJBookmarks) == 0 {
+		in.JJBookmarks = append([]string(nil), r.JJBookmarks...)
 	}
 	return s.Store.CreateTrajectory(ctx, p, projectID, key, in)
 }

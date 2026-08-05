@@ -122,15 +122,20 @@ role: primary | subagent | reviewer | automation | integration
 parent run + root run + delegated objective
 interactive/unattended and permission mode
 project + repository + remote + fork
-branch + worktree + base + HEAD
+VCS + worktree + Git branch/base/HEAD when available
+JJ workspace + stable change ID + commit ID + bookmarks when available
 instruction/skill names or hashes
 start/end + outcome + verification
 ```
 
-Git coordinates are captured at the run boundary, not retyped on every note. `run start`
-records the attached repository, branch, worktree, and starting commit. `run end` updates
-the delivered HEAD and, when an authenticated GitHub CLI is available, records the current
-pull request. Explicit flags cover other environments. A later
+Version-control coordinates are captured at the run boundary, not retyped on every note.
+`run start` records the attached repository and worktree plus native Git and/or Jujutsu
+identity. For JJ, the stable change ID remains beside its starting commit ID, workspace, and
+bookmarks rather than being flattened into a detached Git HEAD. `run end` records the delivered
+JJ change/commit/workspace/bookmarks and the delivered Git HEAD when present; the two commit IDs
+show JJ change evolution across rewrites. In a colocated repository, ClankSpace retains both
+native JJ identity and Git/GitHub delivery evidence. When an authenticated GitHub CLI is
+available, it also records the current pull request. Explicit flags cover other environments. A later
 `run link` enriches that same run after the PR opens or merges with its URL, number, state,
 merge commit, and merge time. Notes retain their contemporaneous text and inherit this
 structured delivery evidence through the run; reconciliation never rewrites the decision.

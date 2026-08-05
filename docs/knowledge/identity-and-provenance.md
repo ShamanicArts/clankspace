@@ -20,9 +20,10 @@ Capture when available:
 - parent/root run and delegated objective;
 - interactive or unattended execution;
 - permission and interaction mode;
-- project, repository, remote, fork, branch, worktree, base, and HEAD;
+- project, repository, remote, fork, VCS, and worktree;
+- Git branch, base, HEAD, delivered commit, pull request, and merge evidence when available;
+- Jujutsu workspace, stable change ID, starting and delivered commit IDs, and origin/delivery bookmarks when available;
 - relevant instruction and skill names/hashes;
 - start/end time and verification state.
 
 Unknown fields remain explicitly absent. Never invent provenance. Never store chain-of-thought, full prompts, sensitive hostnames, or environment dumps.
-

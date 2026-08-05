@@ -59,18 +59,18 @@ func New(c *client.Client) *mcp.Server {
 		o, e := c.SupersedeNote(ctx, in.Project, in.NoteID, domain.SupersedeNoteInput{ExpectedRevision: in.ExpectedRevision, Reason: in.Reason, Replacement: in.Replacement})
 		return nil, o, e
 	})
-	mcp.AddTool(s, &mcp.Tool{Name: "clank_run_start", Description: "Register an agent execution with harness, provider, model, role, run type, repository, and instruction provenance when available."}, func(ctx context.Context, _ *mcp.CallToolRequest, in domain.StartRunInput) (*mcp.CallToolResult, domain.Run, error) {
+	mcp.AddTool(s, &mcp.Tool{Name: "clank_run_start", Description: "Register an agent execution with harness, provider, model, role, repository, native Git/Jujutsu coordinates, and instruction provenance when available."}, func(ctx context.Context, _ *mcp.CallToolRequest, in domain.StartRunInput) (*mcp.CallToolResult, domain.Run, error) {
 		o, e := c.StartRun(ctx, in)
 		return nil, o, e
 	})
-	mcp.AddTool(s, &mcp.Tool{Name: "clank_run_end", Description: "Close a registered execution with its outcome, verification, and delivered Git/PR provenance."}, func(ctx context.Context, _ *mcp.CallToolRequest, in struct {
+	mcp.AddTool(s, &mcp.Tool{Name: "clank_run_end", Description: "Close a registered execution with its outcome, verification, and delivered Git/Jujutsu/PR provenance."}, func(ctx context.Context, _ *mcp.CallToolRequest, in struct {
 		RunID string `json:"runId"`
 		domain.EndRunInput
 	}) (*mcp.CallToolResult, domain.Run, error) {
 		o, e := c.EndRun(ctx, in.RunID, in.EndRunInput)
 		return nil, o, e
 	})
-	mcp.AddTool(s, &mcp.Tool{Name: "clank_run_link", Description: "Attach or refresh the delivered branch, commit, pull request, and merge result for a run after delivery changes."}, func(ctx context.Context, _ *mcp.CallToolRequest, in struct {
+	mcp.AddTool(s, &mcp.Tool{Name: "clank_run_link", Description: "Attach or refresh delivered Git/Jujutsu coordinates, pull request, and merge evidence after delivery changes."}, func(ctx context.Context, _ *mcp.CallToolRequest, in struct {
 		RunID string `json:"runId"`
 		domain.LinkRunDeliveryInput
 	}) (*mcp.CallToolResult, domain.Run, error) {

@@ -274,7 +274,8 @@ that issued them. Replication publishes `portable_actor_id`, display name, kind,
 provenance only; it never publishes `user_id` or email.
 
 Run replication uses a portable provenance projection. Harness, provider, model,
-reasoning level, role, parent/root relationships, repository ID, branch, base/HEAD,
+reasoning level, role, parent/root relationships, repository ID, Git branch/base/HEAD,
+and Jujutsu workspace/change/commit/bookmark coordinates
 interaction mode, objective, and instruction-profile identifiers may replicate. Absolute
 worktree paths, hostnames, environment-derived paths, and other machine-local labels stay
 local; a caller may supply an explicitly safe logical worktree label instead.
